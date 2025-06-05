@@ -1,0 +1,312 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  OFFICE
+  FIELD_CREW
+}
+
+enum JobStatus {
+  ESTIMATE
+  SCHEDULED
+  DISPATCHED
+  IN_PROGRESS
+  COMPLETED
+  BILLED
+  CANCELLED
+}
+
+enum JobType {
+  SERVICE_CALL
+  COMMERCIAL_PROJECT
+}
+
+enum JobPhase {
+  UG // Underground
+  RI // Rough-In
+  FN // Finish
+}
+
+enum ChangeOrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String
+  password         String
+  role             UserRole
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  timeEntries      TimeEntry[]
+  assignedJobs     JobAssignment[]
+  changeOrders     ChangeOrder[]
+  purchaseOrders   PurchaseOrder[]
+}
+
+model Customer {
+  id               String           @id @default(cuid())
+  companyName      String?
+  firstName        String
+  lastName         String
+  email            String?
+  phone            String
+  address          String?
+  city             String?
+  state            String?
+  zip              String?
+  quickbooksId     String?          @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  jobs             Job[]
+}
+
+model Job {
+  id               String           @id @default(cuid())
+  jobNumber        String           @unique // Format: YY-###-SSS
+  customerId       String
+  type             JobType
+  status           JobStatus        @default(ESTIMATE)
+  description      String
+  address          String?
+  city             String?
+  state            String?
+  zip              String?
+  scheduledDate    DateTime?
+  completedDate    DateTime?
+  billedDate       DateTime?
+  estimatedHours   Float?
+  actualHours      Float?
+  estimatedCost    Float?
+  actualCost       Float?
+  billedAmount     Float?
+  quickbooksJobId  String?          @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  customer         Customer         @relation(fields: [customerId], references: [id])
+  phases           JobPhaseDetail[]
+  timeEntries      TimeEntry[]
+  materialUsage    MaterialUsage[]
+  assignments      JobAssignment[]
+  changeOrders     ChangeOrder[]
+  purchaseOrders   PurchaseOrder[]
+  notes            JobNote[]
+}
+
+model JobPhaseDetail {
+  id               String           @id @default(cuid())
+  jobId            String
+  phase            JobPhase
+  jobNumber        String           @unique // Format: YY-###-SSS-PH
+  status           JobStatus        @default(SCHEDULED)
+  estimatedHours   Float?
+  actualHours      Float?
+  estimatedCost    Float?
+  actualCost       Float?
+  startDate        DateTime?
+  completedDate    DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  job              Job              @relation(fields: [jobId], references: [id])
+  timeEntries      TimeEntry[]
+  materialUsage    MaterialUsage[]
+  purchaseOrders   PurchaseOrder[]
+}
+
+model TimeEntry {
+  id               String           @id @default(cuid())
+  userId           String
+  jobId            String
+  phaseId          String?
+  date             DateTime
+  startTime        DateTime
+  endTime          DateTime?
+  hours            Float
+  description      String?
+  gpsLatitude      Float?
+  gpsLongitude     Float?
+  synced           Boolean          @default(false)
+  quickbooksId     String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  user             User             @relation(fields: [userId], references: [id])
+  job              Job              @relation(fields: [jobId], references: [id])
+  phase            JobPhaseDetail?  @relation(fields: [phaseId], references: [id])
+}
+
+model Material {
+  id               String           @id @default(cuid())
+  code             String           @unique
+  name             String
+  description      String?
+  unit             String
+  cost             Float
+  price            Float
+  markup           Float            @default(1.5)
+  category         String
+  vendorId         String?
+  inStock          Int              @default(0)
+  minStock         Int              @default(0)
+  quickbooksItemId String?          @unique
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  vendor           Vendor?          @relation(fields: [vendorId], references: [id])
+  usage            MaterialUsage[]
+  purchaseOrderItems PurchaseOrderItem[]
+}
+
+model MaterialUsage {
+  id               String           @id @default(cuid())
+  jobId            String
+  phaseId          String?
+  materialId       String
+  quantity         Float
+  unitCost         Float
+  totalCost        Float
+  usedBy           String
+  usedAt           DateTime
+  synced           Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  
+  // Relations
+  job              Job              @relation(fields: [jobId], references: [id])
+  phase            JobPhaseDetail?  @relation(fields: [phaseId], references: [id])
+  material         Material         @relation(fields: [materialId], references: [id])
+}
+
+model Vendor {
+  id               String           @id @default(cuid())
+  code             String           @unique
+  name             String
+  contactName      String?
+  email            String?
+  phone            String?
+  address          String?
+  quickbooksId     String?          @unique
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  materials        Material[]
+  purchaseOrders   PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id               String           @id @default(cuid())
+  poNumber         String           @unique // Format: Job-Phase-VendorCode-##
+  jobId            String
+  phaseId          String?
+  vendorId         String
+  createdBy        String
+  status           String           @default("PENDING")
+  totalAmount      Float
+  approvedBy       String?
+  approvedAt       DateTime?
+  quickbooksId     String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  job              Job              @relation(fields: [jobId], references: [id])
+  phase            JobPhaseDetail?  @relation(fields: [phaseId], references: [id])
+  vendor           Vendor           @relation(fields: [vendorId], references: [id])
+  creator          User             @relation(fields: [createdBy], references: [id])
+  items            PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id               String           @id @default(cuid())
+  purchaseOrderId  String
+  materialId       String
+  quantity         Float
+  unitCost         Float
+  totalCost        Float
+  
+  // Relations
+  purchaseOrder    PurchaseOrder    @relation(fields: [purchaseOrderId], references: [id])
+  material         Material         @relation(fields: [materialId], references: [id])
+}
+
+model JobAssignment {
+  id               String           @id @default(cuid())
+  jobId            String
+  userId           String
+  assignedAt       DateTime         @default(now())
+  assignedBy       String
+  
+  // Relations
+  job              Job              @relation(fields: [jobId], references: [id])
+  user             User             @relation(fields: [userId], references: [id])
+  
+  @@unique([jobId, userId])
+}
+
+model ChangeOrder {
+  id               String           @id @default(cuid())
+  jobId            String
+  requestedBy      String
+  description      String
+  estimatedCost    Float
+  actualCost       Float?
+  status           ChangeOrderStatus @default(PENDING)
+  approvedBy       String?
+  approvedAt       DateTime?
+  customerApproved Boolean          @default(false)
+  photos           String[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  job              Job              @relation(fields: [jobId], references: [id])
+  requester        User             @relation(fields: [requestedBy], references: [id])
+}
+
+model JobNote {
+  id               String           @id @default(cuid())
+  jobId            String
+  note             String
+  createdBy        String
+  createdAt        DateTime         @default(now())
+  
+  // Relations
+  job              Job              @relation(fields: [jobId], references: [id])
+}
+
+model LaborRate {
+  id               String           @id @default(cuid())
+  name             String
+  description      String?
+  hourlyRate       Float
+  skillLevel       String
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
