@@ -23,10 +23,10 @@ import {
   ListItemText,
   Button,
   Paper,
-  Grid2 as Grid,
   Stack,
   CircularProgress,
   Alert,
+  Grid,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,

@@ -18,11 +18,12 @@ const createPhaseSchema = z.object({
 // GET all phases for a job
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const phases = await prisma.jobPhase.findMany({
-      where: { jobId: params.id },
+      where: { jobId: resolvedParams.id },
       orderBy: {
         createdAt: 'asc'
       }
@@ -41,15 +42,16 @@ export async function GET(
 // POST create a new phase for a job
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const body = await request.json()
     const data = createPhaseSchema.parse(body)
 
     // Verify job exists
     const job = await prisma.job.findUnique({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     if (!job) {
@@ -62,7 +64,7 @@ export async function POST(
     // Check if phase already exists for this job
     const existingPhase = await prisma.jobPhase.findFirst({
       where: {
-        jobId: params.id,
+        jobId: resolvedParams.id,
         name: data.name
       }
     })
@@ -76,7 +78,7 @@ export async function POST(
 
     const phase = await prisma.jobPhase.create({
       data: {
-        jobId: params.id,
+        jobId: resolvedParams.id,
         name: data.name,
         description: data.description,
         estimatedHours: data.estimatedHours,

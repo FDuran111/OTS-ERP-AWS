@@ -443,17 +443,17 @@ export default function DashboardPage() {
                           </Typography>
                           <Stack direction="row" spacing={1}>
                             <Chip 
-                              label={phaseData.summary.UG.COMPLETED} 
+                              label={phaseData.summary?.UG?.COMPLETED || 0} 
                               color="success" 
                               size="small" 
                             />
                             <Chip 
-                              label={phaseData.summary.UG.IN_PROGRESS} 
+                              label={phaseData.summary?.UG?.IN_PROGRESS || 0} 
                               color="warning" 
                               size="small" 
                             />
                             <Chip 
-                              label={phaseData.summary.UG.NOT_STARTED} 
+                              label={phaseData.summary?.UG?.NOT_STARTED || 0} 
                               color="default" 
                               size="small" 
                             />
@@ -465,17 +465,17 @@ export default function DashboardPage() {
                           </Typography>
                           <Stack direction="row" spacing={1}>
                             <Chip 
-                              label={phaseData.summary.RI.COMPLETED} 
+                              label={phaseData.summary?.RI?.COMPLETED || 0} 
                               color="success" 
                               size="small" 
                             />
                             <Chip 
-                              label={phaseData.summary.RI.IN_PROGRESS} 
+                              label={phaseData.summary?.RI?.IN_PROGRESS || 0} 
                               color="warning" 
                               size="small" 
                             />
                             <Chip 
-                              label={phaseData.summary.RI.NOT_STARTED} 
+                              label={phaseData.summary?.RI?.NOT_STARTED || 0} 
                               color="default" 
                               size="small" 
                             />
@@ -487,17 +487,17 @@ export default function DashboardPage() {
                           </Typography>
                           <Stack direction="row" spacing={1}>
                             <Chip 
-                              label={phaseData.summary.FN.COMPLETED} 
+                              label={phaseData.summary?.FN?.COMPLETED || 0} 
                               color="success" 
                               size="small" 
                             />
                             <Chip 
-                              label={phaseData.summary.FN.IN_PROGRESS} 
+                              label={phaseData.summary?.FN?.IN_PROGRESS || 0} 
                               color="warning" 
                               size="small" 
                             />
                             <Chip 
-                              label={phaseData.summary.FN.NOT_STARTED} 
+                              label={phaseData.summary?.FN?.NOT_STARTED || 0} 
                               color="default" 
                               size="small" 
                             />
@@ -505,13 +505,13 @@ export default function DashboardPage() {
                         </Grid>
                       </Grid>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Overall completion: {phaseData.completionRate}% ({phaseData.completedPhases}/{phaseData.totalPhases} phases)
+                        Overall completion: {phaseData.completionRate || 0}% ({phaseData.completedPhases || 0}/{phaseData.totalPhases || 0} phases)
                       </Typography>
                       <Typography variant="subtitle2" gutterBottom>
                         Recent Updates
                       </Typography>
                       <List dense>
-                        {phaseData.recentUpdates.slice(0, 3).map((update) => (
+                        {(phaseData.recentUpdates || []).slice(0, 3).map((update) => (
                           <ListItem key={update.id}>
                             <ListItemText
                               primary={`${update.jobNumber} - ${update.phaseName}`}

@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         phase: {
           select: {
             id: true,
-            name: true,
+            phase: true,
           }
         }
       },
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         customer: entry.job.customer.companyName || 
                  `${entry.job.customer.firstName} ${entry.job.customer.lastName}`,
         phaseId: entry.phaseId,
-        phaseName: entry.phase?.name,
+        phaseName: entry.phase?.phase,
         date: entry.date.toISOString().split('T')[0],
         startTime: entry.startTime,
         endTime: entry.endTime,
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
         phase: {
           select: {
             id: true,
-            name: true,
+            phase: true,
           }
         }
       }

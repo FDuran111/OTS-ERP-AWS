@@ -11,11 +11,12 @@ const updateTimeEntrySchema = z.object({
 // GET a specific time entry
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const timeEntry = await prisma.timeEntry.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: {
         user: {
           select: {
@@ -33,7 +34,7 @@ export async function GET(
         phase: {
           select: {
             id: true,
-            name: true,
+            phase: true,
           }
         }
       }
@@ -59,8 +60,9 @@ export async function GET(
 // PATCH update a time entry (stop timer)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const body = await request.json()
     const data = updateTimeEntrySchema.parse(body)
@@ -69,7 +71,7 @@ export async function PATCH(
     let calculatedHours = data.hours
     if (data.endTime && !calculatedHours) {
       const timeEntry = await prisma.timeEntry.findUnique({
-        where: { id: params.id }
+        where: { id: resolvedParams.id }
       })
       
       if (timeEntry) {
@@ -80,7 +82,7 @@ export async function PATCH(
     }
 
     const updatedEntry = await prisma.timeEntry.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         endTime: data.endTime ? new Date(data.endTime) : undefined,
         hours: calculatedHours,
@@ -103,7 +105,7 @@ export async function PATCH(
         phase: {
           select: {
             id: true,
-            name: true,
+            phase: true,
           }
         }
       }
@@ -129,11 +131,12 @@ export async function PATCH(
 // DELETE a time entry
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     await prisma.timeEntry.delete({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     return NextResponse.json({ success: true })

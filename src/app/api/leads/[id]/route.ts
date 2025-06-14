@@ -25,11 +25,12 @@ const updateLeadSchema = z.object({
 // GET single lead
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const lead = await prisma.lead.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: {
         assignedUser: {
           select: {
@@ -85,15 +86,16 @@ export async function GET(
 // PATCH update lead
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const body = await request.json()
     const data = updateLeadSchema.parse(body)
 
     // Check if status is being updated
     const currentLead = await prisma.lead.findUnique({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     if (!currentLead) {
@@ -103,13 +105,23 @@ export async function PATCH(
       )
     }
 
+    const updateData: any = {
+      ...data,
+      source: data.source as any,
+      lastContactDate: new Date()
+    }
+    
+    // Handle assignedTo separately for proper type safety
+    if (data.assignedTo) {
+      updateData.assignedUser = {
+        connect: { id: data.assignedTo }
+      }
+      delete updateData.assignedTo
+    }
+
     const lead = await prisma.lead.update({
-      where: { id: params.id },
-      data: {
-        ...data,
-        source: data.source as any,
-        lastContactDate: new Date()
-      },
+      where: { id: resolvedParams.id },
+      data: updateData,
       include: {
         assignedUser: {
           select: {
@@ -125,7 +137,7 @@ export async function PATCH(
     if (data.status && data.status !== currentLead.status) {
       await prisma.leadActivity.create({
         data: {
-          leadId: params.id,
+          leadId: resolvedParams.id,
           type: 'STATUS_CHANGE',
           description: `Status changed from ${currentLead.status} to ${data.status}`,
           completedDate: new Date(),
@@ -154,11 +166,12 @@ export async function PATCH(
 // DELETE lead
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     await prisma.lead.delete({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     return NextResponse.json({ message: 'Lead deleted successfully' })

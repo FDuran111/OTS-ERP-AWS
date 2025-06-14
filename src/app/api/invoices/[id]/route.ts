@@ -25,12 +25,13 @@ const updateInvoiceSchema = z.object({
 // GET specific invoice
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     // Mock specific invoice data with line items
     const mockInvoice = {
-      id: params.id,
+      id: resolvedParams.id,
       invoiceNumber: 'INV-2025-001',
       status: 'DRAFT',
       totalAmount: 2450.00,
@@ -103,15 +104,16 @@ export async function GET(
 // PATCH update invoice
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const body = await request.json()
     const data = updateInvoiceSchema.parse(body)
 
     // Mock successful update response
     const mockUpdatedInvoice = {
-      id: params.id,
+      id: resolvedParams.id,
       invoiceNumber: 'INV-2025-001',
       status: data.status || 'DRAFT',
       totalAmount: data.totalAmount || 2450.00,
@@ -158,8 +160,9 @@ export async function PATCH(
 // DELETE invoice
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     // Mock deletion success for now
     return NextResponse.json({ success: true })

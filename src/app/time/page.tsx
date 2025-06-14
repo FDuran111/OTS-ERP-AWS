@@ -31,10 +31,10 @@ import {
   TableRow,
   Paper,
   Button,
-  Grid2 as Grid,
   Stack,
   useMediaQuery,
   useTheme,
+  Grid,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,

@@ -5,11 +5,12 @@ import { z } from 'zod'
 // GET a single job
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const job = await prisma.job.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: {
         customer: true,
         assignments: {
@@ -71,8 +72,9 @@ const updateJobSchema = z.object({
 // PATCH update a job
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const body = await request.json()
     const data = updateJobSchema.parse(body)
@@ -81,13 +83,13 @@ export async function PATCH(
     if (data.assignedUserIds) {
       // Remove existing assignments
       await prisma.jobAssignment.deleteMany({
-        where: { jobId: params.id }
+        where: { jobId: resolvedParams.id }
       })
 
       // Create new assignments
       await prisma.jobAssignment.createMany({
         data: data.assignedUserIds.map(userId => ({
-          jobId: params.id,
+          jobId: resolvedParams.id,
           userId,
           assignedBy: 'system', // TODO: Get from authenticated user
         }))
@@ -96,7 +98,7 @@ export async function PATCH(
 
     // Update the job
     const job = await prisma.job.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         description: data.description,
         status: data.status,
@@ -142,50 +144,51 @@ export async function PATCH(
 // DELETE a job
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     // Delete related records first (if not using cascade delete)
     // Note: JobPhase has onDelete: Cascade, so it should be handled automatically
     await prisma.jobAssignment.deleteMany({
-      where: { jobId: params.id }
+      where: { jobId: resolvedParams.id }
     })
 
     // Delete job phases explicitly (in case cascade isn't working)
     await prisma.jobPhase.deleteMany({
-      where: { jobId: params.id }
+      where: { jobId: resolvedParams.id }
     })
 
     // Delete time entries
     await prisma.timeEntry.deleteMany({
-      where: { jobId: params.id }
+      where: { jobId: resolvedParams.id }
     })
 
     // Delete material usage
     await prisma.materialUsage.deleteMany({
-      where: { jobId: params.id }
+      where: { jobId: resolvedParams.id }
     })
 
     // Delete change orders
     await prisma.changeOrder.deleteMany({
-      where: { jobId: params.id }
+      where: { jobId: resolvedParams.id }
     })
 
     // Delete job notes
     await prisma.jobNote.deleteMany({
-      where: { jobId: params.id }
+      where: { jobId: resolvedParams.id }
     })
 
     // Finally delete the job
     await prisma.job.delete({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting job:', error)
     return NextResponse.json(
-      { error: 'Failed to delete job', details: error.message },
+      { error: 'Failed to delete job', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

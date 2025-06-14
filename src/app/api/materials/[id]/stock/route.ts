@@ -12,15 +12,16 @@ const stockUpdateSchema = z.object({
 // PATCH update material stock
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const body = await request.json()
     const data = stockUpdateSchema.parse(body)
 
     // Get current material
     const material = await prisma.material.findUnique({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     if (!material) {
@@ -48,7 +49,7 @@ export async function PATCH(
 
     // Update the material stock
     const updatedMaterial = await prisma.material.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: { inStock: newStock },
       include: {
         vendor: {

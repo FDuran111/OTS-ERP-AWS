@@ -17,13 +17,14 @@ const updatePhaseSchema = z.object({
 // GET a specific phase
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string, phaseId: string } }
+  { params }: { params: Promise<{ id: string, phaseId: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const phase = await prisma.jobPhase.findUnique({
       where: { 
-        id: params.phaseId,
-        jobId: params.id
+        id: resolvedParams.phaseId,
+        jobId: resolvedParams.id
       }
     })
 
@@ -47,8 +48,9 @@ export async function GET(
 // PATCH update a phase
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string, phaseId: string } }
+  { params }: { params: Promise<{ id: string, phaseId: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const body = await request.json()
     const data = updatePhaseSchema.parse(body)
@@ -74,8 +76,8 @@ export async function PATCH(
 
     const phase = await prisma.jobPhase.update({
       where: { 
-        id: params.phaseId,
-        jobId: params.id
+        id: resolvedParams.phaseId,
+        jobId: resolvedParams.id
       },
       data: updateData
     })
@@ -100,13 +102,14 @@ export async function PATCH(
 // DELETE a phase
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string, phaseId: string } }
+  { params }: { params: Promise<{ id: string, phaseId: string }> }
 ) {
+  const resolvedParams = await params
   try {
     await prisma.jobPhase.delete({
       where: { 
-        id: params.phaseId,
-        jobId: params.id
+        id: resolvedParams.phaseId,
+        jobId: resolvedParams.id
       }
     })
 

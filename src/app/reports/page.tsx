@@ -20,12 +20,12 @@ import {
   Divider,
   List,
   ListItemText,
-  Grid,
   Button,
   Paper,
   Select,
   FormControl,
   InputLabel,
+  Grid,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -396,7 +396,7 @@ export default function ReportsPage() {
 
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {quickStats.map((stat) => (
-              <Grid item xs={12} sm={6} md={3} key={stat.label}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.label}>
                 <Paper sx={{ p: 2 }}>
                   <Typography color="text.secondary" variant="caption">
                     {stat.label}
@@ -412,7 +412,7 @@ export default function ReportsPage() {
           </Typography>
           <Grid container spacing={3}>
             {reportTypes.map((report) => (
-              <Grid item xs={12} md={6} lg={4} key={report.title}>
+              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={report.title}>
                 <Card>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>

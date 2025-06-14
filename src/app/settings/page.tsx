@@ -20,13 +20,13 @@ import {
   Divider,
   List,
   ListItemText,
-  Grid,
   Switch,
   Button,
   TextField,
   FormControlLabel,
   Tabs,
   Tab,
+  Grid,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -289,7 +289,7 @@ export default function SettingsPage() {
 
               <TabPanel value={tabValue} index={0}>
                 <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="Company Name"
@@ -317,7 +317,7 @@ export default function SettingsPage() {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="License Number"
@@ -343,7 +343,7 @@ export default function SettingsPage() {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Button
                       variant="contained"
                       startIcon={<Save />}
@@ -397,12 +397,12 @@ export default function SettingsPage() {
                   Notification Types
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <FormControlLabel control={<Switch defaultChecked />} label="New Job Assignments" />
                     <FormControlLabel control={<Switch defaultChecked />} label="Schedule Changes" />
                     <FormControlLabel control={<Switch defaultChecked />} label="Invoice Reminders" />
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <FormControlLabel control={<Switch />} label="Material Low Stock Alerts" />
                     <FormControlLabel control={<Switch defaultChecked />} label="Customer Messages" />
                     <FormControlLabel control={<Switch />} label="Daily Summary" />
@@ -447,7 +447,7 @@ export default function SettingsPage() {
                   Change Password
                 </Typography>
                 <Grid container spacing={2} sx={{ maxWidth: 600 }}>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       fullWidth
                       type="password"
@@ -455,7 +455,7 @@ export default function SettingsPage() {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       fullWidth
                       type="password"
@@ -463,7 +463,7 @@ export default function SettingsPage() {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       fullWidth
                       type="password"

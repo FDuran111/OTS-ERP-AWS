@@ -5,11 +5,12 @@ import { z } from 'zod'
 // GET a single customer
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const customer = await prisma.customer.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: {
         jobs: {
           select: {
@@ -59,14 +60,15 @@ const updateCustomerSchema = z.object({
 // PATCH update a customer
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const body = await request.json()
     const data = updateCustomerSchema.parse(body)
 
     const customer = await prisma.customer.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         companyName: data.companyName,
         firstName: data.firstName,
@@ -100,12 +102,13 @@ export async function PATCH(
 // DELETE a customer
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     // Check if customer has any jobs
     const jobCount = await prisma.job.count({
-      where: { customerId: params.id }
+      where: { customerId: resolvedParams.id }
     })
 
     if (jobCount > 0) {
@@ -116,7 +119,7 @@ export async function DELETE(
     }
 
     await prisma.customer.delete({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     return NextResponse.json({ success: true })

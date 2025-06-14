@@ -35,6 +35,11 @@ export async function GET(request: NextRequest) {
         }
       },
       include: {
+        user: {
+          select: {
+            name: true
+          }
+        },
         job: {
           select: {
             jobNumber: true,
@@ -60,7 +65,7 @@ export async function GET(request: NextRequest) {
     }> = {}
 
     timeEntries.forEach(entry => {
-      const employeeName = entry.employeeName
+      const employeeName = entry.user.name
       if (!productivityByEmployee[employeeName]) {
         productivityByEmployee[employeeName] = {
           employeeName,
@@ -83,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate unique jobs worked and average hours per day for each employee
     Object.keys(productivityByEmployee).forEach(employeeName => {
-      const employeeEntries = timeEntries.filter(entry => entry.employeeName === employeeName)
+      const employeeEntries = timeEntries.filter(entry => entry.user.name === employeeName)
       const uniqueJobs = new Set(employeeEntries.map(entry => entry.jobId))
       const uniqueDays = new Set(employeeEntries.map(entry => entry.date.toDateString()))
       
@@ -157,7 +162,7 @@ export async function GET(request: NextRequest) {
       const dayEntries = timeEntries.filter(entry => 
         entry.date.toISOString().split('T')[0] === dateStr
       )
-      const uniqueEmployees = new Set(dayEntries.map(entry => entry.employeeName))
+      const uniqueEmployees = new Set(dayEntries.map(entry => entry.user.name))
       dailyHours[dateStr].employeeCount = uniqueEmployees.size
     })
 
@@ -170,7 +175,7 @@ export async function GET(request: NextRequest) {
       .slice(0, 20)
       .map(entry => ({
         id: entry.id,
-        employeeName: entry.employeeName,
+        employeeName: entry.user.name,
         hours: entry.hours,
         date: entry.date,
         description: entry.description,
@@ -180,7 +185,7 @@ export async function GET(request: NextRequest) {
       }))
 
     // Calculate efficiency metrics
-    const uniqueEmployees = new Set(timeEntries.map(entry => entry.employeeName)).size
+    const uniqueEmployees = new Set(timeEntries.map(entry => entry.user.name)).size
     const uniqueJobs = new Set(timeEntries.map(entry => entry.jobId)).size
     const averageHoursPerEmployee = uniqueEmployees > 0 ? totalHours / uniqueEmployees : 0
     const averageHoursPerJob = uniqueJobs > 0 ? totalHours / uniqueJobs : 0

@@ -20,11 +20,12 @@ const updateMaterialSchema = z.object({
 // GET a specific material
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const material = await prisma.material.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: {
         vendor: {
           select: {
@@ -71,14 +72,15 @@ export async function GET(
 // PATCH update a material
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     const body = await request.json()
     const data = updateMaterialSchema.parse(body)
 
     const material = await prisma.material.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         name: data.name,
         description: data.description,
@@ -124,24 +126,25 @@ export async function PATCH(
 // DELETE a material (soft delete)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
     // Check if material has been used in any jobs
     const usageCount = await prisma.materialUsage.count({
-      where: { materialId: params.id }
+      where: { materialId: resolvedParams.id }
     })
 
     if (usageCount > 0) {
       // Soft delete if material has been used
       await prisma.material.update({
-        where: { id: params.id },
+        where: { id: resolvedParams.id },
         data: { active: false }
       })
     } else {
       // Hard delete if never used
       await prisma.material.delete({
-        where: { id: params.id }
+        where: { id: resolvedParams.id }
       })
     }
 

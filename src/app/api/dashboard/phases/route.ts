@@ -5,7 +5,7 @@ export async function GET() {
   try {
     // Get phase summary grouped by phase type and status
     const phaseSummary = await prisma.jobPhase.groupBy({
-      by: ['phaseName', 'status'],
+      by: ['name', 'status'],
       _count: {
         id: true
       }
@@ -14,10 +14,10 @@ export async function GET() {
     // Transform to the expected format
     const summary: Record<string, Record<string, number>> = {}
     phaseSummary.forEach(phase => {
-      if (!summary[phase.phaseName]) {
-        summary[phase.phaseName] = {}
+      if (!summary[phase.name]) {
+        summary[phase.name] = {}
       }
-      summary[phase.phaseName][phase.status] = phase._count.id
+      summary[phase.name][phase.status] = phase._count.id
     })
 
     // Get total counts
@@ -46,7 +46,7 @@ export async function GET() {
 
     const transformedRecentUpdates = recentUpdates.map(phase => ({
       id: phase.id,
-      phaseName: phase.phaseName,
+      phaseName: phase.name,
       status: phase.status,
       jobNumber: phase.job.jobNumber,
       customer: phase.job.customer.companyName || `${phase.job.customer.firstName} ${phase.job.customer.lastName}`,

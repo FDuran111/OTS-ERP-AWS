@@ -42,7 +42,7 @@ import {
   Select,
   SelectChangeEvent,
   Collapse,
-  Grid2 as Grid,
+  Grid,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -606,7 +606,7 @@ export default function JobsPage() {
               </Box>
 
               <Collapse in={filtersExpanded}>
-                <Grid spacing={2}>
+                <Grid container spacing={2}>
                   <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Status</InputLabel>

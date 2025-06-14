@@ -23,7 +23,7 @@ import {
   ListItemText,
   Button,
   Paper,
-  Grid2 as Grid,
+  Grid,
   CircularProgress,
   Alert,
   Stack,
