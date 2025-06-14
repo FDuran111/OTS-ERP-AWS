@@ -43,6 +43,7 @@ interface Invoice {
   }
   job: {
     jobNumber: string
+    description?: string
   }
 }
 
