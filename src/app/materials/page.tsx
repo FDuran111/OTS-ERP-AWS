@@ -31,7 +31,9 @@ import {
   Button,
   TextField,
   InputAdornment,
-  Grid,
+  Grid2 as Grid,
+  CircularProgress,
+  Alert,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -51,7 +53,11 @@ import {
   Warning,
   CheckCircle,
   Error,
+  TrendingUp,
 } from '@mui/icons-material'
+import AddMaterialDialog from '@/components/materials/AddMaterialDialog'
+import EditMaterialDialog from '@/components/materials/EditMaterialDialog'
+import MaterialActionsMenu from '@/components/materials/MaterialActionsMenu'
 
 const drawerWidth = 240
 
@@ -62,70 +68,33 @@ interface User {
   role: string
 }
 
-const mockMaterials = [
-  {
-    id: 'MAT001',
-    name: '12 AWG THHN Wire - Black',
-    category: 'Wire',
-    quantity: 2500,
-    unit: 'ft',
-    minStock: 1000,
-    location: 'A1-B2',
-    cost: '$0.45/ft',
-    status: 'In Stock',
-  },
-  {
-    id: 'MAT002',
-    name: '200A Main Breaker Panel',
-    category: 'Panels',
-    quantity: 5,
-    unit: 'units',
-    minStock: 3,
-    location: 'C3-D1',
-    cost: '$425.00',
-    status: 'In Stock',
-  },
-  {
-    id: 'MAT003',
-    name: 'Duplex Receptacle - White',
-    category: 'Devices',
-    quantity: 45,
-    unit: 'units',
-    minStock: 50,
-    location: 'B2-C4',
-    cost: '$3.25',
-    status: 'Low Stock',
-  },
-  {
-    id: 'MAT004',
-    name: '1/2" EMT Conduit',
-    category: 'Conduit',
-    quantity: 0,
-    unit: 'sticks',
-    minStock: 20,
-    location: 'D1-E2',
-    cost: '$8.50',
-    status: 'Out of Stock',
-  },
-  {
-    id: 'MAT005',
-    name: 'Single Pole Switch - Ivory',
-    category: 'Devices',
-    quantity: 120,
-    unit: 'units',
-    minStock: 25,
-    location: 'B2-C5',
-    cost: '$2.75',
-    status: 'In Stock',
-  },
-]
+interface Material {
+  id: string
+  code: string
+  name: string
+  description?: string
+  category: string
+  unit: string
+  inStock: number
+  minStock: number
+  cost: number
+  price: number
+  location?: string
+  status: string
+  vendor?: {
+    id: string
+    name: string
+    code: string
+  }
+}
 
-const inventoryStats = [
-  { title: 'Total Items', value: '156', icon: InventoryIcon, color: '#1d8cf8' },
-  { title: 'Low Stock', value: '12', icon: Warning, color: '#fd5d93' },
-  { title: 'Out of Stock', value: '3', icon: Error, color: '#ff8d72' },
-  { title: 'In Stock', value: '141', icon: CheckCircle, color: '#00bf9a' },
-]
+interface Stats {
+  title: string
+  value: string
+  icon: string
+  color: string
+}
+
 
 const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
@@ -133,6 +102,7 @@ const menuItems = [
   { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
   { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
   { text: 'Customers', icon: PeopleIcon, path: '/customers' },
+  { text: 'Leads', icon: TrendingUp, path: '/leads' },
   { text: 'Materials', icon: InventoryIcon, path: '/materials' },
   { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
   { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
@@ -158,6 +128,13 @@ export default function MaterialsPage() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [stats, setStats] = useState<Stats[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -166,7 +143,39 @@ export default function MaterialsPage() {
       return
     }
     setUser(JSON.parse(storedUser))
+    fetchMaterials()
+    fetchStats()
   }, [router])
+
+  const fetchMaterials = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/materials')
+      if (!response.ok) {
+        throw new Error('Failed to fetch materials')
+      }
+      const data = await response.json()
+      setMaterials(data)
+      setError(null)
+    } catch (error) {
+      console.error('Error fetching materials:', error)
+      setError('Failed to load materials')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/materials/stats')
+      if (response.ok) {
+        const data = await response.json()
+        setStats(data.stats)
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error)
+    }
+  }
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -184,6 +193,59 @@ export default function MaterialsPage() {
 
   const handleMenuClose = () => {
     setAnchorEl(null)
+  }
+
+  const handleAddMaterial = () => {
+    setAddDialogOpen(true)
+  }
+
+  const handleEditMaterial = (material: Material) => {
+    setSelectedMaterial(material)
+    setEditDialogOpen(true)
+  }
+
+  const handleDeleteMaterial = async (material: Material) => {
+    try {
+      const response = await fetch(`/api/materials/${material.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete material')
+      }
+
+      await fetchMaterials()
+      await fetchStats()
+    } catch (error) {
+      console.error('Error deleting material:', error)
+      alert(error instanceof Error ? error.message : 'Failed to delete material')
+    }
+  }
+
+  const handleMaterialCreated = () => {
+    fetchMaterials()
+    fetchStats()
+  }
+
+  const handleMaterialUpdated = () => {
+    fetchMaterials()
+    fetchStats()
+  }
+
+  const handleStockUpdated = () => {
+    fetchMaterials()
+    fetchStats()
+  }
+
+  const getStatsIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'inventory': return InventoryIcon
+      case 'warning': return Warning
+      case 'error': return Error
+      case 'check_circle': return CheckCircle
+      default: return InventoryIcon
+    }
   }
 
   if (!user) return null
@@ -331,6 +393,7 @@ export default function MaterialsPage() {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
+              onClick={handleAddMaterial}
               sx={{
                 backgroundColor: '#e14eca',
                 '&:hover': {
@@ -343,36 +406,39 @@ export default function MaterialsPage() {
           </Box>
 
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            {inventoryStats.map((stat) => (
-              <Grid item xs={12} sm={6} md={3} key={stat.title}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 48,
-                          height: 48,
-                          borderRadius: '12px',
-                          backgroundColor: `${stat.color}20`,
-                          mr: 2,
-                        }}
-                      >
-                        <stat.icon sx={{ color: stat.color }} />
+            {stats.map((stat) => {
+              const IconComponent = getStatsIconComponent(stat.icon)
+              return (
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 48,
+                            height: 48,
+                            borderRadius: '12px',
+                            backgroundColor: `${stat.color}20`,
+                            mr: 2,
+                          }}
+                        >
+                          <IconComponent sx={{ color: stat.color }} />
+                        </Box>
+                        <Box>
+                          <Typography color="text.secondary" variant="caption">
+                            {stat.title}
+                          </Typography>
+                          <Typography variant="h5">{stat.value}</Typography>
+                        </Box>
                       </Box>
-                      <Box>
-                        <Typography color="text.secondary" variant="caption">
-                          {stat.title}
-                        </Typography>
-                        <Typography variant="h5">{stat.value}</Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )
+            })}
           </Grid>
 
           <Card sx={{ mb: 3 }}>
@@ -393,58 +459,107 @@ export default function MaterialsPage() {
             </CardContent>
           </Card>
 
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Quantity</TableCell>
-                  <TableCell>Min Stock</TableCell>
-                  <TableCell>Location</TableCell>
-                  <TableCell>Unit Cost</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {mockMaterials
-                  .filter(material => 
-                    material.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    material.category.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map((material) => (
-                    <TableRow key={material.id} hover>
-                      <TableCell>{material.id}</TableCell>
-                      <TableCell>{material.name}</TableCell>
-                      <TableCell>{material.category}</TableCell>
-                      <TableCell>
-                        {material.quantity} {material.unit}
-                      </TableCell>
-                      <TableCell>
-                        {material.minStock} {material.unit}
-                      </TableCell>
-                      <TableCell>{material.location}</TableCell>
-                      <TableCell>{material.cost}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={material.status}
-                          color={getStatusColor(material.status) as any}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small">
-                          <MoreVertIcon />
-                        </IconButton>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Code</TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Category</TableCell>
+                    <TableCell>Stock</TableCell>
+                    <TableCell>Min Stock</TableCell>
+                    <TableCell>Location</TableCell>
+                    <TableCell>Cost</TableCell>
+                    <TableCell>Price</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {materials
+                    .filter(material => 
+                      material.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      material.category.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((material) => (
+                      <TableRow key={material.id} hover>
+                        <TableCell>{material.code}</TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2">{material.name}</Typography>
+                            {material.description && (
+                              <Typography variant="caption" color="text.secondary">
+                                {material.description}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>{material.category}</TableCell>
+                        <TableCell>
+                          {material.inStock} {material.unit}
+                        </TableCell>
+                        <TableCell>
+                          {material.minStock} {material.unit}
+                        </TableCell>
+                        <TableCell>{material.location || '-'}</TableCell>
+                        <TableCell>${material.cost.toFixed(2)}</TableCell>
+                        <TableCell>${material.price.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={material.status}
+                            color={getStatusColor(material.status) as any}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <MaterialActionsMenu
+                            material={material}
+                            onEdit={handleEditMaterial}
+                            onDelete={handleDeleteMaterial}
+                            onStockUpdated={handleStockUpdated}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  {materials.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={10} align="center">
+                        <Typography color="text.secondary">No materials found</Typography>
                       </TableCell>
                     </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          <AddMaterialDialog
+            open={addDialogOpen}
+            onClose={() => setAddDialogOpen(false)}
+            onMaterialCreated={handleMaterialCreated}
+          />
+
+          <EditMaterialDialog
+            open={editDialogOpen}
+            material={selectedMaterial}
+            onClose={() => {
+              setEditDialogOpen(false)
+              setSelectedMaterial(null)
+            }}
+            onMaterialUpdated={handleMaterialUpdated}
+          />
         </Container>
       </Box>
     </Box>

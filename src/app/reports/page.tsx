@@ -100,12 +100,10 @@ const reportTypes = [
   },
 ]
 
-const quickStats = [
-  { label: 'Revenue This Month', value: '$125,450' },
-  { label: 'Jobs Completed', value: '47' },
-  { label: 'Average Job Value', value: '$2,668' },
-  { label: 'Outstanding Invoices', value: '$22,275' },
-]
+interface QuickStat {
+  label: string
+  value: string
+}
 
 const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
@@ -113,6 +111,7 @@ const menuItems = [
   { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
   { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
   { text: 'Customers', icon: PeopleIcon, path: '/customers' },
+  { text: 'Leads', icon: TrendingUp, path: '/leads' },
   { text: 'Materials', icon: InventoryIcon, path: '/materials' },
   { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
   { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
@@ -125,6 +124,8 @@ export default function ReportsPage() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [timeRange, setTimeRange] = useState('month')
+  const [quickStats, setQuickStats] = useState<QuickStat[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -133,7 +134,57 @@ export default function ReportsPage() {
       return
     }
     setUser(JSON.parse(storedUser))
-  }, [router])
+    fetchQuickStats()
+  }, [router, timeRange])
+
+  const fetchQuickStats = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/reports/quick-stats?timeRange=${timeRange}`)
+      if (response.ok) {
+        const data = await response.json()
+        
+        const rangeLabelMap: Record<string, string> = {
+          week: 'This Week',
+          month: 'This Month', 
+          quarter: 'This Quarter',
+          year: 'This Year'
+        }
+        
+        const rangeLabel = rangeLabelMap[timeRange] || 'This Month'
+        
+        setQuickStats([
+          { 
+            label: `Revenue ${rangeLabel}`, 
+            value: `$${data.revenueThisPeriod.toLocaleString()}` 
+          },
+          { 
+            label: 'Jobs Completed', 
+            value: data.jobsCompleted.toString() 
+          },
+          { 
+            label: 'Average Job Value', 
+            value: `$${Math.round(data.averageJobValue).toLocaleString()}` 
+          },
+          { 
+            label: 'Outstanding Invoices', 
+            value: `$${data.outstandingInvoices.toLocaleString()}` 
+          },
+        ])
+      }
+    } catch (error) {
+      console.error('Error fetching quick stats:', error)
+      // Fallback to empty stats
+      setQuickStats([
+        { label: 'Revenue This Month', value: '$0' },
+        { label: 'Jobs Completed', value: '0' },
+        { label: 'Average Job Value', value: '$0' },
+        { label: 'Outstanding Invoices', value: '$0' },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -151,6 +202,39 @@ export default function ReportsPage() {
 
   const handleMenuClose = () => {
     setAnchorEl(null)
+  }
+
+  const handleGenerateReport = async (reportType: string) => {
+    try {
+      const apiEndpoints: Record<string, string> = {
+        'Revenue Report': '/api/reports/revenue',
+        'Job Performance': '/api/reports/job-performance',
+        'Crew Productivity': '/api/reports/crew-productivity',
+        'Material Usage': '/api/reports/material-usage',
+        'Customer Report': '/api/reports/customer',
+        'Invoice Summary': '/api/reports/invoice-summary'
+      }
+
+      const endpoint = apiEndpoints[reportType]
+      if (!endpoint) {
+        alert('Report type not implemented yet')
+        return
+      }
+
+      const response = await fetch(`${endpoint}?timeRange=${timeRange}`)
+      if (response.ok) {
+        const data = await response.json()
+        
+        // For now, show the data in console and alert
+        console.log(`${reportType} Data:`, data)
+        alert(`${reportType} generated successfully! Check console for data. In a real app, this would download a PDF or open a detailed report view.`)
+      } else {
+        throw new Error('Failed to generate report')
+      }
+    } catch (error) {
+      console.error('Error generating report:', error)
+      alert('Failed to generate report. Please try again.')
+    }
   }
 
   if (!user) return null
@@ -361,6 +445,7 @@ export default function ReportsPage() {
                         size="small"
                         startIcon={<DownloadIcon />}
                         sx={{ color: report.color }}
+                        onClick={() => handleGenerateReport(report.title)}
                       >
                         Generate
                       </Button>

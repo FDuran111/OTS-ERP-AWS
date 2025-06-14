@@ -45,6 +45,7 @@ import {
   Security,
   Palette,
   Save,
+  TrendingUp,
 } from '@mui/icons-material'
 
 const drawerWidth = 240
@@ -84,6 +85,7 @@ const menuItems = [
   { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
   { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
   { text: 'Customers', icon: PeopleIcon, path: '/customers' },
+  { text: 'Leads', icon: TrendingUp, path: '/leads' },
   { text: 'Materials', icon: InventoryIcon, path: '/materials' },
   { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
   { text: 'Reports', icon: AssessmentIcon, path: '/reports' },

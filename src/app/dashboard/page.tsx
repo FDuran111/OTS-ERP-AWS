@@ -39,6 +39,7 @@ import {
   AttachMoney,
   AccessTime,
   Group,
+  TrendingUp,
 } from '@mui/icons-material'
 
 const drawerWidth = 240
@@ -50,48 +51,65 @@ interface User {
   role: string
 }
 
-const stats = [
-  {
-    title: 'Active Jobs',
-    value: '12',
-    change: '+2 from last week',
-    icon: WorkIcon,
-    color: '#E53E3E', // Ortmeier red
-  },
-  {
-    title: 'Hours Today',
-    value: '48',
-    subtitle: '6 crews active',
-    icon: AccessTime,
-    color: '#F6E05E', // Safety yellow
-  },
-  {
-    title: 'Revenue MTD',
-    value: '$45,231',
-    change: '+20.1% from last month',
-    icon: AttachMoney,
-    color: '#68D391', // Success green
-  },
-  {
-    title: 'Active Crews',
-    value: '8',
-    subtitle: 'All crews available',
-    icon: Group,
-    color: '#63B3ED', // Info blue
-  },
-]
+interface Stat {
+  title: string
+  value: string
+  change?: string
+  subtitle?: string
+  icon: string
+  color: string
+}
 
-const recentJobs = [
-  { id: '25-001-A12', title: 'Service Call - Panel Upgrade', status: 'In Progress', color: 'success' },
-  { id: '25-002-B34', title: 'Commercial - Office Buildout', status: 'Scheduled', color: 'warning' },
-  { id: '25-003-C56', title: 'Service Call - Outlet Repair', status: 'Completed', color: 'info' },
-]
+interface RecentJob {
+  id: string
+  title: string
+  customer: string
+  status: string
+  updatedAt: string
+}
+
+interface PhaseData {
+  summary: {
+    UG: { NOT_STARTED: number, IN_PROGRESS: number, COMPLETED: number }
+    RI: { NOT_STARTED: number, IN_PROGRESS: number, COMPLETED: number }
+    FN: { NOT_STARTED: number, IN_PROGRESS: number, COMPLETED: number }
+  }
+  totalPhases: number
+  completedPhases: number
+  inProgressPhases: number
+  completionRate: number
+  recentUpdates: Array<{
+    id: string
+    phaseName: string
+    status: string
+    jobNumber: string
+    customer: string
+    updatedAt: string
+  }>
+}
+
+// Icon mapping for stats
+const iconMap = {
+  'work': WorkIcon,
+  'access_time': AccessTime,
+  'attach_money': AttachMoney,
+  'pending_actions': Group,
+}
+
+const colorMap = {
+  'primary': '#E53E3E', // Ortmeier red
+  'success': '#68D391', // Success green
+  'warning': '#F6E05E', // Safety yellow
+  'info': '#63B3ED', // Info blue
+}
 
 const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
   { text: 'Jobs', icon: WorkIcon, path: '/jobs' },
   { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
+  { text: 'Time Tracking', icon: AccessTime, path: '/time' },
   { text: 'Customers', icon: PeopleIcon, path: '/customers' },
+  { text: 'Leads', icon: TrendingUp, path: '/leads' },
   { text: 'Materials', icon: InventoryIcon, path: '/materials' },
   { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
   { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
@@ -103,6 +121,10 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [stats, setStats] = useState<Stat[]>([])
+  const [recentJobs, setRecentJobs] = useState<RecentJob[]>([])
+  const [phaseData, setPhaseData] = useState<PhaseData | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -111,7 +133,43 @@ export default function DashboardPage() {
       return
     }
     setUser(JSON.parse(storedUser))
+    fetchDashboardData()
   }, [router])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      const [statsResponse, phasesResponse] = await Promise.all([
+        fetch('/api/dashboard/stats'),
+        fetch('/api/dashboard/phases')
+      ])
+      
+      if (!statsResponse.ok) {
+        throw new Error('Failed to fetch dashboard data')
+      }
+      
+      const statsData = await statsResponse.json()
+      
+      // Transform stats with icons
+      const transformedStats = statsData.stats.map((stat: any) => ({
+        ...stat,
+        icon: iconMap[stat.icon as keyof typeof iconMap] || WorkIcon,
+        color: colorMap[stat.color as keyof typeof colorMap] || '#E53E3E',
+      }))
+      
+      setStats(transformedStats)
+      setRecentJobs(statsData.recentJobs)
+      
+      if (phasesResponse.ok) {
+        const phasesData = await phasesResponse.json()
+        setPhaseData(phasesData)
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -273,116 +331,217 @@ export default function DashboardPage() {
           </Typography>
 
           <Grid container spacing={3}>
-            {stats.map((stat) => (
-              <Grid item xs={12} sm={6} md={3} key={stat.title}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 48,
-                          height: 48,
-                          borderRadius: '12px',
-                          backgroundColor: `${stat.color}20`,
-                          mr: 2,
-                        }}
-                      >
-                        <stat.icon sx={{ color: stat.color }} />
+            {loading ? (
+              Array.from({ length: 4 }).map((_, index) => (
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+                  <Card>
+                    <CardContent>
+                      <Typography>Loading...</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            ) : (
+              stats.map((stat) => (
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 48,
+                            height: 48,
+                            borderRadius: '12px',
+                            backgroundColor: `${stat.color}20`,
+                            mr: 2,
+                          }}
+                        >
+                          <stat.icon sx={{ color: stat.color }} />
+                        </Box>
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography color="text.secondary" variant="caption">
+                            {stat.title}
+                          </Typography>
+                          <Typography variant="h5">{stat.value}</Typography>
+                        </Box>
                       </Box>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography color="text.secondary" variant="caption">
-                          {stat.title}
+                      {stat.change && (
+                        <Typography variant="caption" color="success.main">
+                          {stat.change}
                         </Typography>
-                        <Typography variant="h5">{stat.value}</Typography>
-                      </Box>
-                    </Box>
-                    {stat.change && (
-                      <Typography variant="caption" color="success.main">
-                        {stat.change}
-                      </Typography>
-                    )}
-                    {stat.subtitle && (
-                      <Typography variant="caption" color="text.secondary">
-                        {stat.subtitle}
-                      </Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
+                      )}
+                      {stat.subtitle && (
+                        <Typography variant="caption" color="text.secondary">
+                          {stat.subtitle}
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            )}
           </Grid>
 
           <Grid container spacing={3} sx={{ mt: 2 }}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     Recent Jobs
                   </Typography>
                   <List>
-                    {recentJobs.map((job) => (
-                      <ListItem
-                        key={job.id}
-                        secondaryAction={
-                          <Chip
-                            label={job.status}
-                            color={job.color as any}
-                            size="small"
-                          />
-                        }
-                      >
-                        <ListItemText
-                          primary={job.id}
-                          secondary={job.title}
-                        />
+                    {loading ? (
+                      <ListItem>
+                        <ListItemText primary="Loading recent jobs..." />
                       </ListItem>
-                    ))}
+                    ) : recentJobs.length === 0 ? (
+                      <ListItem>
+                        <ListItemText primary="No recent jobs" />
+                      </ListItem>
+                    ) : (
+                      recentJobs.map((job) => (
+                        <ListItem
+                          key={job.id}
+                          secondaryAction={
+                            <Chip
+                              label={job.status.replace('_', ' ')}
+                              color={job.status === 'completed' ? 'success' : 
+                                     job.status === 'in_progress' ? 'warning' : 'default'}
+                              size="small"
+                            />
+                          }
+                        >
+                          <ListItemText
+                            primary={job.title}
+                            secondary={job.customer}
+                          />
+                        </ListItem>
+                      ))
+                    )}
                   </List>
                 </CardContent>
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
-                    Upcoming Schedule
+                    Job Phases Progress
                   </Typography>
-                  <List>
-                    <ListItem>
-                      <ListItemText
-                        primary="Tomorrow - 8:00 AM"
-                        secondary={
-                          <Stack>
-                            <Typography variant="body2">
-                              25-004-D78 - Residential Rewire
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Crew: Team Alpha
-                            </Typography>
+                  {loading ? (
+                    <Typography>Loading phases...</Typography>
+                  ) : phaseData ? (
+                    <Box>
+                      <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid size={4}>
+                          <Typography variant="caption" color="text.secondary">
+                            Underground
+                          </Typography>
+                          <Stack direction="row" spacing={1}>
+                            <Chip 
+                              label={phaseData.summary.UG.COMPLETED} 
+                              color="success" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary.UG.IN_PROGRESS} 
+                              color="warning" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary.UG.NOT_STARTED} 
+                              color="default" 
+                              size="small" 
+                            />
                           </Stack>
-                        }
-                      />
-                    </ListItem>
-                    <ListItem>
-                      <ListItemText
-                        primary="Tomorrow - 10:00 AM"
-                        secondary={
-                          <Stack>
-                            <Typography variant="body2">
-                              25-005-E90 - Service Call
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Crew: Team Bravo
-                            </Typography>
+                        </Grid>
+                        <Grid size={4}>
+                          <Typography variant="caption" color="text.secondary">
+                            Rough-in
+                          </Typography>
+                          <Stack direction="row" spacing={1}>
+                            <Chip 
+                              label={phaseData.summary.RI.COMPLETED} 
+                              color="success" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary.RI.IN_PROGRESS} 
+                              color="warning" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary.RI.NOT_STARTED} 
+                              color="default" 
+                              size="small" 
+                            />
                           </Stack>
-                        }
-                      />
-                    </ListItem>
-                  </List>
+                        </Grid>
+                        <Grid size={4}>
+                          <Typography variant="caption" color="text.secondary">
+                            Finish
+                          </Typography>
+                          <Stack direction="row" spacing={1}>
+                            <Chip 
+                              label={phaseData.summary.FN.COMPLETED} 
+                              color="success" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary.FN.IN_PROGRESS} 
+                              color="warning" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary.FN.NOT_STARTED} 
+                              color="default" 
+                              size="small" 
+                            />
+                          </Stack>
+                        </Grid>
+                      </Grid>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Overall completion: {phaseData.completionRate}% ({phaseData.completedPhases}/{phaseData.totalPhases} phases)
+                      </Typography>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Recent Updates
+                      </Typography>
+                      <List dense>
+                        {phaseData.recentUpdates.slice(0, 3).map((update) => (
+                          <ListItem key={update.id}>
+                            <ListItemText
+                              primary={`${update.jobNumber} - ${update.phaseName}`}
+                              secondary={
+                                <Stack>
+                                  <Typography variant="body2">
+                                    {update.customer}
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Chip
+                                      label={update.status.replace('_', ' ')}
+                                      color={update.status === 'COMPLETED' ? 'success' : 'warning'}
+                                      size="small"
+                                    />
+                                    <Typography variant="caption" color="text.secondary">
+                                      {new Date(update.updatedAt).toLocaleDateString()}
+                                    </Typography>
+                                  </Box>
+                                </Stack>
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Box>
+                  ) : (
+                    <Typography color="text.secondary">
+                      No phase data available
+                    </Typography>
+                  )}
                 </CardContent>
               </Card>
             </Grid>

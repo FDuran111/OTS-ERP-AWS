@@ -53,8 +53,11 @@ export default function LoginPage() {
       // Store user data in localStorage for client-side use
       localStorage.setItem('user', JSON.stringify(data.user))
       
-      // Use window.location for a full page navigation to ensure cookies are sent
-      window.location.href = '/dashboard'
+      console.log('Login successful, redirecting to dashboard...')
+      console.log('User data:', data.user)
+      
+      // Use window.location.replace for immediate navigation
+      window.location.replace('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {

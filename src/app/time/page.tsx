@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import StartTimerDialog from '@/components/time/StartTimerDialog'
+import ActiveTimerCard from '@/components/time/ActiveTimerCard'
 import {
   Box,
   Container,
@@ -29,8 +31,10 @@ import {
   TableRow,
   Paper,
   Button,
-  Grid,
+  Grid2 as Grid,
   Stack,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -49,6 +53,7 @@ import {
   Timer,
   Today,
   Group,
+  TrendingUp,
 } from '@mui/icons-material'
 
 const drawerWidth = 240
@@ -60,76 +65,40 @@ interface User {
   role: string
 }
 
-const mockTimeEntries = [
-  {
-    id: 1,
-    employee: 'John Smith',
-    jobId: '25-001-A12',
-    jobTitle: 'Panel Upgrade',
-    date: '2025-05-28',
-    startTime: '8:00 AM',
-    endTime: '12:30 PM',
-    hours: 4.5,
-    status: 'Approved',
-  },
-  {
-    id: 2,
-    employee: 'Mike Johnson',
-    jobId: '25-002-B34',
-    jobTitle: 'Office Buildout',
-    date: '2025-05-28',
-    startTime: '7:30 AM',
-    endTime: '3:30 PM',
-    hours: 8.0,
-    status: 'Pending',
-  },
-  {
-    id: 3,
-    employee: 'Sarah Davis',
-    jobId: '25-003-C56',
-    jobTitle: 'Outlet Repair',
-    date: '2025-05-27',
-    startTime: '9:00 AM',
-    endTime: '11:00 AM',
-    hours: 2.0,
-    status: 'Approved',
-  },
-  {
-    id: 4,
-    employee: 'Tom Wilson',
-    jobId: '25-004-D78',
-    jobTitle: 'Residential Rewire',
-    date: '2025-05-28',
-    startTime: '8:00 AM',
-    endTime: 'Active',
-    hours: 0,
-    status: 'Active',
-  },
-]
+interface TimeEntry {
+  id: string
+  userId: string
+  userName: string
+  jobId: string
+  jobNumber: string
+  jobTitle: string
+  customer: string
+  phaseId?: string
+  phaseName?: string
+  date: string
+  startTime: string
+  endTime?: string
+  hours: number
+  calculatedHours?: number
+  description?: string
+  isActive: boolean
+  createdAt: string
+}
 
-const activeTimers = [
-  {
-    employee: 'Tom Wilson',
-    jobId: '25-004-D78',
-    jobTitle: 'Residential Rewire',
-    startTime: '8:00 AM',
-    elapsed: '3h 45m',
-  },
-  {
-    employee: 'Lisa Brown',
-    jobId: '25-005-E90',
-    jobTitle: 'Emergency Service',
-    startTime: '10:30 AM',
-    elapsed: '1h 15m',
-  },
-]
+interface TimeStat {
+  title: string
+  value: string
+  icon: any
+  color: string
+}
 
-const timeStats = [
-  { title: 'Hours Today', value: '42.5', icon: Timer, color: '#1d8cf8' },
-  { title: 'Active Timers', value: '2', icon: PlayArrow, color: '#00bf9a' },
-  { title: 'This Week', value: '156h', icon: Today, color: '#e14eca' },
-  { title: 'Employees', value: '12', icon: Group, color: '#fd5d93' },
-]
+// Icon mapping for stats
+const iconMap = {
+  timer: Timer,
+  play_arrow: PlayArrow,
+  today: Today,
+  group: Group,
+}
 
 const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
@@ -137,6 +106,7 @@ const menuItems = [
   { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
   { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
   { text: 'Customers', icon: PeopleIcon, path: '/customers' },
+  { text: 'Leads', icon: TrendingUp, path: '/leads' },
   { text: 'Materials', icon: InventoryIcon, path: '/materials' },
   { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
   { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
@@ -158,9 +128,16 @@ const getStatusColor = (status: string) => {
 
 export default function TimePage() {
   const router = useRouter()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
+  const [activeTimers, setActiveTimers] = useState<TimeEntry[]>([])
+  const [stats, setStats] = useState<TimeStat[]>([])
+  const [loading, setLoading] = useState(true)
+  const [startTimerOpen, setStartTimerOpen] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -169,7 +146,37 @@ export default function TimePage() {
       return
     }
     setUser(JSON.parse(storedUser))
+    fetchTimeData()
   }, [router])
+
+  const fetchTimeData = async () => {
+    try {
+      setLoading(true)
+      const [entriesResponse, statsResponse] = await Promise.all([
+        fetch('/api/time-entries?limit=20'),
+        fetch('/api/time-entries/stats')
+      ])
+
+      if (entriesResponse.ok) {
+        const entries = await entriesResponse.json()
+        setTimeEntries(entries.filter((entry: TimeEntry) => !entry.isActive))
+        setActiveTimers(entries.filter((entry: TimeEntry) => entry.isActive))
+      }
+
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json()
+        const transformedStats = statsData.stats.map((stat: any) => ({
+          ...stat,
+          icon: iconMap[stat.icon as keyof typeof iconMap] || Timer,
+        }))
+        setStats(transformedStats)
+      }
+    } catch (error) {
+      console.error('Error fetching time data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -334,6 +341,7 @@ export default function TimePage() {
             <Button
               variant="contained"
               startIcon={<PlayArrow />}
+              onClick={() => setStartTimerOpen(true)}
               sx={{
                 backgroundColor: '#00bf9a',
                 '&:hover': {
@@ -346,36 +354,48 @@ export default function TimePage() {
           </Box>
 
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            {timeStats.map((stat) => (
-              <Grid item xs={12} sm={6} md={3} key={stat.title}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 48,
-                          height: 48,
-                          borderRadius: '12px',
-                          backgroundColor: `${stat.color}20`,
-                          mr: 2,
-                        }}
-                      >
-                        <stat.icon sx={{ color: stat.color }} />
+            {loading ? (
+              Array.from({ length: 4 }).map((_, index) => (
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+                  <Card>
+                    <CardContent>
+                      <Typography>Loading...</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            ) : (
+              stats.map((stat) => (
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 48,
+                            height: 48,
+                            borderRadius: '12px',
+                            backgroundColor: `${stat.color}20`,
+                            mr: 2,
+                          }}
+                        >
+                          <stat.icon sx={{ color: stat.color }} />
+                        </Box>
+                        <Box>
+                          <Typography color="text.secondary" variant="caption">
+                            {stat.title}
+                          </Typography>
+                          <Typography variant="h5">{stat.value}</Typography>
+                        </Box>
                       </Box>
-                      <Box>
-                        <Typography color="text.secondary" variant="caption">
-                          {stat.title}
-                        </Typography>
-                        <Typography variant="h5">{stat.value}</Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            )}
           </Grid>
 
           <Card sx={{ mb: 3 }}>
@@ -383,31 +403,31 @@ export default function TimePage() {
               <Typography variant="h6" gutterBottom>
                 Active Timers
               </Typography>
-              <Grid container spacing={2}>
-                {activeTimers.map((timer, index) => (
-                  <Grid item xs={12} md={6} key={index}>
-                    <Paper sx={{ p: 2, backgroundColor: 'background.default' }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box>
-                          <Typography variant="subtitle1">{timer.employee}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {timer.jobId} - {timer.jobTitle}
-                          </Typography>
-                          <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              Started: {timer.startTime}
-                            </Typography>
-                            <Chip label={timer.elapsed} color="success" size="small" />
-                          </Stack>
-                        </Box>
-                        <IconButton color="error">
-                          <Stop />
-                        </IconButton>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                ))}
-              </Grid>
+              {loading ? (
+                <Typography>Loading active timers...</Typography>
+              ) : activeTimers.length === 0 ? (
+                <Typography color="text.secondary">No active timers</Typography>
+              ) : (
+                <Grid container spacing={2}>
+                  {activeTimers.map((timer) => (
+                    <Grid size={{ xs: 12, md: 6 }} key={timer.id}>
+                      <ActiveTimerCard
+                        timer={{
+                          id: timer.id,
+                          userName: timer.userName,
+                          jobNumber: timer.jobNumber,
+                          jobTitle: timer.jobTitle,
+                          customer: timer.customer,
+                          phaseName: timer.phaseName,
+                          startTime: timer.startTime,
+                          description: timer.description,
+                        }}
+                        onTimerStopped={fetchTimeData}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
             </CardContent>
           </Card>
 
@@ -424,39 +444,82 @@ export default function TimePage() {
                   <TableCell>Start Time</TableCell>
                   <TableCell>End Time</TableCell>
                   <TableCell>Hours</TableCell>
-                  <TableCell>Status</TableCell>
+                  <TableCell>Phase</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {mockTimeEntries.map((entry) => (
-                  <TableRow key={entry.id} hover>
-                    <TableCell>{entry.employee}</TableCell>
-                    <TableCell>
-                      <Stack>
-                        <Typography variant="body2">{entry.jobId}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {entry.jobTitle}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
-                    <TableCell>{entry.date}</TableCell>
-                    <TableCell>{entry.startTime}</TableCell>
-                    <TableCell>{entry.endTime}</TableCell>
-                    <TableCell>{entry.hours || '-'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={entry.status}
-                        color={getStatusColor(entry.status) as any}
-                        size="small"
-                      />
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      Loading time entries...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : timeEntries.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      No time entries found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  timeEntries.map((entry) => (
+                    <TableRow key={entry.id} hover>
+                      <TableCell>{entry.userName}</TableCell>
+                      <TableCell>
+                        <Stack>
+                          <Typography variant="body2">{entry.jobNumber}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {entry.jobTitle}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {entry.customer}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                      <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {new Date(entry.startTime).toLocaleTimeString([], { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        {entry.endTime 
+                          ? new Date(entry.endTime).toLocaleTimeString([], { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })
+                          : 'Active'
+                        }
+                      </TableCell>
+                      <TableCell>{entry.hours?.toFixed(1) || '-'}</TableCell>
+                      <TableCell>
+                        {entry.phaseName ? (
+                          <Chip
+                            label={entry.phaseName}
+                            size="small"
+                            variant="outlined"
+                          />
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>
         </Container>
       </Box>
+
+      <StartTimerDialog
+        open={startTimerOpen}
+        onClose={() => setStartTimerOpen(false)}
+        onTimerStarted={() => {
+          fetchTimeData()
+          setStartTimerOpen(false)
+        }}
+      />
     </Box>
   )
 }

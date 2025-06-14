@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import CreateCustomerDialog from '@/components/customers/CreateCustomerDialog'
+import EditCustomerDialog from '@/components/customers/EditCustomerDialog'
+import CustomerActionsMenu from '@/components/customers/CustomerActionsMenu'
 import {
   Box,
   Container,
@@ -50,6 +53,7 @@ import {
   Phone,
   Email,
   LocationOn,
+  TrendingUp,
 } from '@mui/icons-material'
 
 const drawerWidth = 240
@@ -61,58 +65,22 @@ interface User {
   role: string
 }
 
-const mockCustomers = [
-  {
-    id: 'C001',
-    name: 'Johnson Residence',
-    type: 'Residential',
-    phone: '(555) 123-4567',
-    email: 'johnson@email.com',
-    address: '123 Main St, Anytown, ST 12345',
-    totalJobs: 5,
-    status: 'Active',
-  },
-  {
-    id: 'C002',
-    name: 'Tech Corp',
-    type: 'Commercial',
-    phone: '(555) 234-5678',
-    email: 'contact@techcorp.com',
-    address: '456 Business Blvd, Suite 100, Anytown, ST 12345',
-    totalJobs: 12,
-    status: 'Active',
-  },
-  {
-    id: 'C003',
-    name: 'Smith Residence',
-    type: 'Residential',
-    phone: '(555) 345-6789',
-    email: 'smith.family@email.com',
-    address: '789 Oak Lane, Anytown, ST 12345',
-    totalJobs: 3,
-    status: 'Active',
-  },
-  {
-    id: 'C004',
-    name: 'Davis Home',
-    type: 'Residential',
-    phone: '(555) 456-7890',
-    email: 'davis@email.com',
-    address: '321 Elm Street, Anytown, ST 12345',
-    totalJobs: 2,
-    status: 'Inactive',
-  },
-  {
-    id: 'C005',
-    name: 'Brown Residence',
-    type: 'Residential',
-    phone: '(555) 567-8901',
-    email: 'brown.res@email.com',
-    address: '654 Pine Road, Anytown, ST 12345',
-    totalJobs: 8,
-    status: 'Active',
-  },
-]
+interface Customer {
+  id: string
+  name: string
+  companyName?: string
+  firstName: string
+  lastName: string
+  type: string
+  phone: string
+  email?: string
+  address: string
+  totalJobs: number
+  activeJobs: number
+  status: string
+}
+
+// Removed mockCustomers - data now comes from API
 
 const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
@@ -120,6 +88,7 @@ const menuItems = [
   { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
   { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
   { text: 'Customers', icon: PeopleIcon, path: '/customers' },
+  { text: 'Leads', icon: TrendingUp, path: '/leads' },
   { text: 'Materials', icon: InventoryIcon, path: '/materials' },
   { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
   { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
@@ -132,6 +101,11 @@ export default function CustomersPage() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -140,7 +114,24 @@ export default function CustomersPage() {
       return
     }
     setUser(JSON.parse(storedUser))
+    fetchCustomers()
   }, [router])
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/customers')
+      if (!response.ok) {
+        throw new Error('Failed to fetch customers')
+      }
+      const data = await response.json()
+      setCustomers(data)
+    } catch (error) {
+      console.error('Error fetching customers:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -158,6 +149,35 @@ export default function CustomersPage() {
 
   const handleMenuClose = () => {
     setAnchorEl(null)
+  }
+
+  const handleEditCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer)
+    setEditDialogOpen(true)
+  }
+
+  const handleDeleteCustomer = async (customer: Customer) => {
+    try {
+      const response = await fetch(`/api/customers/${customer.id}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete customer')
+      }
+      
+      fetchCustomers() // Refresh the list
+    } catch (error) {
+      console.error('Error deleting customer:', error)
+      alert(error instanceof Error ? error.message : 'Failed to delete customer. Please try again.')
+    }
+  }
+
+  const handleViewCustomer = (customer: Customer) => {
+    // For now, just open edit dialog in view mode
+    // Later could be a separate view dialog
+    handleEditCustomer(customer)
   }
 
   if (!user) return null
@@ -305,6 +325,7 @@ export default function CustomersPage() {
             <Button
               variant="contained"
               startIcon={<PersonAddIcon />}
+              onClick={() => setCreateDialogOpen(true)}
               sx={{
                 backgroundColor: '#e14eca',
                 '&:hover': {
@@ -349,62 +370,104 @@ export default function CustomersPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {mockCustomers
-                  .filter(customer => 
-                    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    customer.phone.includes(searchTerm)
-                  )
-                  .map((customer) => (
-                    <TableRow key={customer.id} hover>
-                      <TableCell>{customer.id}</TableCell>
-                      <TableCell>{customer.name}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={customer.type}
-                          color={customer.type === 'Commercial' ? 'primary' : 'default'}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
-                            <Typography variant="body2">{customer.phone}</Typography>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      Loading customers...
+                    </TableCell>
+                  </TableRow>
+                ) : customers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      No customers found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  customers
+                    .filter(customer => 
+                      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                      customer.phone.includes(searchTerm)
+                    )
+                    .map((customer) => (
+                      <TableRow key={customer.id} hover>
+                        <TableCell>{customer.id.slice(0, 8)}</TableCell>
+                        <TableCell>{customer.name}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={customer.type}
+                            color={customer.type === 'Commercial' ? 'primary' : 'default'}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
+                              <Typography variant="body2">{customer.phone}</Typography>
+                            </Box>
+                            {customer.email && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Email sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="body2">{customer.email}</Typography>
+                              </Box>
+                            )}
                           </Box>
+                        </TableCell>
+                        <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Email sx={{ fontSize: 16, color: 'text.secondary' }} />
-                            <Typography variant="body2">{customer.email}</Typography>
+                            <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
+                            <Typography variant="body2">{customer.address || 'No address'}</Typography>
                           </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
-                          <Typography variant="body2">{customer.address}</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{customer.totalJobs}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={customer.status}
-                          color={customer.status === 'Active' ? 'success' : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small">
-                          <MoreVertIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell>{customer.totalJobs}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={customer.status}
+                            color={customer.status === 'active' ? 'success' : 'default'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <CustomerActionsMenu
+                            customer={customer}
+                            onEdit={handleEditCustomer}
+                            onDelete={handleDeleteCustomer}
+                            onView={handleViewCustomer}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>
         </Container>
       </Box>
+
+      <CreateCustomerDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onCustomerCreated={() => {
+          fetchCustomers() // Refresh the customers list
+          setCreateDialogOpen(false)
+        }}
+      />
+
+      <EditCustomerDialog
+        open={editDialogOpen}
+        onClose={() => {
+          setEditDialogOpen(false)
+          setSelectedCustomer(null)
+        }}
+        onCustomerUpdated={() => {
+          fetchCustomers() // Refresh the customers list
+          setEditDialogOpen(false)
+          setSelectedCustomer(null)
+        }}
+        customer={selectedCustomer}
+      />
     </Box>
   )
 }

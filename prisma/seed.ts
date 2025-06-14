@@ -1,5 +1,5 @@
 import { PrismaClient, UserRole } from '@prisma/client'
-import { hashPassword } from '../src/lib/auth'
+import { hashPassword } from '../src/lib/auth.js'
 
 const prisma = new PrismaClient()
 
@@ -159,8 +159,10 @@ async function main() {
   ]
 
   for (const material of materials) {
-    await prisma.material.create({
-      data: material,
+    await prisma.material.upsert({
+      where: { code: material.code },
+      update: {},
+      create: material,
     })
   }
 

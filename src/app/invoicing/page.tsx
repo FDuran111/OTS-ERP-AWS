@@ -31,7 +31,9 @@ import {
   Button,
   TextField,
   InputAdornment,
-  Grid,
+  Grid2 as Grid,
+  CircularProgress,
+  Alert,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -52,7 +54,11 @@ import {
   PendingActions,
   CheckCircle,
   Warning,
+  TrendingUp,
 } from '@mui/icons-material'
+import CreateInvoiceDialog from '@/components/invoices/CreateInvoiceDialog'
+import EditInvoiceDialog from '@/components/invoices/EditInvoiceDialog'
+import InvoiceActionsMenu from '@/components/invoices/InvoiceActionsMenu'
 
 const drawerWidth = 240
 
@@ -63,60 +69,31 @@ interface User {
   role: string
 }
 
-const mockInvoices = [
-  {
-    id: 'INV-2025-001',
-    jobId: '25-001-A12',
-    customer: 'Johnson Residence',
-    amount: '$2,450.00',
-    dueDate: '2025-06-15',
-    status: 'Sent',
-    sentDate: '2025-05-15',
-  },
-  {
-    id: 'INV-2025-002',
-    jobId: '25-002-B34',
-    customer: 'Tech Corp',
-    amount: '$15,750.00',
-    dueDate: '2025-06-30',
-    status: 'Draft',
-    sentDate: '-',
-  },
-  {
-    id: 'INV-2025-003',
-    jobId: '25-003-C56',
-    customer: 'Smith Residence',
-    amount: '$875.00',
-    dueDate: '2025-05-30',
-    status: 'Paid',
-    sentDate: '2025-05-10',
-  },
-  {
-    id: 'INV-2025-004',
-    jobId: '25-004-D78',
-    customer: 'Davis Home',
-    amount: '$3,200.00',
-    dueDate: '2025-06-20',
-    status: 'Overdue',
-    sentDate: '2025-05-05',
-  },
-  {
-    id: 'INV-2025-005',
-    jobId: '25-005-E90',
-    customer: 'Brown Residence',
-    amount: '$425.00',
-    dueDate: '2025-06-10',
-    status: 'Sent',
-    sentDate: '2025-05-20',
-  },
-]
+interface Invoice {
+  id: string
+  invoiceNumber: string
+  status: string
+  totalAmount: number
+  dueDate: string
+  sentDate: string | null
+  paidDate: string | null
+  customer: {
+    firstName: string
+    lastName: string
+  }
+  job: {
+    jobNumber: string
+    description: string
+  }
+}
 
-const invoiceStats = [
-  { title: 'Total Outstanding', value: '$22,275', icon: AttachMoney, color: '#1d8cf8' },
-  { title: 'Pending', value: '4', icon: PendingActions, color: '#fd5d93' },
-  { title: 'Paid This Month', value: '$8,450', icon: CheckCircle, color: '#00bf9a' },
-  { title: 'Overdue', value: '1', icon: Warning, color: '#ff8d72' },
-]
+interface Stats {
+  title: string
+  value: string
+  icon: string
+  color: string
+}
+
 
 const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
@@ -124,6 +101,7 @@ const menuItems = [
   { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
   { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
   { text: 'Customers', icon: PeopleIcon, path: '/customers' },
+  { text: 'Leads', icon: TrendingUp, path: '/leads' },
   { text: 'Materials', icon: InventoryIcon, path: '/materials' },
   { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
   { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
@@ -151,6 +129,13 @@ export default function InvoicingPage() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [stats, setStats] = useState<Stats[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -159,7 +144,39 @@ export default function InvoicingPage() {
       return
     }
     setUser(JSON.parse(storedUser))
+    fetchInvoices()
+    fetchStats()
   }, [router])
+
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/invoices')
+      if (!response.ok) {
+        throw new Error('Failed to fetch invoices')
+      }
+      const data = await response.json()
+      setInvoices(data)
+      setError(null)
+    } catch (error) {
+      console.error('Error fetching invoices:', error)
+      setError('Failed to load invoices')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/invoices/stats')
+      if (response.ok) {
+        const data = await response.json()
+        setStats(data.stats)
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error)
+    }
+  }
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -177,6 +194,63 @@ export default function InvoicingPage() {
 
   const handleMenuClose = () => {
     setAnchorEl(null)
+  }
+
+  const handleCreateInvoice = () => {
+    setCreateDialogOpen(true)
+  }
+
+  const handleEditInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice)
+    setEditDialogOpen(true)
+  }
+
+  const handleDeleteInvoice = async (invoice: Invoice) => {
+    try {
+      const response = await fetch(`/api/invoices/${invoice.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete invoice')
+      }
+
+      await fetchInvoices()
+      await fetchStats()
+    } catch (error) {
+      console.error('Error deleting invoice:', error)
+      alert(error instanceof Error ? error.message : 'Failed to delete invoice')
+    }
+  }
+
+  const handleInvoiceCreated = () => {
+    fetchInvoices()
+    fetchStats()
+  }
+
+  const handleInvoiceUpdated = () => {
+    fetchInvoices()
+    fetchStats()
+  }
+
+  const handleStatusUpdated = () => {
+    fetchInvoices()
+    fetchStats()
+  }
+
+  const getStatsIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'attach_money': return AttachMoney
+      case 'pending_actions': return PendingActions
+      case 'check_circle': return CheckCircle
+      case 'warning': return Warning
+      default: return AttachMoney
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
   }
 
   if (!user) return null
@@ -324,6 +398,7 @@ export default function InvoicingPage() {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
+              onClick={handleCreateInvoice}
               sx={{
                 backgroundColor: '#e14eca',
                 '&:hover': {
@@ -336,36 +411,39 @@ export default function InvoicingPage() {
           </Box>
 
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            {invoiceStats.map((stat) => (
-              <Grid item xs={12} sm={6} md={3} key={stat.title}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 48,
-                          height: 48,
-                          borderRadius: '12px',
-                          backgroundColor: `${stat.color}20`,
-                          mr: 2,
-                        }}
-                      >
-                        <stat.icon sx={{ color: stat.color }} />
+            {stats.map((stat) => {
+              const IconComponent = getStatsIconComponent(stat.icon)
+              return (
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 48,
+                            height: 48,
+                            borderRadius: '12px',
+                            backgroundColor: `${stat.color}20`,
+                            mr: 2,
+                          }}
+                        >
+                          <IconComponent sx={{ color: stat.color }} />
+                        </Box>
+                        <Box>
+                          <Typography color="text.secondary" variant="caption">
+                            {stat.title}
+                          </Typography>
+                          <Typography variant="h5">{stat.value}</Typography>
+                        </Box>
                       </Box>
-                      <Box>
-                        <Typography color="text.secondary" variant="caption">
-                          {stat.title}
-                        </Typography>
-                        <Typography variant="h5">{stat.value}</Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )
+            })}
           </Grid>
 
           <Card sx={{ mb: 3 }}>
@@ -386,52 +464,96 @@ export default function InvoicingPage() {
             </CardContent>
           </Card>
 
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Invoice ID</TableCell>
-                  <TableCell>Job ID</TableCell>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Due Date</TableCell>
-                  <TableCell>Sent Date</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {mockInvoices
-                  .filter(invoice => 
-                    invoice.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    invoice.jobId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    invoice.customer.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map((invoice) => (
-                    <TableRow key={invoice.id} hover>
-                      <TableCell>{invoice.id}</TableCell>
-                      <TableCell>{invoice.jobId}</TableCell>
-                      <TableCell>{invoice.customer}</TableCell>
-                      <TableCell sx={{ fontWeight: 'medium' }}>{invoice.amount}</TableCell>
-                      <TableCell>{invoice.dueDate}</TableCell>
-                      <TableCell>{invoice.sentDate}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={invoice.status}
-                          color={getStatusColor(invoice.status) as any}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small">
-                          <MoreVertIcon />
-                        </IconButton>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Invoice #</TableCell>
+                    <TableCell>Job #</TableCell>
+                    <TableCell>Customer</TableCell>
+                    <TableCell>Amount</TableCell>
+                    <TableCell>Due Date</TableCell>
+                    <TableCell>Sent Date</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {invoices
+                    .filter(invoice => 
+                      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      invoice.job.jobNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      `${invoice.customer.firstName} ${invoice.customer.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((invoice) => (
+                      <TableRow key={invoice.id} hover>
+                        <TableCell>{invoice.invoiceNumber}</TableCell>
+                        <TableCell>{invoice.job.jobNumber}</TableCell>
+                        <TableCell>
+                          {invoice.customer.firstName} {invoice.customer.lastName}
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 'medium' }}>
+                          ${invoice.totalAmount.toFixed(2)}
+                        </TableCell>
+                        <TableCell>{formatDate(invoice.dueDate)}</TableCell>
+                        <TableCell>
+                          {invoice.sentDate ? formatDate(invoice.sentDate) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={invoice.status}
+                            color={getStatusColor(invoice.status) as any}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <InvoiceActionsMenu
+                            invoice={invoice}
+                            onEdit={handleEditInvoice}
+                            onDelete={handleDeleteInvoice}
+                            onStatusUpdated={handleStatusUpdated}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  {invoices.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center">
+                        <Typography color="text.secondary">No invoices found</Typography>
                       </TableCell>
                     </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          <CreateInvoiceDialog
+            open={createDialogOpen}
+            onClose={() => setCreateDialogOpen(false)}
+            onInvoiceCreated={handleInvoiceCreated}
+          />
+
+          <EditInvoiceDialog
+            open={editDialogOpen}
+            invoice={selectedInvoice}
+            onClose={() => {
+              setEditDialogOpen(false)
+              setSelectedInvoice(null)
+            }}
+            onInvoiceUpdated={handleInvoiceUpdated}
+          />
         </Container>
       </Box>
     </Box>

@@ -31,16 +31,56 @@ enum JobType {
   COMMERCIAL_PROJECT
 }
 
-enum JobPhase {
+enum JobPhaseName {
   UG // Underground
   RI // Rough-In
   FN // Finish
+}
+
+enum PhaseStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
 }
 
 enum ChangeOrderStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum LeadStatus {
+  COLD_LEAD
+  WARM_LEAD
+  ESTIMATE_REQUESTED
+  ESTIMATE_SENT
+  ESTIMATE_APPROVED
+  JOB_SCHEDULED
+  JOB_IN_PROGRESS
+  JOB_COMPLETED
+  INVOICED
+  PAID
+  LOST
+  FOLLOW_UP_REQUIRED
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  GOOGLE_ADS
+  FACEBOOK
+  YELLOW_PAGES
+  WORD_OF_MOUTH
+  REPEAT_CUSTOMER
+  OTHER
 }
 
 model User {
@@ -58,6 +98,9 @@ model User {
   assignedJobs     JobAssignment[]
   changeOrders     ChangeOrder[]
   purchaseOrders   PurchaseOrder[]
+  assignedLeads    Lead[]
+  leadActivities   LeadActivity[]
+  leadEstimates    LeadEstimate[]
 }
 
 model Customer {
@@ -66,7 +109,8 @@ model Customer {
   firstName        String
   lastName         String
   email            String?
-  phone            String
+  phone            String?
+  street           String?
   address          String?
   city             String?
   state            String?
@@ -77,6 +121,78 @@ model Customer {
   
   // Relations
   jobs             Job[]
+  invoices         Invoice[]
+  lead             Lead?            // One-to-one relationship with Lead
+}
+
+model Lead {
+  id               String           @id @default(cuid())
+  firstName        String
+  lastName         String
+  companyName      String?
+  email            String?
+  phone            String?
+  street           String?
+  city             String?
+  state            String?
+  zip              String?
+  status           LeadStatus       @default(COLD_LEAD)
+  source           LeadSource?
+  estimatedValue   Float?
+  priority         String?          // HIGH, MEDIUM, LOW
+  description      String?          // What work they need
+  notes            String?
+  lastContactDate  DateTime?
+  nextFollowUpDate DateTime?
+  assignedTo       String?          // User ID
+  convertedToCustomerId String?      @unique // When converted to customer
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  assignedUser     User?            @relation(fields: [assignedTo], references: [id])
+  convertedCustomer Customer?       @relation(fields: [convertedToCustomerId], references: [id])
+  activities       LeadActivity[]
+  estimates        LeadEstimate[]
+}
+
+model LeadActivity {
+  id               String           @id @default(cuid())
+  leadId           String
+  type             String           // CALL, EMAIL, MEETING, NOTE, STATUS_CHANGE
+  description      String
+  outcome          String?          // SUCCESS, NO_ANSWER, CALLBACK_REQUESTED, etc.
+  scheduledDate    DateTime?        // For scheduled activities
+  completedDate    DateTime?        // When activity was completed
+  createdBy        String
+  createdAt        DateTime         @default(now())
+  
+  // Relations
+  lead             Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [createdBy], references: [id])
+}
+
+model LeadEstimate {
+  id               String           @id @default(cuid())
+  leadId           String
+  title            String
+  description      String?
+  estimatedHours   Float?
+  laborCost        Float?
+  materialCost     Float?
+  totalAmount      Float
+  validUntil       DateTime?
+  status           String           @default("DRAFT") // DRAFT, SENT, APPROVED, REJECTED, EXPIRED
+  sentDate         DateTime?
+  respondedDate    DateTime?
+  notes            String?
+  createdBy        String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  lead             Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  creator          User             @relation(fields: [createdBy], references: [id])
 }
 
 model Job {
@@ -91,32 +207,63 @@ model Job {
   state            String?
   zip              String?
   scheduledDate    DateTime?
+  scheduledTime    String?          // Time as string (e.g., "9:00 AM")
+  startDate        DateTime?
   completedDate    DateTime?
+  completedAt      DateTime?
   billedDate       DateTime?
   estimatedHours   Float?
   actualHours      Float?
   estimatedCost    Float?
   actualCost       Float?
   billedAmount     Float?
+  priority         String?          // HIGH, MEDIUM, LOW
+  jobType          String?          // Additional job type description
+  assignedCrewId   String?
   quickbooksJobId  String?          @unique
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   
   // Relations
   customer         Customer         @relation(fields: [customerId], references: [id])
+  assignedCrew     Crew?            @relation(fields: [assignedCrewId], references: [id])
   phases           JobPhaseDetail[]
+  jobPhases        JobPhase[]
   timeEntries      TimeEntry[]
   materialUsage    MaterialUsage[]
   assignments      JobAssignment[]
   changeOrders     ChangeOrder[]
   purchaseOrders   PurchaseOrder[]
   notes            JobNote[]
+  invoices         Invoice[]
+}
+
+model JobPhase {
+  id               String           @id @default(cuid())
+  jobId            String
+  name             JobPhaseName
+  description      String?
+  estimatedHours   Float?
+  actualHours      Float?
+  estimatedCost    Float?
+  actualCost       Float?
+  status           PhaseStatus      @default(NOT_STARTED)
+  startDate        DateTime?
+  completedDate    DateTime?
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  job              Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  @@unique([jobId, name])
 }
 
 model JobPhaseDetail {
   id               String           @id @default(cuid())
   jobId            String
-  phase            JobPhase
+  phase            JobPhaseName
   jobNumber        String           @unique // Format: YY-###-SSS-PH
   status           JobStatus        @default(SCHEDULED)
   estimatedHours   Float?
@@ -171,6 +318,7 @@ model Material {
   vendorId         String?
   inStock          Int              @default(0)
   minStock         Int              @default(0)
+  location         String?
   quickbooksItemId String?          @unique
   active           Boolean          @default(true)
   createdAt        DateTime         @default(now())
@@ -180,6 +328,7 @@ model Material {
   vendor           Vendor?          @relation(fields: [vendorId], references: [id])
   usage            MaterialUsage[]
   purchaseOrderItems PurchaseOrderItem[]
+  invoiceLineItems InvoiceLineItem[]
 }
 
 model MaterialUsage {
@@ -199,6 +348,33 @@ model MaterialUsage {
   job              Job              @relation(fields: [jobId], references: [id])
   phase            JobPhaseDetail?  @relation(fields: [phaseId], references: [id])
   material         Material         @relation(fields: [materialId], references: [id])
+}
+
+model Crew {
+  id               String           @id @default(cuid())
+  name             String           @unique
+  description      String?
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  members          CrewMember[]
+  assignedJobs     Job[]
+}
+
+model CrewMember {
+  id               String           @id @default(cuid())
+  crewId           String
+  name             String
+  role             String?          // Lead, Apprentice, etc.
+  hourlyRate       Float?
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  crew             Crew             @relation(fields: [crewId], references: [id], onDelete: Cascade)
 }
 
 model Vendor {
@@ -309,4 +485,47 @@ model LaborRate {
   active           Boolean          @default(true)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  invoiceLineItems InvoiceLineItem[]
+}
+
+model Invoice {
+  id               String           @id @default(cuid())
+  invoiceNumber    String           @unique // Format: INV-YYYY-###
+  jobId            String
+  customerId       String
+  status           InvoiceStatus    @default(DRAFT)
+  totalAmount      Float
+  taxAmount        Float            @default(0)
+  subtotalAmount   Float
+  dueDate          DateTime
+  sentDate         DateTime?
+  paidDate         DateTime?
+  notes            String?
+  quickbooksId     String?          @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  job              Job              @relation(fields: [jobId], references: [id])
+  customer         Customer         @relation(fields: [customerId], references: [id])
+  lineItems        InvoiceLineItem[]
+}
+
+model InvoiceLineItem {
+  id               String           @id @default(cuid())
+  invoiceId        String
+  type             String           // 'LABOR', 'MATERIAL', 'OTHER'
+  description      String
+  quantity         Float
+  unitPrice        Float
+  totalPrice       Float
+  materialId       String?
+  laborRateId      String?
+  
+  // Relations
+  invoice          Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  material         Material?        @relation(fields: [materialId], references: [id])
+  laborRate        LaborRate?       @relation(fields: [laborRateId], references: [id])
 }
