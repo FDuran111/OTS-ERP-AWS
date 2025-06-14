@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
@@ -359,7 +359,7 @@ export default function DashboardPage() {
                             mr: 2,
                           }}
                         >
-                          <stat.icon style={{ color: stat.color }} />
+                          {React.createElement(stat.icon, { sx: { color: stat.color } })}
                         </Box>
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography color="text.secondary" variant="caption">

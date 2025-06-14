@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import StartTimerDialog from '@/components/time/StartTimerDialog'
 import ActiveTimerCard from '@/components/time/ActiveTimerCard'
@@ -382,7 +382,7 @@ export default function TimePage() {
                             mr: 2,
                           }}
                         >
-                          <stat.icon style={{ color: stat.color }} />
+                          {React.createElement(stat.icon, { sx: { color: stat.color } })}
                         </Box>
                         <Box>
                           <Typography color="text.secondary" variant="caption">
