@@ -382,7 +382,7 @@ export default function TimePage() {
                             mr: 2,
                           }}
                         >
-                          <stat.icon sx={{ color: stat.color }} />
+                          <stat.icon style={{ color: stat.color }} />
                         </Box>
                         <Box>
                           <Typography color="text.secondary" variant="caption">

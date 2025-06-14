@@ -359,7 +359,7 @@ export default function DashboardPage() {
                             mr: 2,
                           }}
                         >
-                          <stat.icon sx={{ color: stat.color }} />
+                          <stat.icon style={{ color: stat.color }} />
                         </Box>
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography color="text.secondary" variant="caption">
