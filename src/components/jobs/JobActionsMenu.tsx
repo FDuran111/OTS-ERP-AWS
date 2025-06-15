@@ -20,16 +20,21 @@ interface Job {
   jobNumber: string
   title: string
   customer: string
-  customerId?: string
-  type?: 'SERVICE_CALL' | 'COMMERCIAL_PROJECT'
+  customerId: string
+  type: 'SERVICE_CALL' | 'COMMERCIAL_PROJECT'
   status: string
   priority: string
   dueDate: string | null
-  completedDate?: string | null
+  completedDate: string | null
   crew: string[]
   estimatedHours?: number
   actualHours?: number
   estimatedCost?: number
+  actualCost?: number
+  billedAmount?: number
+  address?: string
+  city?: string
+  state?: string
 }
 
 interface JobActionsMenuProps {
