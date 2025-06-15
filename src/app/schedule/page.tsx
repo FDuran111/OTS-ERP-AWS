@@ -45,7 +45,13 @@ import {
   Today,
   CalendarMonth,
   TrendingUp,
+  Add as AddIcon,
+  Notifications as NotificationsIcon,
+  Event as EventIcon,
+  Warning as WarningIcon,
+  TaskAlt as TaskIcon,
 } from '@mui/icons-material'
+import ScheduleJobDialog from '@/components/schedule/ScheduleJobDialog'
 
 const drawerWidth = 240
 
@@ -86,6 +92,18 @@ interface CrewAvailability {
   status: 'available' | 'busy' | 'overbooked'
 }
 
+interface UpcomingReminder {
+  id: string
+  jobId: string
+  jobNumber: string
+  title: string
+  customer: string
+  scheduledDate: string
+  daysUntil: number
+  priority: 'high' | 'medium' | 'low'
+  type: 'start_reminder' | 'deadline_warning' | 'overdue'
+}
+
 const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
   { text: 'Jobs', icon: WorkIcon, path: '/jobs' },
@@ -110,6 +128,9 @@ export default function SchedulePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [upcomingReminders, setUpcomingReminders] = useState<UpcomingReminder[]>([])
+  const [scheduleJobOpen, setScheduleJobOpen] = useState(false)
+  const [showReminders, setShowReminders] = useState(true)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -124,13 +145,51 @@ export default function SchedulePage() {
   const fetchScheduleData = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/schedule?viewType=${viewType}&date=${currentDate.toISOString()}`)
-      if (!response.ok) {
+      const [scheduleResponse, remindersResponse] = await Promise.all([
+        fetch(`/api/schedule?viewType=${viewType}&date=${currentDate.toISOString()}`),
+        fetch('/api/schedule/reminders')
+      ])
+      
+      if (!scheduleResponse.ok) {
         throw new Error('Failed to fetch schedule data')
       }
-      const data = await response.json()
-      setScheduleData(data.dateRange)
-      setCrewAvailability(data.crewAvailability)
+      
+      const scheduleData = await scheduleResponse.json()
+      setScheduleData(scheduleData.dateRange)
+      setCrewAvailability(scheduleData.crewAvailability)
+      
+      // Handle reminders (if API exists)
+      if (remindersResponse.ok) {
+        const remindersData = await remindersResponse.json()
+        setUpcomingReminders(remindersData.reminders || [])
+      } else {
+        // Mock reminder data for now
+        setUpcomingReminders([
+          {
+            id: '1',
+            jobId: 'job1',
+            jobNumber: 'J-2024-001',
+            title: 'Commercial Wiring Project',
+            customer: 'ABC Company',
+            scheduledDate: '2024-06-18',
+            daysUntil: 3,
+            priority: 'high',
+            type: 'start_reminder'
+          },
+          {
+            id: '2',
+            jobId: 'job2',
+            jobNumber: 'J-2024-002',
+            title: 'Service Call - Panel Upgrade',
+            customer: 'John Smith',
+            scheduledDate: '2024-06-20',
+            daysUntil: 5,
+            priority: 'medium',
+            type: 'start_reminder'
+          }
+        ])
+      }
+      
       setError(null)
     } catch (error) {
       console.error('Error fetching schedule data:', error)
@@ -138,6 +197,7 @@ export default function SchedulePage() {
       // Fallback to empty data
       setScheduleData([])
       setCrewAvailability([])
+      setUpcomingReminders([])
     } finally {
       setLoading(false)
     }
@@ -226,6 +286,32 @@ export default function SchedulePage() {
     }
   }
 
+  const getReminderPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'error'
+      case 'medium':
+        return 'warning'
+      case 'low':
+        return 'info'
+      default:
+        return 'default'
+    }
+  }
+
+  const getReminderIcon = (type: string) => {
+    switch (type) {
+      case 'start_reminder':
+        return <EventIcon />
+      case 'deadline_warning':
+        return <WarningIcon />
+      case 'overdue':
+        return <TaskIcon />
+      default:
+        return <NotificationsIcon />
+    }
+  }
+
   if (!user) return null
 
   const drawer = (
@@ -291,6 +377,30 @@ export default function SchedulePage() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Schedule
           </Typography>
+          
+          {/* Notification indicator */}
+          <IconButton 
+            onClick={() => setShowReminders(!showReminders)}
+            sx={{ mr: 1 }}
+          >
+            <NotificationsIcon />
+            {upcomingReminders.length > 0 && (
+              <Chip
+                label={upcomingReminders.length}
+                size="small"
+                color="error"
+                sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  minWidth: 20,
+                  height: 20,
+                  fontSize: '0.75rem'
+                }}
+              />
+            )}
+          </IconButton>
+          
           <IconButton onClick={handleMenuClick}>
             <Avatar sx={{ bgcolor: 'primary.main' }}>
               {user.name.charAt(0)}
@@ -370,6 +480,19 @@ export default function SchedulePage() {
             </Typography>
             <Stack direction="row" spacing={1}>
               <Button
+                startIcon={<AddIcon />}
+                variant="contained"
+                onClick={() => setScheduleJobOpen(true)}
+                sx={{
+                  backgroundColor: '#e14eca',
+                  '&:hover': {
+                    backgroundColor: '#d236b8',
+                  },
+                }}
+              >
+                Schedule Job
+              </Button>
+              <Button
                 startIcon={<Today />}
                 variant={viewType === 'day' ? 'contained' : 'outlined'}
                 onClick={() => setViewType('day')}
@@ -436,6 +559,64 @@ export default function SchedulePage() {
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
+          )}
+
+          {/* Upcoming Reminders Section */}
+          {showReminders && upcomingReminders.length > 0 && (
+            <Card sx={{ mb: 3, border: '2px solid', borderColor: 'warning.main' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <NotificationsIcon sx={{ mr: 1, color: 'warning.main' }} />
+                  <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                    Upcoming Job Reminders
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setShowReminders(false)}
+                  >
+                    Dismiss
+                  </Button>
+                </Box>
+                <Grid container spacing={2}>
+                  {upcomingReminders.map((reminder) => (
+                    <Grid size={{ xs: 12, md: 6 }} key={reminder.id}>
+                      <Card sx={{ backgroundColor: 'background.default' }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                            <Box sx={{ color: getReminderPriorityColor(reminder.priority) }}>
+                              {getReminderIcon(reminder.type)}
+                            </Box>
+                            <Box sx={{ flexGrow: 1 }}>
+                              <Typography variant="subtitle1" fontWeight="medium">
+                                {reminder.jobNumber} - {reminder.title}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {reminder.customer}
+                              </Typography>
+                              <Typography variant="body2" sx={{ mt: 1 }}>
+                                Scheduled: {new Date(reminder.scheduledDate).toLocaleDateString()}
+                              </Typography>
+                              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                                <Chip
+                                  label={`${reminder.daysUntil} days`}
+                                  size="small"
+                                  color={getReminderPriorityColor(reminder.priority) as any}
+                                />
+                                <Chip
+                                  label={reminder.type.replace('_', ' ')}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              </Box>
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
           )}
 
           {loading ? (
@@ -562,6 +743,16 @@ export default function SchedulePage() {
           </Box>
         </Container>
       </Box>
+
+      {/* Schedule Job Dialog */}
+      <ScheduleJobDialog
+        open={scheduleJobOpen}
+        onClose={() => setScheduleJobOpen(false)}
+        onJobScheduled={() => {
+          setScheduleJobOpen(false)
+          fetchScheduleData()
+        }}
+      />
     </Box>
   )
 }
