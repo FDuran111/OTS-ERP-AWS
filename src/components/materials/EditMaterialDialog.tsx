@@ -34,6 +34,7 @@ interface Material {
   inStock: number
   minStock: number
   location?: string
+  status: string
   vendor?: {
     id: string
     name: string
