@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
@@ -122,7 +122,7 @@ const menuItems = [
   { text: 'Settings', icon: SettingsIcon, path: '/settings' },
 ]
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
   switch (status) {
     case 'Paid':
       return 'success'
@@ -444,7 +444,7 @@ export default function InvoicingPage() {
                             mr: 2,
                           }}
                         >
-                          <IconComponent sx={{ color: stat.color }} />
+                          {React.createElement(IconComponent, { sx: { color: stat.color } })}
                         </Box>
                         <Box>
                           <Typography color="text.secondary" variant="caption">
@@ -527,7 +527,7 @@ export default function InvoicingPage() {
                         <TableCell>
                           <Chip
                             label={invoice.status}
-                            color={getStatusColor(invoice.status) as any}
+                            color={getStatusColor(invoice.status)}
                             size="small"
                           />
                         </TableCell>

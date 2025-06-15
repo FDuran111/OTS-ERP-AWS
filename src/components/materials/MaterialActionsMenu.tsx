@@ -32,13 +32,20 @@ interface Material {
   id: string
   code: string
   name: string
+  description?: string
   category: string
   unit: string
   inStock: number
   minStock: number
   cost: number
   price: number
+  location?: string
   status: string
+  vendor?: {
+    id: string
+    name: string
+    code: string
+  }
 }
 
 interface MaterialActionsMenuProps {

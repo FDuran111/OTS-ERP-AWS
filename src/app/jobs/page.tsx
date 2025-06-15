@@ -121,7 +121,7 @@ const menuItems = [
   { text: 'Settings', icon: SettingsIcon, path: '/settings' },
 ]
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
   switch (status.toLowerCase()) {
     case 'in_progress':
       return 'success'
@@ -138,7 +138,7 @@ const getStatusColor = (status: string) => {
   }
 }
 
-const getPriorityColor = (priority: string) => {
+const getPriorityColor = (priority: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
   switch (priority) {
     case 'High':
       return 'error'
@@ -347,12 +347,12 @@ export default function JobsPage() {
         <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
           <Chip
             label={job.status.replace('_', ' ')}
-            color={getStatusColor(job.status) as any}
+            color={getStatusColor(job.status)}
             size="small"
           />
           <Chip
             label={job.priority}
-            color={getPriorityColor(job.priority) as any}
+            color={getPriorityColor(job.priority)}
             size="small"
             variant="outlined"
           />
@@ -730,14 +730,14 @@ export default function JobsPage() {
                         <TableCell>
                           <Chip
                             label={job.status.replace('_', ' ')}
-                            color={getStatusColor(job.status) as any}
+                            color={getStatusColor(job.status)}
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Chip
                             label={job.priority}
-                            color={getPriorityColor(job.priority) as any}
+                            color={getPriorityColor(job.priority)}
                             size="small"
                             variant="outlined"
                           />

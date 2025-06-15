@@ -42,22 +42,26 @@ interface User {
 interface Job {
   id: string
   jobNumber: string
+  title: string
+  customer: string
   customerId: string
   type: 'SERVICE_CALL' | 'COMMERCIAL_PROJECT'
   status: string
-  description: string
+  priority: string
+  dueDate: string | null
+  completedDate: string | null
+  crew: string[]
+  estimatedHours?: number
+  actualHours?: number
+  estimatedCost?: number
+  actualCost?: number
+  billedAmount?: number
   address?: string
   city?: string
   state?: string
   zip?: string
+  description?: string
   scheduledDate?: string
-  completedDate?: string
-  estimatedHours?: number
-  estimatedCost?: number
-  actualHours?: number
-  actualCost?: number
-  billedAmount?: number
-  crew: string[]
 }
 
 interface EditJobDialogProps {
