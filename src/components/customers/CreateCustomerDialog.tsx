@@ -108,7 +108,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Customer Type Toggle */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Controller
                 name="isCommercial"
                 control={control}
@@ -128,7 +128,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
 
             {/* Company Name (if commercial) */}
             {isCommercial && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Controller
                   name="companyName"
                   control={control}
@@ -145,7 +145,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
             )}
 
             {/* Contact Person Name */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
                 name="firstName"
                 control={control}
@@ -161,7 +161,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
                 name="lastName"
                 control={control}
@@ -178,7 +178,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
             </Grid>
 
             {/* Contact Information */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
                 name="phone"
                 control={control}
@@ -194,7 +194,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
                 name="email"
                 control={control}
@@ -212,13 +212,13 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
             </Grid>
 
             {/* Address Information */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="subtitle2" gutterBottom>
                 Address Information
               </Typography>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Controller
                 name="address"
                 control={control}
@@ -232,7 +232,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
                 name="city"
                 control={control}
@@ -246,7 +246,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
               />
             </Grid>
 
-            <Grid item xs={12} sm={3}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <Controller
                 name="state"
                 control={control}
@@ -260,7 +260,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
               />
             </Grid>
 
-            <Grid item xs={12} sm={3}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <Controller
                 name="zip"
                 control={control}
