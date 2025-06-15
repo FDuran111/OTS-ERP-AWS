@@ -50,6 +50,7 @@ import {
   Event as EventIcon,
   Warning as WarningIcon,
   TaskAlt as TaskIcon,
+  Tv as TvIcon,
 } from '@mui/icons-material'
 import ScheduleJobDialog from '@/components/schedule/ScheduleJobDialog'
 
@@ -479,6 +480,14 @@ export default function SchedulePage() {
               Schedule
             </Typography>
             <Stack direction="row" spacing={1}>
+              <Button
+                startIcon={<TvIcon />}
+                variant="outlined"
+                onClick={() => window.open('/office-display', '_blank')}
+                sx={{ mr: 1 }}
+              >
+                Office Display
+              </Button>
               <Button
                 startIcon={<AddIcon />}
                 variant="contained"
