@@ -63,10 +63,10 @@ const materialSchema = z.object({
   unit: z.string().min(1, 'Unit is required'),
   cost: z.number().min(0, 'Cost must be positive'),
   price: z.number().min(0, 'Price must be positive'),
-  markup: z.number().min(1, 'Markup must be at least 1').default(1.5),
+  markup: z.number().min(1, 'Markup must be at least 1').optional(),
   vendorId: z.string().optional(),
-  inStock: z.number().int().min(0, 'Stock must be non-negative').default(0),
-  minStock: z.number().int().min(0, 'Min stock must be non-negative').default(0),
+  inStock: z.number().int().min(0, 'Stock must be non-negative').optional(),
+  minStock: z.number().int().min(0, 'Min stock must be non-negative').optional(),
   location: z.string().optional(),
 })
 
