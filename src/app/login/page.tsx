@@ -55,6 +55,16 @@ export default function LoginPage() {
       
       console.log('Login successful, redirecting to dashboard...')
       console.log('User data:', data.user)
+      console.log('Response headers:', response.headers)
+      
+      // Check if auth debug endpoint works after login
+      try {
+        const debugResponse = await fetch('/api/auth/debug')
+        const debugData = await debugResponse.json()
+        console.log('Auth debug after login:', debugData)
+      } catch (err) {
+        console.log('Debug check failed:', err)
+      }
       
       // Use window.location.replace for immediate navigation
       window.location.replace('/dashboard')
