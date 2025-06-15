@@ -72,11 +72,15 @@ interface User {
 interface Invoice {
   id: string
   invoiceNumber: string
+  jobId?: string
   status: string
   totalAmount: number
+  subtotalAmount: number
+  taxAmount: number
   dueDate: string
   sentDate: string | null
   paidDate: string | null
+  notes?: string
   customer: {
     firstName: string
     lastName: string
@@ -85,6 +89,16 @@ interface Invoice {
     jobNumber: string
     description?: string
   }
+  lineItems?: Array<{
+    id: string
+    type: string
+    description: string
+    quantity: number
+    unitPrice: number
+    totalPrice: number
+    materialId?: string
+    laborRateId?: string
+  }>
 }
 
 interface Stats {
