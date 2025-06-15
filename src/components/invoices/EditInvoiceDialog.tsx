@@ -36,7 +36,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 interface Job {
   id: string
   jobNumber: string
-  description: string
+  description?: string
   customer: {
     firstName: string
     lastName: string
@@ -75,7 +75,7 @@ interface Invoice {
   }
   job: {
     jobNumber: string
-    description: string
+    description?: string
   }
   lineItems?: Array<{
     id: string
