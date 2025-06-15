@@ -52,7 +52,7 @@ import {
   MoreVert as MoreVertIcon,
   Warning,
   CheckCircle,
-  Error,
+  Error as ErrorIcon,
   TrendingUp,
 } from '@mui/icons-material'
 import AddMaterialDialog from '@/components/materials/AddMaterialDialog'
@@ -242,7 +242,7 @@ export default function MaterialsPage() {
     switch (iconName) {
       case 'inventory': return InventoryIcon
       case 'warning': return Warning
-      case 'error': return Error
+      case 'error': return ErrorIcon
       case 'check_circle': return CheckCircle
       default: return InventoryIcon
     }
