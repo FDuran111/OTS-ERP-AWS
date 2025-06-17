@@ -73,6 +73,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
   } = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
     defaultValues: {
+      customerId: '',
       type: 'SERVICE_CALL',
       assignedUserIds: [],
     },
@@ -180,6 +181,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                     <InputLabel>Customer *</InputLabel>
                     <Select
                       {...field}
+                      value={field.value || ''}
                       label="Customer *"
                     >
                       {customers.map((customer) => (

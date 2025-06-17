@@ -249,6 +249,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                     <InputLabel>Customer *</InputLabel>
                     <Select
                       {...field}
+                      value={field.value || ''}
                       label="Customer *"
                     >
                       {customers.map((customer) => (

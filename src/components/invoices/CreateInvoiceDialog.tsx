@@ -95,6 +95,9 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
   } = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
+      jobId: '',
+      dueDate: '',
+      notes: '',
       lineItems: [{ type: 'LABOR', description: '', quantity: 1, unitPrice: 0 }]
     }
   })
@@ -278,7 +281,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
                 render={({ field }) => (
                   <FormControl fullWidth error={!!errors.jobId}>
                     <InputLabel>Job *</InputLabel>
-                    <Select {...field} label="Job *">
+                    <Select {...field} value={field.value || ''} label="Job *">
                       {jobs.map((job) => (
                         <MenuItem key={job.id} value={job.id}>
                           {job.jobNumber} - {job.description}

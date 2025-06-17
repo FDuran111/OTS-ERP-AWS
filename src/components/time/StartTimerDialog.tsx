@@ -59,6 +59,11 @@ export default function StartTimerDialog({ open, onClose, onTimerStarted }: Star
     formState: { errors },
   } = useForm<TimerFormData>({
     resolver: zodResolver(timerSchema),
+    defaultValues: {
+      jobId: '',
+      phaseId: '',
+      description: '',
+    },
   })
 
   const watchedJobId = watch('jobId')
@@ -152,6 +157,7 @@ export default function StartTimerDialog({ open, onClose, onTimerStarted }: Star
                     <InputLabel>Job *</InputLabel>
                     <Select
                       {...field}
+                      value={field.value || ''}
                       label="Job *"
                     >
                       {jobs.length === 0 ? (
@@ -195,6 +201,7 @@ export default function StartTimerDialog({ open, onClose, onTimerStarted }: Star
                       <InputLabel>Phase (Optional)</InputLabel>
                       <Select
                         {...field}
+                        value={field.value || ''}
                         label="Phase (Optional)"
                       >
                         <MenuItem value="">
