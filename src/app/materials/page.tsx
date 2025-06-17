@@ -180,11 +180,11 @@ export default function MaterialsPage() {
       setMaterials(data)
       
       // Extract unique categories and manufacturers for filters
-      const categories = [...new Set(data.map((m: Material) => m.category).filter(Boolean))].sort()
-      const manufacturers = [...new Set(data.map((m: Material) => m.manufacturer).filter(Boolean))].sort()
+      const categories = [...new Set(data.map((m: Material) => m.category).filter(Boolean))] as string[]
+      const manufacturers = [...new Set(data.map((m: Material) => m.manufacturer).filter(Boolean))] as string[]
       
-      setAvailableCategories(categories)
-      setAvailableManufacturers(manufacturers)
+      setAvailableCategories(categories.sort())
+      setAvailableManufacturers(manufacturers.sort())
       setError(null)
     } catch (error) {
       console.error('Error fetching materials:', error)
@@ -447,7 +447,7 @@ export default function MaterialsPage() {
             {stats.map((stat) => {
               const IconComponent = getStatsIconComponent(stat.icon)
               return (
-                <Grid item xs={12} sm={6} md={3} key={stat.title}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
                   <Card>
                     <CardContent>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>

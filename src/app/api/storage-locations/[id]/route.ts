@@ -6,9 +6,10 @@ const prisma = new PrismaClient()
 // PATCH /api/storage-locations/[id] - Update a storage location
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params
     const { id } = params
     const body = await request.json()
     const { name, code, type, address, description } = body
@@ -67,9 +68,10 @@ export async function PATCH(
 // DELETE /api/storage-locations/[id] - Delete a storage location
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params
     const { id } = params
 
     // Check if location has any stock records

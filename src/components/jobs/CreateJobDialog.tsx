@@ -172,7 +172,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Customer Selection */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Controller
                 name="customerId"
                 control={control}
@@ -201,7 +201,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
             </Grid>
 
             {/* Job Type */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
                 name="type"
                 control={control}
@@ -221,7 +221,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
             </Grid>
 
             {/* Scheduled Date */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
                 name="scheduledDate"
                 control={control}
@@ -238,7 +238,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
             </Grid>
 
             {/* Description */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Controller
                 name="description"
                 control={control}
@@ -257,13 +257,13 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
             </Grid>
 
             {/* Address Fields */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="subtitle2" gutterBottom>
                 Job Address
               </Typography>
             </Grid>
             
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Controller
                 name="address"
                 control={control}
@@ -277,7 +277,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
                 name="city"
                 control={control}
@@ -291,7 +291,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
               />
             </Grid>
 
-            <Grid item xs={12} sm={3}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <Controller
                 name="state"
                 control={control}
@@ -305,7 +305,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
               />
             </Grid>
 
-            <Grid item xs={12} sm={3}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <Controller
                 name="zip"
                 control={control}
@@ -320,7 +320,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
             </Grid>
 
             {/* Estimates */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
                 name="estimatedHours"
                 control={control}
@@ -338,7 +338,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
                 name="estimatedCost"
                 control={control}
@@ -360,7 +360,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
             </Grid>
 
             {/* Crew Assignment */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Controller
                 name="assignedUserIds"
                 control={control}

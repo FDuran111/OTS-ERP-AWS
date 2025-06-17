@@ -262,7 +262,7 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
               </Typography>
               
               <Grid container spacing={3} sx={{ mt: 1 }}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Controller
                     name="name"
                     control={control}
@@ -279,7 +279,7 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
                   />
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Controller
                     name="code"
                     control={control}
@@ -296,7 +296,7 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
                   />
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Controller
                     name="type"
                     control={control}
@@ -315,7 +315,7 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
                   />
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Controller
                     name="address"
                     control={control}
@@ -330,7 +330,7 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Controller
                     name="description"
                     control={control}
