@@ -179,12 +179,19 @@ export default function MaterialsPage() {
       setLoading(true)
       setError(null)
       
+      // Create AbortController for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 500) // 500ms timeout
+      
       const response = await fetch('/api/materials', {
         cache: 'no-store', // Disable caching
         headers: {
           'Cache-Control': 'no-cache',
-        }
+        },
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
       
       if (!response.ok) {
         throw new Error(`Failed to fetch materials: ${response.status}`)
@@ -201,14 +208,20 @@ export default function MaterialsPage() {
       setAvailableManufacturers(manufacturers.sort())
     } catch (error) {
       console.error('Error fetching materials:', error)
-      setError('Failed to load materials')
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        setError('Request timed out after 0.5 seconds - click Retry')
+      } else {
+        setError('Failed to load materials')
+      }
+      
       // Auto-retry once after a brief delay
       setTimeout(() => {
         if (user) {
           console.log('Retrying materials fetch...')
           fetchMaterials()
         }
-      }, 2000)
+      }, 1000) // Shortened retry delay
     } finally {
       setLoading(false)
     }
@@ -216,12 +229,19 @@ export default function MaterialsPage() {
 
   const fetchStats = async () => {
     try {
+      // Create AbortController for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 500) // 500ms timeout
+      
       const response = await fetch('/api/materials/stats', {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
-        }
+        },
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
       
       if (response.ok) {
         const data = await response.json()
@@ -230,7 +250,11 @@ export default function MaterialsPage() {
         console.warn('Failed to fetch stats:', response.status)
       }
     } catch (error) {
-      console.error('Error fetching stats:', error)
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('Stats request timed out after 0.5 seconds')
+      } else {
+        console.error('Error fetching stats:', error)
+      }
     }
   }
 
