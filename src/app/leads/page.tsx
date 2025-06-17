@@ -1,5 +1,9 @@
 'use client'
 
+// Force dynamic rendering to prevent caching issues
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
