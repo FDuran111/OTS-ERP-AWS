@@ -53,6 +53,7 @@ import {
   Search as SearchIcon,
   MoreVert as MoreVertIcon,
 } from '@mui/icons-material'
+import AddLeadDialog from '@/components/leads/AddLeadDialog'
 
 const drawerWidth = 240
 
@@ -120,6 +121,7 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [addLeadDialogOpen, setAddLeadDialogOpen] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -128,22 +130,55 @@ export default function LeadsPage() {
       return
     }
     setUser(JSON.parse(storedUser))
-    fetchLeads()
   }, [router])
+
+  useEffect(() => {
+    if (user) {
+      fetchLeads()
+    }
+  }, [user])
 
   const fetchLeads = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/leads')
+      setError(null)
+      
+      // Create AbortController for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 500) // 500ms timeout
+      
+      const response = await fetch('/api/leads', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch leads')
+        throw new Error(`Failed to fetch leads: ${response.status}`)
       }
+      
       const data = await response.json()
       setLeads(data.leads || [])
-      setError(null)
     } catch (error) {
       console.error('Error fetching leads:', error)
-      setError('Failed to load leads')
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        setError('Request timed out after 0.5 seconds - click Retry')
+      } else {
+        setError('Failed to load leads')
+      }
+      
+      // Auto-retry once after a brief delay
+      setTimeout(() => {
+        if (user) {
+          console.log('Retrying leads fetch...')
+          fetchLeads()
+        }
+      }, 1000)
     } finally {
       setLoading(false)
     }
@@ -165,6 +200,10 @@ export default function LeadsPage() {
 
   const handleMenuClose = () => {
     setAnchorEl(null)
+  }
+
+  const handleLeadCreated = () => {
+    fetchLeads()
   }
 
   const getPriorityColor = (priority?: string) => {
@@ -252,6 +291,7 @@ export default function LeadsPage() {
           <Button
             color="inherit"
             startIcon={<AddIcon />}
+            onClick={() => setAddLeadDialogOpen(true)}
             sx={{ mr: 2 }}
           >
             Add Lead
@@ -330,7 +370,19 @@ export default function LeadsPage() {
       >
         <Container maxWidth="xl">
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert 
+              severity="error" 
+              sx={{ mb: 3 }}
+              action={
+                <Button 
+                  color="inherit" 
+                  size="small" 
+                  onClick={() => fetchLeads()}
+                >
+                  Retry
+                </Button>
+              }
+            >
               {error}
             </Alert>
           )}
@@ -349,6 +401,14 @@ export default function LeadsPage() {
                 ),
               }}
             />
+            <Button
+              variant="outlined"
+              onClick={() => fetchLeads()}
+              disabled={loading}
+              size="small"
+            >
+              {loading ? 'Loading...' : 'Refresh'}
+            </Button>
           </Box>
 
           <TableContainer component={Paper}>
@@ -467,6 +527,12 @@ export default function LeadsPage() {
           </TableContainer>
         </Container>
       </Box>
+
+      <AddLeadDialog
+        open={addLeadDialogOpen}
+        onClose={() => setAddLeadDialogOpen(false)}
+        onLeadCreated={handleLeadCreated}
+      />
     </Box>
   )
 }
