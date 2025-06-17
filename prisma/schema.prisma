@@ -310,6 +310,7 @@ model Material {
   code             String           @unique
   name             String
   description      String?
+  manufacturer     String?          // Brand/Manufacturer like "Square D", "Schneider", etc.
   unit             String
   cost             Float
   price            Float
@@ -329,6 +330,45 @@ model Material {
   usage            MaterialUsage[]
   purchaseOrderItems PurchaseOrderItem[]
   invoiceLineItems InvoiceLineItem[]
+  stockLocations   MaterialStockLocation[]
+}
+
+model StorageLocation {
+  id               String           @id @default(cuid())
+  name             String           @unique
+  code             String           @unique
+  type             LocationType     @default(WAREHOUSE)
+  address          String?
+  description      String?
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  materialStock    MaterialStockLocation[]
+}
+
+model MaterialStockLocation {
+  id               String           @id @default(cuid())
+  materialId       String
+  locationId       String
+  quantity         Int              @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  material         Material         @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  location         StorageLocation  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  
+  @@unique([materialId, locationId])
+}
+
+enum LocationType {
+  WAREHOUSE
+  SHOP
+  TRUCK
+  OFFICE
+  SUPPLIER
 }
 
 model MaterialUsage {

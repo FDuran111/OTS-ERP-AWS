@@ -36,6 +36,7 @@ const materialSchema = z.object({
   code: z.string().min(1, 'Code is required'),
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
+  manufacturer: z.string().optional(),
   category: z.string().min(1, 'Category is required'),
   unit: z.string().min(1, 'Unit is required'),
   cost: z.number().min(0, 'Cost must be positive'),
@@ -59,6 +60,22 @@ const commonCategories = [
   'Tools',
   'Hardware',
   'Safety',
+  'Other'
+]
+
+const commonManufacturers = [
+  'Square D',
+  'Schneider Electric',
+  'Eaton',
+  'General Electric',
+  'Siemens',
+  'ABB',
+  'Leviton',
+  'Hubbell',
+  'Legrand',
+  'Cooper',
+  'Lutron',
+  'Pass & Seymour',
   'Other'
 ]
 
@@ -168,7 +185,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Code and Name */}
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <Controller
                 name="code"
                 control={control}
@@ -185,7 +202,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
               />
             </Grid>
 
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <Controller
                 name="name"
                 control={control}
@@ -203,7 +220,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
             </Grid>
 
             {/* Description */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Controller
                 name="description"
                 control={control}
@@ -220,8 +237,29 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
               />
             </Grid>
 
+            {/* Manufacturer/Brand */}
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="manufacturer"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Brand/Manufacturer</InputLabel>
+                    <Select {...field} value={field.value || ''} label="Brand/Manufacturer">
+                      <MenuItem value="">Not Specified</MenuItem>
+                      {commonManufacturers.map((manufacturer) => (
+                        <MenuItem key={manufacturer} value={manufacturer}>
+                          {manufacturer}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </Grid>
+
             {/* Category and Unit */}
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <Controller
                 name="category"
                 control={control}
@@ -245,7 +283,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
               />
             </Grid>
 
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <Controller
                 name="unit"
                 control={control}
@@ -392,7 +430,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
             </Grid>
 
             {/* Vendor */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Controller
                 name="vendorId"
                 control={control}

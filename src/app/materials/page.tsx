@@ -34,6 +34,9 @@ import {
   CircularProgress,
   Alert,
   Grid,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -54,10 +57,12 @@ import {
   CheckCircle,
   Error as ErrorIcon,
   TrendingUp,
+  Clear as ClearIcon,
 } from '@mui/icons-material'
 import AddMaterialDialog from '@/components/materials/AddMaterialDialog'
 import EditMaterialDialog from '@/components/materials/EditMaterialDialog'
 import MaterialActionsMenu from '@/components/materials/MaterialActionsMenu'
+import StorageLocationDialog from '@/components/materials/StorageLocationDialog'
 
 const drawerWidth = 240
 
@@ -73,6 +78,7 @@ interface Material {
   code: string
   name: string
   description?: string
+  manufacturer?: string
   category: string
   unit: string
   inStock: number
@@ -86,6 +92,16 @@ interface Material {
     name: string
     code: string
   }
+  stockLocations?: {
+    id: string
+    quantity: number
+    location: {
+      id: string
+      name: string
+      code: string
+      type: string
+    }
+  }[]
 }
 
 interface Stats {
@@ -128,6 +144,10 @@ export default function MaterialsPage() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [manufacturerFilter, setManufacturerFilter] = useState('')
+  const [availableCategories, setAvailableCategories] = useState<string[]>([])
+  const [availableManufacturers, setAvailableManufacturers] = useState<string[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
   const [stats, setStats] = useState<Stats[]>([])
   const [loading, setLoading] = useState(true)
@@ -135,6 +155,8 @@ export default function MaterialsPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
+  const [showOnlyLowStock, setShowOnlyLowStock] = useState(false)
+  const [storageLocationDialogOpen, setStorageLocationDialogOpen] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -156,6 +178,13 @@ export default function MaterialsPage() {
       }
       const data = await response.json()
       setMaterials(data)
+      
+      // Extract unique categories and manufacturers for filters
+      const categories = [...new Set(data.map((m: Material) => m.category).filter(Boolean))].sort()
+      const manufacturers = [...new Set(data.map((m: Material) => m.manufacturer).filter(Boolean))].sort()
+      
+      setAvailableCategories(categories)
+      setAvailableManufacturers(manufacturers)
       setError(null)
     } catch (error) {
       console.error('Error fetching materials:', error)
@@ -390,26 +419,35 @@ export default function MaterialsPage() {
             <Typography variant="h4">
               Materials & Inventory
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleAddMaterial}
-              sx={{
-                backgroundColor: '#e14eca',
-                '&:hover': {
-                  backgroundColor: '#d236b8',
-                },
-              }}
-            >
-              Add Material
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<InventoryIcon />}
+                onClick={() => setStorageLocationDialogOpen(true)}
+              >
+                Manage Locations
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleAddMaterial}
+                sx={{
+                  backgroundColor: '#e14eca',
+                  '&:hover': {
+                    backgroundColor: '#d236b8',
+                  },
+                }}
+              >
+                Add Material
+              </Button>
+            </Box>
           </Box>
 
           <Grid container spacing={3} sx={{ mb: 3 }}>
             {stats.map((stat) => {
               const IconComponent = getStatsIconComponent(stat.icon)
               return (
-                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
+                <Grid item xs={12} sm={6} md={3} key={stat.title}>
                   <Card>
                     <CardContent>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -443,19 +481,103 @@ export default function MaterialsPage() {
 
           <Card sx={{ mb: 3 }}>
             <CardContent>
-              <TextField
-                fullWidth
-                placeholder="Search materials by name, ID, or category..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
+              <Typography variant="h6" gutterBottom>
+                🔍 Advanced Search & Filters
+              </Typography>
+              
+              {/* Main Search Row */}
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                <TextField
+                  fullWidth
+                  placeholder="Search by keyword, brand, part number, description... (e.g., 'Square D', '60 amp disconnect')"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ flex: 2 }}
+                />
+                <Button
+                  variant={showOnlyLowStock ? "contained" : "outlined"}
+                  color={showOnlyLowStock ? "warning" : "primary"}
+                  onClick={() => setShowOnlyLowStock(!showOnlyLowStock)}
+                  startIcon={<Warning />}
+                  sx={{ whiteSpace: 'nowrap', minWidth: 160 }}
+                >
+                  {showOnlyLowStock ? "Show All" : "Low Stock Only"}
+                </Button>
+              </Box>
+
+              {/* Filter Row */}
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel>Filter by Brand</InputLabel>
+                  <Select
+                    value={manufacturerFilter}
+                    onChange={(e) => setManufacturerFilter(e.target.value)}
+                    label="Filter by Brand"
+                    size="small"
+                  >
+                    <MenuItem value="">All Brands</MenuItem>
+                    {availableManufacturers.map((manufacturer) => (
+                      <MenuItem key={manufacturer} value={manufacturer}>
+                        {manufacturer}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel>Filter by Category</InputLabel>
+                  <Select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    label="Filter by Category"
+                    size="small"
+                  >
+                    <MenuItem value="">All Categories</MenuItem>
+                    {availableCategories.map((category) => (
+                      <MenuItem key={category} value={category}>
+                        {category}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                {(searchTerm || categoryFilter || manufacturerFilter || showOnlyLowStock) && (
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setSearchTerm('')
+                      setCategoryFilter('')
+                      setManufacturerFilter('')
+                      setShowOnlyLowStock(false)
+                    }}
+                    startIcon={<ClearIcon />}
+                    size="small"
+                  >
+                    Clear All
+                  </Button>
+                )}
+              </Box>
+
+              {/* Search Results Summary */}
+              {(searchTerm || categoryFilter || manufacturerFilter || showOnlyLowStock) && (
+                <Box sx={{ mt: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Active filters: {[
+                      searchTerm && `Search: "${searchTerm}"`,
+                      manufacturerFilter && `Brand: ${manufacturerFilter}`,
+                      categoryFilter && `Category: ${categoryFilter}`,
+                      showOnlyLowStock && `Low Stock Only`
+                    ].filter(Boolean).join(' • ') || 'None'}
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
 
@@ -464,6 +586,69 @@ export default function MaterialsPage() {
               {error}
             </Alert>
           )}
+
+          {/* Low Stock Summary */}
+          {materials.length > 0 && (
+            <Alert 
+              severity={materials.filter(m => m.inStock <= m.minStock).length > 0 ? "warning" : "success"} 
+              sx={{ mb: 3 }}
+              icon={<Warning />}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="body2">
+                  {materials.filter(m => m.inStock <= m.minStock).length > 0 
+                    ? `${materials.filter(m => m.inStock <= m.minStock).length} item(s) need restocking`
+                    : "All items are adequately stocked"
+                  }
+                </Typography>
+                {materials.filter(m => m.inStock <= m.minStock).length > 0 && !showOnlyLowStock && (
+                  <Button 
+                    size="small" 
+                    variant="contained" 
+                    color="warning"
+                    onClick={() => setShowOnlyLowStock(true)}
+                  >
+                    View Low Stock Items
+                  </Button>
+                )}
+              </Box>
+            </Alert>
+          )}
+
+          {/* Stock Status Legend */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Stock Status Legend
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>🚨</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Critical - Out of stock or &lt;5% of target
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>⚠️</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Low Stock - At or below minimum level
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>📦</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Adequate - Above minimum, normal stock
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>✅</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Well Stocked - 50% or more above minimum
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
 
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -476,6 +661,7 @@ export default function MaterialsPage() {
                   <TableRow>
                     <TableCell>Code</TableCell>
                     <TableCell>Name</TableCell>
+                    <TableCell>Brand</TableCell>
                     <TableCell>Category</TableCell>
                     <TableCell>Stock</TableCell>
                     <TableCell>Min Stock</TableCell>
@@ -488,11 +674,29 @@ export default function MaterialsPage() {
                 </TableHead>
                 <TableBody>
                   {materials
-                    .filter(material => 
-                      material.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      material.category.toLowerCase().includes(searchTerm.toLowerCase())
-                    )
+                    .filter(material => {
+                      // Enhanced keyword search across multiple fields
+                      const searchLower = searchTerm.toLowerCase()
+                      const matchesSearch = !searchTerm || 
+                        material.code.toLowerCase().includes(searchLower) ||
+                        material.name.toLowerCase().includes(searchLower) ||
+                        material.category.toLowerCase().includes(searchLower) ||
+                        (material.description && material.description.toLowerCase().includes(searchLower)) ||
+                        (material.manufacturer && material.manufacturer.toLowerCase().includes(searchLower)) ||
+                        (material.location && material.location.toLowerCase().includes(searchLower))
+                      
+                      // Filter by category
+                      const matchesCategory = !categoryFilter || material.category === categoryFilter
+                      
+                      // Filter by manufacturer/brand
+                      const matchesManufacturer = !manufacturerFilter || material.manufacturer === manufacturerFilter
+                      
+                      // Filter by stock level
+                      const isLowStock = material.inStock <= material.minStock
+                      const matchesStockFilter = !showOnlyLowStock || isLowStock
+                      
+                      return matchesSearch && matchesCategory && matchesManufacturer && matchesStockFilter
+                    })
                     .map((material) => (
                       <TableRow key={material.id} hover>
                         <TableCell>{material.code}</TableCell>
@@ -506,9 +710,50 @@ export default function MaterialsPage() {
                             )}
                           </Box>
                         </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={material.manufacturer ? "medium" : "normal"}>
+                            {material.manufacturer || '-'}
+                          </Typography>
+                        </TableCell>
                         <TableCell>{material.category}</TableCell>
                         <TableCell>
-                          {material.inStock} {material.unit}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>
+                              {(() => {
+                                const stockPercentage = material.minStock > 0 ? (material.inStock / material.minStock) * 100 : 0
+                                if (material.inStock === 0 || stockPercentage < 5) return '🚨'
+                                if (material.inStock <= material.minStock) return '⚠️'
+                                if (stockPercentage >= 150) return '✅'
+                                return '📦'
+                              })()}
+                            </Typography>
+                            <Box>
+                              <Typography variant="body2" fontWeight="medium">
+                                Total: {material.inStock} {material.unit}
+                              </Typography>
+                              {material.stockLocations && material.stockLocations.length > 0 && (
+                                <Box sx={{ mt: 0.5 }}>
+                                  {material.stockLocations
+                                    .filter(stock => stock.quantity > 0)
+                                    .map((stock, index) => (
+                                    <Typography 
+                                      key={stock.id} 
+                                      variant="caption" 
+                                      color="text.secondary"
+                                      sx={{ display: 'block', fontSize: '0.7rem' }}
+                                    >
+                                      {stock.location.code}: {stock.quantity} {material.unit}
+                                    </Typography>
+                                  ))}
+                                  {material.stockLocations.filter(stock => stock.quantity > 0).length === 0 && (
+                                    <Typography variant="caption" color="error" sx={{ fontSize: '0.7rem' }}>
+                                      No stock at any location
+                                    </Typography>
+                                  )}
+                                </Box>
+                              )}
+                            </Box>
+                          </Box>
                         </TableCell>
                         <TableCell>
                           {material.minStock} {material.unit}
@@ -535,7 +780,7 @@ export default function MaterialsPage() {
                     ))}
                   {materials.length === 0 && !loading && (
                     <TableRow>
-                      <TableCell colSpan={10} align="center">
+                      <TableCell colSpan={11} align="center">
                         <Typography color="text.secondary">No materials found</Typography>
                       </TableCell>
                     </TableRow>
@@ -559,6 +804,15 @@ export default function MaterialsPage() {
               setSelectedMaterial(null)
             }}
             onMaterialUpdated={handleMaterialUpdated}
+          />
+
+          <StorageLocationDialog
+            open={storageLocationDialogOpen}
+            onClose={() => setStorageLocationDialogOpen(false)}
+            onLocationsUpdated={() => {
+              fetchMaterials()
+              fetchStats()
+            }}
           />
         </Container>
       </Box>

@@ -6,6 +6,7 @@ const createMaterialSchema = z.object({
   code: z.string().min(1, 'Code is required'),
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
+  manufacturer: z.string().optional(),
   unit: z.string().min(1, 'Unit is required'),
   cost: z.number().min(0, 'Cost must be positive'),
   price: z.number().min(0, 'Price must be positive'),
@@ -74,6 +75,7 @@ export async function GET(request: NextRequest) {
         code: material.code,
         name: material.name,
         description: material.description,
+        manufacturer: (material as any).manufacturer || null,
         category: material.category,
         unit: material.unit,
         cost: material.cost,
@@ -85,6 +87,7 @@ export async function GET(request: NextRequest) {
         vendor: material.vendor,
         status: stockStatus,
         active: material.active,
+        stockLocations: [],
         createdAt: material.createdAt,
         updatedAt: material.updatedAt,
       }
@@ -93,8 +96,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(transformedMaterials)
   } catch (error) {
     console.error('Error fetching materials:', error)
+    console.error('Error details:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch materials' },
+      { error: 'Failed to fetch materials', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

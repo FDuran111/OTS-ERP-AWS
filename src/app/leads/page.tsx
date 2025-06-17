@@ -6,8 +6,6 @@ import {
   Box,
   Container,
   Typography,
-  Card,
-  CardContent,
   Chip,
   IconButton,
   AppBar,
@@ -23,11 +21,16 @@ import {
   ListItemText,
   Button,
   Paper,
-  Grid,
   CircularProgress,
   Alert,
-  Stack,
-  Badge,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  InputAdornment,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -47,6 +50,8 @@ import {
   TrendingUp as LeadsIcon,
   Warning as WarningIcon,
   AttachMoney,
+  Search as SearchIcon,
+  MoreVert as MoreVertIcon,
 } from '@mui/icons-material'
 
 const drawerWidth = 240
@@ -84,14 +89,14 @@ interface Lead {
 }
 
 const leadStages = [
-  { key: 'COLD_LEAD', label: 'Cold Leads', color: '#f5f5f5' },
-  { key: 'WARM_LEAD', label: 'Warm Leads', color: '#f8f8f8' },
-  { key: 'ESTIMATE_REQUESTED', label: 'Estimate Requested', color: '#f5f5f5' },
-  { key: 'ESTIMATE_SENT', label: 'Estimate Sent', color: '#f8f8f8' },
-  { key: 'ESTIMATE_APPROVED', label: 'Approved', color: '#f5f5f5' },
-  { key: 'JOB_SCHEDULED', label: 'Job Scheduled', color: '#f8f8f8' },
-  { key: 'FOLLOW_UP_REQUIRED', label: 'Follow-up Required', color: '#f5f5f5' },
-  { key: 'LOST', label: 'Lost', color: '#f8f8f8' },
+  { key: 'COLD_LEAD', label: 'Cold Lead' },
+  { key: 'WARM_LEAD', label: 'Warm Lead' },
+  { key: 'ESTIMATE_REQUESTED', label: 'Estimate Requested' },
+  { key: 'ESTIMATE_SENT', label: 'Estimate Sent' },
+  { key: 'ESTIMATE_APPROVED', label: 'Approved' },
+  { key: 'JOB_SCHEDULED', label: 'Job Scheduled' },
+  { key: 'FOLLOW_UP_REQUIRED', label: 'Follow-up Required' },
+  { key: 'LOST', label: 'Lost' },
 ]
 
 const menuItems = [
@@ -113,8 +118,6 @@ export default function LeadsPage() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [leads, setLeads] = useState<Lead[]>([])
-  const [leadsByStatus, setLeadsByStatus] = useState<Record<string, Lead[]>>({})
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -136,9 +139,7 @@ export default function LeadsPage() {
         throw new Error('Failed to fetch leads')
       }
       const data = await response.json()
-      setLeads(data.leads)
-      setLeadsByStatus(data.leadsByStatus)
-      setStatusCounts(data.statusCounts)
+      setLeads(data.leads || [])
       setError(null)
     } catch (error) {
       console.error('Error fetching leads:', error)
@@ -334,182 +335,136 @@ export default function LeadsPage() {
             </Alert>
           )}
 
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <Box sx={{ overflowX: 'auto' }}>
-              <Stack direction="row" spacing={3} sx={{ minWidth: 'max-content', pb: 2 }}>
-                {leadStages.map((stage) => (
-                  <Paper
-                    key={stage.key}
-                    sx={{
-                      minWidth: 320,
-                      maxWidth: 320,
-                      backgroundColor: stage.color,
-                      border: '1px solid #ddd',
-                      borderRadius: 2,
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                    }}
-                  >
-                    <Box sx={{ 
-                      p: 3, 
-                      borderBottom: '1px solid #ddd',
-                      backgroundColor: 'white',
-                      borderTopLeftRadius: 8,
-                      borderTopRightRadius: 8,
-                    }}>
-                      <Stack direction="row" alignItems="center" justifyContent="space-between">
-                        <Typography variant="h6" fontWeight="600" color="text.primary">
-                          {stage.label}
-                        </Typography>
-                        <Badge 
-                          badgeContent={statusCounts[stage.key] || 0} 
-                          color="primary"
-                          sx={{
-                            '& .MuiBadge-badge': {
-                              fontSize: '0.75rem',
-                              fontWeight: 'bold'
-                            }
-                          }}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <TextField
+              placeholder="Search leads..."
+              variant="outlined"
+              size="small"
+              sx={{ width: 300 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Contact</TableCell>
+                  <TableCell>Source</TableCell>
+                  <TableCell>Value</TableCell>
+                  <TableCell>Priority</TableCell>
+                  <TableCell>Last Contact</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      Loading leads...
+                    </TableCell>
+                  </TableRow>
+                ) : leads.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      No leads found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  leads.map((lead) => (
+                    <TableRow key={lead.id} hover>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">
+                            {lead.companyName || `${lead.firstName} ${lead.lastName}`}
+                          </Typography>
+                          {lead.description && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                              {lead.description.length > 50 ? `${lead.description.substring(0, 50)}...` : lead.description}
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={leadStages.find(s => s.key === lead.status)?.label || lead.status}
+                          size="small"
+                          color={lead.overdue ? 'error' : 'default'}
+                          variant="outlined"
                         />
-                      </Stack>
-                    </Box>
-                    <Box sx={{ p: 2, maxHeight: 600, overflowY: 'auto' }}>
-                      {(leadsByStatus[stage.key] || []).map((lead) => (
-                        <Card
-                          key={lead.id}
-                          sx={{
-                            mb: 2,
-                            cursor: 'pointer',
-                            backgroundColor: 'white',
-                            border: lead.overdue ? '2px solid #f44336' : '1px solid #e0e0e0',
-                            borderRadius: 2,
-                            transition: 'all 0.2s ease-in-out',
-                            '&:hover': {
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                              transform: 'translateY(-2px)',
-                            },
-                          }}
-                        >
-                          <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-                            <Stack spacing={2}>
-                              {/* Header with name and priority */}
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <Typography variant="h6" fontWeight="600" color="text.primary">
-                                  {lead.companyName || `${lead.firstName} ${lead.lastName}`}
-                                </Typography>
-                                {lead.priority && (
-                                  <Chip
-                                    label={lead.priority}
-                                    size="small"
-                                    color={getPriorityColor(lead.priority) as any}
-                                    sx={{ fontWeight: 'medium' }}
-                                  />
-                                )}
-                              </Box>
-                              
-                              {/* Description */}
-                              {lead.description && (
-                                <Typography 
-                                  variant="body2" 
-                                  color="text.primary"
-                                  sx={{ 
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden',
-                                    lineHeight: 1.4,
-                                  }}
-                                >
-                                  {lead.description}
-                                </Typography>
-                              )}
-                              
-                              {/* Estimated Value */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <AttachMoney sx={{ fontSize: 18, color: 'success.main' }} />
-                                <Typography variant="body1" fontWeight="medium" color="success.main">
-                                  {formatCurrency(lead.estimatedValue)}
-                                </Typography>
-                              </Box>
-                              
-                              {/* Contact Information */}
-                              {lead.phone && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <PhoneIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                                  <Typography variant="body2" color="text.primary">
-                                    {lead.phone}
-                                  </Typography>
-                                </Box>
-                              )}
-                              
-                              {lead.email && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <EmailIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                                  <Typography variant="body2" color="text.primary">
-                                    {lead.email}
-                                  </Typography>
-                                </Box>
-                              )}
-                              
-                              {/* Assigned User */}
-                              {lead.assignedUser && (
-                                <Chip
-                                  label={`Assigned: ${lead.assignedUser.name}`}
-                                  size="small"
-                                  variant="outlined"
-                                  color="primary"
-                                  sx={{ alignSelf: 'flex-start' }}
-                                />
-                              )}
-                              
-                              {/* Last Contact Warning */}
-                              {lead.daysSinceLastContact !== null && (
-                                <Box 
-                                  sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: 1,
-                                    p: 1,
-                                    borderRadius: 1,
-                                    backgroundColor: lead.overdue ? 'error.main' : 'grey.100',
-                                    color: lead.overdue ? 'white' : 'text.primary',
-                                  }}
-                                >
-                                  {lead.overdue && <WarningIcon sx={{ fontSize: 16 }} />}
-                                  <Typography 
-                                    variant="caption" 
-                                    fontWeight="medium"
-                                  >
-                                    Last contact: {lead.daysSinceLastContact} days ago
-                                  </Typography>
-                                </Box>
-                              )}
-                            </Stack>
-                          </CardContent>
-                        </Card>
-                      ))}
-                      {(!leadsByStatus[stage.key] || leadsByStatus[stage.key].length === 0) && (
-                        <Box sx={{ 
-                          textAlign: 'center', 
-                          py: 4,
-                          backgroundColor: 'white',
-                          borderRadius: 1,
-                          border: '1px dashed #ddd'
-                        }}>
-                          <Typography color="text.secondary" variant="body2" fontWeight="medium">
-                            No leads in this stage
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          {lead.phone && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <PhoneIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                              <Typography variant="body2">{lead.phone}</Typography>
+                            </Box>
+                          )}
+                          {lead.email && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <EmailIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                              <Typography variant="body2">{lead.email}</Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {lead.source || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <AttachMoney sx={{ fontSize: 16, color: 'success.main' }} />
+                          <Typography variant="body2" color="success.main" fontWeight="medium">
+                            {formatCurrency(lead.estimatedValue)}
                           </Typography>
                         </Box>
-                      )}
-                    </Box>
-                  </Paper>
-                ))}
-              </Stack>
-            </Box>
-          )}
+                      </TableCell>
+                      <TableCell>
+                        {lead.priority && (
+                          <Chip
+                            label={lead.priority}
+                            size="small"
+                            color={getPriorityColor(lead.priority) as any}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {lead.daysSinceLastContact !== null && (
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 0.5,
+                            color: lead.overdue ? 'error.main' : 'text.secondary'
+                          }}>
+                            {lead.overdue && <WarningIcon sx={{ fontSize: 16 }} />}
+                            <Typography variant="body2" color="inherit">
+                              {lead.daysSinceLastContact} days ago
+                            </Typography>
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton size="small">
+                          <MoreVertIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Container>
       </Box>
     </Box>
