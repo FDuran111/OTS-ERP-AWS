@@ -145,7 +145,7 @@ export default function LeadsPage() {
       
       // Create AbortController for timeout
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 500) // 500ms timeout
+      const timeoutId = setTimeout(() => controller.abort(), 2000) // 2s timeout
       
       const response = await fetch('/api/leads', {
         cache: 'no-store',
@@ -167,18 +167,12 @@ export default function LeadsPage() {
       console.error('Error fetching leads:', error)
       
       if (error instanceof Error && error.name === 'AbortError') {
-        setError('Request timed out after 0.5 seconds - click Retry')
+        setError('Request timed out after 2 seconds - click Retry')
       } else {
         setError('Failed to load leads')
       }
       
-      // Auto-retry once after a brief delay
-      setTimeout(() => {
-        if (user) {
-          console.log('Retrying leads fetch...')
-          fetchLeads()
-        }
-      }, 1000)
+      // No auto-retry - user can click Retry or Refresh manually
     } finally {
       setLoading(false)
     }
