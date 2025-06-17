@@ -266,7 +266,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
                 render={({ field }) => (
                   <FormControl fullWidth error={!!errors.category}>
                     <InputLabel>Category *</InputLabel>
-                    <Select {...field} label="Category *">
+                    <Select {...field} value={field.value || ''} label="Category *">
                       {commonCategories.map((category) => (
                         <MenuItem key={category} value={category}>
                           {category}
@@ -290,7 +290,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
                 render={({ field }) => (
                   <FormControl fullWidth error={!!errors.unit}>
                     <InputLabel>Unit *</InputLabel>
-                    <Select {...field} label="Unit *">
+                    <Select {...field} value={field.value || ''} label="Unit *">
                       {commonUnits.map((unit) => (
                         <MenuItem key={unit} value={unit}>
                           {unit}
@@ -437,7 +437,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
                 render={({ field }) => (
                   <FormControl fullWidth>
                     <InputLabel>Vendor (Optional)</InputLabel>
-                    <Select {...field} label="Vendor (Optional)">
+                    <Select {...field} value={field.value || ''} label="Vendor (Optional)">
                       <MenuItem value="">
                         <em>No vendor selected</em>
                       </MenuItem>
