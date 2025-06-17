@@ -240,7 +240,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             <Box>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Customer Selection */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Controller
                 name="customerId"
                 control={control}
@@ -269,7 +269,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Job Type and Status */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="type"
                 control={control}
@@ -288,7 +288,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="status"
                 control={control}
@@ -313,7 +313,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Description */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Controller
                 name="description"
                 control={control}
@@ -332,7 +332,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Dates */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="scheduledDate"
                 control={control}
@@ -348,7 +348,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="completedDate"
                 control={control}
@@ -365,13 +365,13 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Address Fields */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Typography variant="subtitle2" gutterBottom>
                 Job Address
               </Typography>
             </Grid>
             
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Controller
                 name="address"
                 control={control}
@@ -385,7 +385,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="city"
                 control={control}
@@ -399,7 +399,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 3 }}>
+            <Grid item xs={12} sm={3}>
               <Controller
                 name="state"
                 control={control}
@@ -413,7 +413,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 3 }}>
+            <Grid item xs={12} sm={3}>
               <Controller
                 name="zip"
                 control={control}
@@ -428,7 +428,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Estimates */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="estimatedHours"
                 control={control}
@@ -446,7 +446,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="estimatedCost"
                 control={control}
@@ -468,7 +468,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Actuals */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="actualHours"
                 control={control}
@@ -486,7 +486,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="actualCost"
                 control={control}
@@ -508,7 +508,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Billed Amount */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="billedAmount"
                 control={control}
@@ -530,7 +530,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Crew Assignment */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Controller
                 name="assignedUserIds"
                 control={control}

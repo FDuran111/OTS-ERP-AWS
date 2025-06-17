@@ -157,13 +157,13 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {error && (
-              <Grid size={12}>
+              <Grid item xs={12}>
                 <Alert severity="error">{error}</Alert>
               </Grid>
             )}
 
             {/* Job Selection */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Controller
                 name="jobId"
                 control={control}
@@ -189,7 +189,7 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
             </Grid>
 
             {/* Date and Time */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="scheduledDate"
                 control={control}
@@ -208,7 +208,7 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="scheduledTime"
                 control={control}
@@ -228,7 +228,7 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
             </Grid>
 
             {/* Estimated Hours */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="estimatedHours"
                 control={control}
@@ -249,7 +249,7 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
             </Grid>
 
             {/* Reminder Days */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="reminderDays"
                 control={control}
@@ -270,7 +270,7 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
             </Grid>
 
             {/* Notes */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Controller
                 name="notes"
                 control={control}

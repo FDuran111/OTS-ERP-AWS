@@ -285,7 +285,7 @@ export default function EditInvoiceDialog({ open, invoice, onClose, onInvoiceUpd
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Invoice Info */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>
                 Job: {invoice.job.jobNumber} - {invoice.job.description}
               </Typography>
@@ -298,7 +298,7 @@ export default function EditInvoiceDialog({ open, invoice, onClose, onInvoiceUpd
             </Grid>
 
             {/* Due Date */}
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid item xs={12} md={6}>
               <Controller
                 name="dueDate"
                 control={control}
@@ -318,7 +318,7 @@ export default function EditInvoiceDialog({ open, invoice, onClose, onInvoiceUpd
             </Grid>
 
             {/* Line Items */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">Line Items</Typography>
                 {canEdit && (
@@ -457,7 +457,7 @@ export default function EditInvoiceDialog({ open, invoice, onClose, onInvoiceUpd
             </Grid>
 
             {/* Notes */}
-            <Grid size={12}>
+            <Grid item xs={12}>
               <Controller
                 name="notes"
                 control={control}
@@ -477,7 +477,7 @@ export default function EditInvoiceDialog({ open, invoice, onClose, onInvoiceUpd
 
             {/* Original amounts for comparison */}
             {invoice.totalAmount !== calculateTotal() && (
-              <Grid size={12}>
+              <Grid item xs={12}>
                 <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
                   <Typography variant="body2" color="text.secondary">
                     Original Total: ${invoice.totalAmount.toFixed(2)} → New Total: ${calculateTotal().toFixed(2)}
