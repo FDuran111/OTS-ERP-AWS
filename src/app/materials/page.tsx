@@ -165,17 +165,31 @@ export default function MaterialsPage() {
       return
     }
     setUser(JSON.parse(storedUser))
-    fetchMaterials()
-    fetchStats()
   }, [router])
+
+  useEffect(() => {
+    if (user) {
+      fetchMaterials()
+      fetchStats()
+    }
+  }, [user])
 
   const fetchMaterials = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/materials')
+      setError(null)
+      
+      const response = await fetch('/api/materials', {
+        cache: 'no-store', // Disable caching
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      })
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch materials')
+        throw new Error(`Failed to fetch materials: ${response.status}`)
       }
+      
       const data = await response.json()
       setMaterials(data)
       
@@ -185,10 +199,16 @@ export default function MaterialsPage() {
       
       setAvailableCategories(categories.sort())
       setAvailableManufacturers(manufacturers.sort())
-      setError(null)
     } catch (error) {
       console.error('Error fetching materials:', error)
       setError('Failed to load materials')
+      // Auto-retry once after a brief delay
+      setTimeout(() => {
+        if (user) {
+          console.log('Retrying materials fetch...')
+          fetchMaterials()
+        }
+      }, 2000)
     } finally {
       setLoading(false)
     }
@@ -196,10 +216,18 @@ export default function MaterialsPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/materials/stats')
+      const response = await fetch('/api/materials/stats', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      })
+      
       if (response.ok) {
         const data = await response.json()
         setStats(data.stats)
+      } else {
+        console.warn('Failed to fetch stats:', response.status)
       }
     } catch (error) {
       console.error('Error fetching stats:', error)
@@ -422,6 +450,16 @@ export default function MaterialsPage() {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
                 variant="outlined"
+                onClick={() => {
+                  fetchMaterials()
+                  fetchStats()
+                }}
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : 'Refresh'}
+              </Button>
+              <Button
+                variant="outlined"
                 startIcon={<InventoryIcon />}
                 onClick={() => setStorageLocationDialogOpen(true)}
               >
@@ -582,7 +620,22 @@ export default function MaterialsPage() {
           </Card>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert 
+              severity="error" 
+              sx={{ mb: 3 }}
+              action={
+                <Button 
+                  color="inherit" 
+                  size="small" 
+                  onClick={() => {
+                    fetchMaterials()
+                    fetchStats()
+                  }}
+                >
+                  Retry
+                </Button>
+              }
+            >
               {error}
             </Alert>
           )}
