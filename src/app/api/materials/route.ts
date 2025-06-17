@@ -42,9 +42,8 @@ export async function GET(request: NextRequest) {
       whereClause.category = category
     }
 
-    if (lowStock) {
-      whereClause.inStock = { lte: prisma.material.fields.minStock }
-    }
+    // Note: Low stock filtering will be done post-query due to Prisma limitations
+    // with field-to-field comparisons
 
     const materials = await prisma.material.findMany({
       where: whereClause,
@@ -55,6 +54,18 @@ export async function GET(request: NextRequest) {
             name: true,
             code: true,
           }
+        },
+        stockLocations: {
+          include: {
+            location: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                type: true,
+              }
+            }
+          }
         }
       },
       orderBy: {
@@ -62,8 +73,14 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Filter by low stock if requested (post-query filtering)
+    let filteredMaterials = materials
+    if (lowStock) {
+      filteredMaterials = materials.filter(material => material.inStock <= material.minStock)
+    }
+
     // Transform data for frontend
-    const transformedMaterials = materials.map(material => {
+    const transformedMaterials = filteredMaterials.map(material => {
       const stockStatus = material.inStock === 0 
         ? 'Out of Stock' 
         : material.inStock <= material.minStock 
@@ -75,7 +92,7 @@ export async function GET(request: NextRequest) {
         code: material.code,
         name: material.name,
         description: material.description,
-        manufacturer: (material as any).manufacturer || null,
+        manufacturer: material.manufacturer || null,
         category: material.category,
         unit: material.unit,
         cost: material.cost,
@@ -87,7 +104,7 @@ export async function GET(request: NextRequest) {
         vendor: material.vendor,
         status: stockStatus,
         active: material.active,
-        stockLocations: [],
+        stockLocations: material.stockLocations || [],
         createdAt: material.createdAt,
         updatedAt: material.updatedAt,
       }
@@ -96,7 +113,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(transformedMaterials)
   } catch (error) {
     console.error('Error fetching materials:', error)
-    console.error('Error details:', error)
+    
+    // Check if it's a database connection error
+    if (error instanceof Error) {
+      if (error.message.includes('Can\'t reach database server')) {
+        return NextResponse.json(
+          { 
+            error: 'Database connection failed', 
+            details: 'Unable to connect to database. The Supabase instance may be paused or there may be a connectivity issue.',
+            suggestion: 'Please check the Supabase dashboard to ensure the project is active.'
+          },
+          { status: 503 }
+        )
+      }
+    }
+    
     return NextResponse.json(
       { error: 'Failed to fetch materials', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

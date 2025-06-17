@@ -8,15 +8,13 @@ export async function GET() {
       where: { active: true }
     })
 
-    // Get low stock count
-    const lowStockMaterials = await prisma.material.count({
-      where: {
-        active: true,
-        inStock: {
-          lte: prisma.material.fields.minStock
-        }
-      }
-    })
+    // Get low stock count (using raw query due to Prisma field comparison limitations)
+    const lowStockMaterials = await prisma.$queryRaw<[{count: bigint}]>`
+      SELECT COUNT(*) as count 
+      FROM "Material" 
+      WHERE "active" = true 
+      AND "inStock" <= "minStock"
+    `
 
     // Get out of stock count
     const outOfStockMaterials = await prisma.material.count({
@@ -27,7 +25,8 @@ export async function GET() {
     })
 
     // Calculate in stock (not low stock and not out of stock)
-    const inStockMaterials = totalMaterials - lowStockMaterials
+    const lowStockCount = Number(lowStockMaterials[0]?.count || 0)
+    const inStockMaterials = totalMaterials - lowStockCount
 
     // Get categories
     const categories = await prisma.material.groupBy({
@@ -69,7 +68,7 @@ export async function GET() {
       },
       {
         title: 'Low Stock',
-        value: lowStockMaterials.toString(),
+        value: lowStockCount.toString(),
         icon: 'warning',
         color: '#fd5d93'
       },
