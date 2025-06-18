@@ -13,9 +13,9 @@ export async function GET(
     const jobResult = await query(
       `SELECT 
         j.*,
-        c.company_name,
-        c.first_name,
-        c.last_name,
+        c."companyName",
+        c."firstName",
+        c."lastName",
         c.email,
         c.phone,
         c.address as customer_address,
@@ -23,7 +23,7 @@ export async function GET(
         c.state as customer_state,
         c.zip as customer_zip
       FROM "Job" j
-      INNER JOIN "Customer" c ON j.customer_id = c.id
+      INNER JOIN "Customer" c ON j."customerId" = c.id
       WHERE j.id = $1`,
       [resolvedParams.id]
     )
@@ -45,8 +45,8 @@ export async function GET(
         u.email,
         u.role
       FROM "JobAssignment" ja
-      INNER JOIN "User" u ON ja.user_id = u.id
-      WHERE ja.job_id = $1`,
+      INNER JOIN "User" u ON ja."userId" = u.id
+      WHERE ja."jobId" = $1`,
       [resolvedParams.id]
     )
 
@@ -72,33 +72,33 @@ export async function GET(
         m.cost,
         m.price
       FROM "MaterialUsage" mu
-      INNER JOIN "Material" m ON mu.material_id = m.id
-      WHERE mu.job_id = $1`,
+      INNER JOIN "Material" m ON mu."materialId" = m.id
+      WHERE mu."jobId" = $1`,
       [resolvedParams.id]
     )
 
     // Get job phases
     const phasesResult = await query(
-      `SELECT * FROM "JobPhase" WHERE job_id = $1 ORDER BY created_at`,
+      `SELECT * FROM "JobPhase" WHERE "jobId" = $1 ORDER BY "createdAt"`,
       [resolvedParams.id]
     )
 
     // Get change orders
     const changeOrdersResult = await query(
-      `SELECT * FROM "ChangeOrder" WHERE job_id = $1 ORDER BY created_at DESC`,
+      `SELECT * FROM "ChangeOrder" WHERE "jobId" = $1 ORDER BY "createdAt" DESC`,
       [resolvedParams.id]
     )
 
     // Get job notes
     const notesResult = await query(
-      `SELECT * FROM "JobNote" WHERE job_id = $1 ORDER BY created_at DESC`,
+      `SELECT * FROM "JobNote" WHERE "jobId" = $1 ORDER BY "createdAt" DESC`,
       [resolvedParams.id]
     )
 
     // Build the complete job object
     const completeJob = {
       id: job.id,
-      jobNumber: job.job_number,
+      jobNumber: job.jobNumber,
       description: job.description,
       status: job.status,
       type: job.type,
@@ -106,21 +106,21 @@ export async function GET(
       city: job.city,
       state: job.state,
       zip: job.zip,
-      scheduledDate: job.scheduled_date,
-      completedDate: job.completed_date,
-      estimatedHours: parseFloat(job.estimated_hours) || 0,
-      estimatedCost: parseFloat(job.estimated_cost) || 0,
-      actualHours: parseFloat(job.actual_hours) || 0,
-      actualCost: parseFloat(job.actual_cost) || 0,
-      billedAmount: parseFloat(job.billed_amount) || 0,
-      billedDate: job.billed_date,
-      createdAt: job.created_at,
-      updatedAt: job.updated_at,
+      scheduledDate: job.scheduledDate,
+      completedDate: job.completedDate,
+      estimatedHours: parseFloat(job.estimatedHours) || 0,
+      estimatedCost: parseFloat(job.estimatedCost) || 0,
+      actualHours: parseFloat(job.actualHours) || 0,
+      actualCost: parseFloat(job.actualCost) || 0,
+      billedAmount: parseFloat(job.billedAmount) || 0,
+      billedDate: job.billedDate,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
       customer: {
-        id: job.customer_id,
-        companyName: job.company_name,
-        firstName: job.first_name,
-        lastName: job.last_name,
+        id: job.customerId,
+        companyName: job.companyName,
+        firstName: job.firstName,
+        lastName: job.lastName,
         email: job.email,
         phone: job.phone,
         address: job.customer_address,
@@ -130,11 +130,11 @@ export async function GET(
       },
       assignments: assignmentsResult.rows.map(assignment => ({
         id: assignment.id,
-        userId: assignment.user_id,
-        assignedBy: assignment.assigned_by,
-        assignedAt: assignment.assigned_at,
+        userId: assignment.userId,
+        assignedBy: assignment.assignedBy,
+        assignedAt: assignment.assignedAt,
         user: {
-          id: assignment.user_id,
+          id: assignment.userId,
           name: assignment.name,
           email: assignment.email,
           role: assignment.role
@@ -152,10 +152,10 @@ export async function GET(
       materialUsage: materialUsageResult.rows.map(usage => ({
         id: usage.id,
         quantity: parseFloat(usage.quantity),
-        costAtTime: parseFloat(usage.cost_at_time),
-        usedAt: usage.used_at,
+        costAtTime: parseFloat(usage.costAtTime),
+        usedAt: usage.usedAt,
         material: {
-          id: usage.material_id,
+          id: usage.materialId,
           code: usage.code,
           name: usage.name,
           unit: usage.unit,
@@ -204,13 +204,14 @@ export async function PATCH(
   const resolvedParams = await params
   try {
     const body = await request.json()
+    console.log('PATCH request body:', body)
     const data = updateJobSchema.parse(body)
 
     // If assignedUserIds is provided, update assignments
     if (data.assignedUserIds) {
       // Remove existing assignments
       await query(
-        'DELETE FROM "JobAssignment" WHERE job_id = $1',
+        'DELETE FROM "JobAssignment" WHERE "jobId" = $1',
         [resolvedParams.id]
       )
 
@@ -218,7 +219,7 @@ export async function PATCH(
       for (const userId of data.assignedUserIds) {
         await query(
           `INSERT INTO "JobAssignment" (
-            id, job_id, user_id, assigned_by, assigned_at, created_at, updated_at
+            id, "jobId", "userId", "assignedBy", "assignedAt", "createdAt", "updatedAt"
           ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)`,
           [
             resolvedParams.id,
@@ -262,36 +263,36 @@ export async function PATCH(
       updateValues.push(data.zip)
     }
     if (data.scheduledDate !== undefined) {
-      updateFields.push(`scheduled_date = $${paramIndex++}`)
+      updateFields.push(`"scheduledDate" = $${paramIndex++}`)
       updateValues.push(data.scheduledDate ? new Date(data.scheduledDate) : null)
     }
     if (data.completedDate !== undefined) {
-      updateFields.push(`completed_date = $${paramIndex++}`)
+      updateFields.push(`"completedDate" = $${paramIndex++}`)
       updateValues.push(data.completedDate ? new Date(data.completedDate) : null)
     }
     if (data.estimatedHours !== undefined) {
-      updateFields.push(`estimated_hours = $${paramIndex++}`)
+      updateFields.push(`"estimatedHours" = $${paramIndex++}`)
       updateValues.push(data.estimatedHours)
     }
     if (data.estimatedCost !== undefined) {
-      updateFields.push(`estimated_cost = $${paramIndex++}`)
+      updateFields.push(`"estimatedCost" = $${paramIndex++}`)
       updateValues.push(data.estimatedCost)
     }
     if (data.actualHours !== undefined) {
-      updateFields.push(`actual_hours = $${paramIndex++}`)
+      updateFields.push(`"actualHours" = $${paramIndex++}`)
       updateValues.push(data.actualHours)
     }
     if (data.actualCost !== undefined) {
-      updateFields.push(`actual_cost = $${paramIndex++}`)
+      updateFields.push(`"actualCost" = $${paramIndex++}`)
       updateValues.push(data.actualCost)
     }
     if (data.billedAmount !== undefined) {
-      updateFields.push(`billed_amount = $${paramIndex++}`)
+      updateFields.push(`"billedAmount" = $${paramIndex++}`)
       updateValues.push(data.billedAmount)
     }
 
     if (updateFields.length > 0) {
-      updateFields.push(`updated_at = $${paramIndex++}`)
+      updateFields.push(`"updatedAt" = $${paramIndex++}`)
       updateValues.push(new Date())
       updateValues.push(resolvedParams.id)
 
@@ -305,11 +306,11 @@ export async function PATCH(
     const updatedJobResult = await query(
       `SELECT 
         j.*,
-        c.company_name,
-        c.first_name,
-        c.last_name
+        c."companyName",
+        c."firstName",
+        c."lastName"
       FROM "Job" j
-      INNER JOIN "Customer" c ON j.customer_id = c.id
+      INNER JOIN "Customer" c ON j."customerId" = c.id
       WHERE j.id = $1`,
       [resolvedParams.id]
     )
@@ -325,7 +326,7 @@ export async function PATCH(
     
     console.error('Error updating job:', error)
     return NextResponse.json(
-      { error: 'Failed to update job' },
+      { error: 'Failed to update job', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
@@ -340,12 +341,12 @@ export async function DELETE(
   try {
     // Delete related records first
     await Promise.all([
-      query('DELETE FROM "JobAssignment" WHERE job_id = $1', [resolvedParams.id]),
-      query('DELETE FROM "JobPhase" WHERE job_id = $1', [resolvedParams.id]),
+      query('DELETE FROM "JobAssignment" WHERE "jobId" = $1', [resolvedParams.id]),
+      query('DELETE FROM "JobPhase" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "TimeEntry" WHERE job_id = $1', [resolvedParams.id]),
-      query('DELETE FROM "MaterialUsage" WHERE job_id = $1', [resolvedParams.id]),
-      query('DELETE FROM "ChangeOrder" WHERE job_id = $1', [resolvedParams.id]),
-      query('DELETE FROM "JobNote" WHERE job_id = $1', [resolvedParams.id])
+      query('DELETE FROM "MaterialUsage" WHERE "jobId" = $1', [resolvedParams.id]),
+      query('DELETE FROM "ChangeOrder" WHERE "jobId" = $1', [resolvedParams.id]),
+      query('DELETE FROM "JobNote" WHERE "jobId" = $1', [resolvedParams.id])
     ])
 
     // Finally delete the job

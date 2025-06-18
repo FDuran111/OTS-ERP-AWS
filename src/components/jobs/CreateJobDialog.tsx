@@ -230,6 +230,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Scheduled Date"
                     type="datetime-local"
                     fullWidth
@@ -247,6 +248,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Job Description *"
                     multiline
                     rows={3}
@@ -272,6 +274,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Street Address"
                     fullWidth
                   />
@@ -286,6 +289,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="City"
                     fullWidth
                   />
@@ -300,6 +304,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="State"
                     fullWidth
                   />
@@ -314,6 +319,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="ZIP Code"
                     fullWidth
                   />

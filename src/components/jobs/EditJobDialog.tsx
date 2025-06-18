@@ -111,30 +111,32 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
     if (open) {
       fetchCustomers()
       fetchUsers()
-      
-      if (job) {
-        // Pre-populate form with job data
-        reset({
-          customerId: job.customerId,
-          type: job.type,
-          status: job.status.toUpperCase() as any,
-          description: job.description,
-          address: job.address || '',
-          city: job.city || '',
-          state: job.state || '',
-          zip: job.zip || '',
-          scheduledDate: job.scheduledDate ? new Date(job.scheduledDate).toISOString().slice(0, 16) : '',
-          completedDate: job.completedDate ? new Date(job.completedDate).toISOString().slice(0, 16) : '',
-          estimatedHours: job.estimatedHours,
-          estimatedCost: job.estimatedCost,
-          actualHours: job.actualHours,
-          actualCost: job.actualCost,
-          billedAmount: job.billedAmount,
-          assignedUserIds: [], // Will be set after users are loaded
-        })
-      }
     }
-  }, [open, job, reset])
+  }, [open])
+
+  // Pre-populate form after customers and users are loaded
+  useEffect(() => {
+    if (open && job && customers.length > 0) {
+      reset({
+        customerId: job.customerId,
+        type: job.type,
+        status: job.status.toUpperCase() as any,
+        description: job.description,
+        address: job.address || '',
+        city: job.city || '',
+        state: job.state || '',
+        zip: job.zip || '',
+        scheduledDate: job.scheduledDate ? new Date(job.scheduledDate).toISOString().slice(0, 16) : '',
+        completedDate: job.completedDate ? new Date(job.completedDate).toISOString().slice(0, 16) : '',
+        estimatedHours: job.estimatedHours,
+        estimatedCost: job.estimatedCost,
+        actualHours: job.actualHours,
+        actualCost: job.actualCost,
+        billedAmount: job.billedAmount,
+        assignedUserIds: [], // Will be set after users are loaded
+      })
+    }
+  }, [open, job, customers, reset])
 
   // Set assigned users after users are loaded
   useEffect(() => {
@@ -155,10 +157,12 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
       const response = await fetch('/api/customers')
       if (response.ok) {
         const data = await response.json()
-        setCustomers(data)
+        // Extract customers array from API response
+        setCustomers(data.customers || [])
       }
     } catch (error) {
       console.error('Error fetching customers:', error)
+      setCustomers([]) // Set empty array on error
     }
   }
 
@@ -194,6 +198,8 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
         completedDate: data.completedDate || undefined,
       }
 
+      console.log('Updating job with data:', submitData)
+      
       const response = await fetch(`/api/jobs/${job.id}`, {
         method: 'PATCH',
         headers: {
@@ -203,7 +209,9 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update job')
+        const errorData = await response.json()
+        console.error('Update error:', errorData)
+        throw new Error(errorData.error || 'Failed to update job')
       }
 
       onJobUpdated()
@@ -240,7 +248,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             <Box>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Customer Selection */}
-            <Grid xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="customerId"
                 control={control}
@@ -278,6 +286,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                     <InputLabel>Job Type</InputLabel>
                     <Select
                       {...field}
+                      value={field.value || ''}
                       label="Job Type"
                     >
                       <MenuItem value="SERVICE_CALL">Service Call</MenuItem>
@@ -297,6 +306,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                     <InputLabel>Status</InputLabel>
                     <Select
                       {...field}
+                      value={field.value || ''}
                       label="Status"
                     >
                       <MenuItem value="ESTIMATE">Estimate</MenuItem>
@@ -313,13 +323,14 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Description */}
-            <Grid xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="description"
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Job Description *"
                     multiline
                     rows={3}
@@ -339,6 +350,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Scheduled Date"
                     type="datetime-local"
                     fullWidth
@@ -355,6 +367,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Completed Date"
                     type="datetime-local"
                     fullWidth
@@ -365,19 +378,20 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Address Fields */}
-            <Grid xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Job Address
               </Typography>
             </Grid>
             
-            <Grid xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="address"
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Street Address"
                     fullWidth
                   />
@@ -392,6 +406,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="City"
                     fullWidth
                   />
@@ -406,6 +421,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="State"
                     fullWidth
                   />
@@ -420,6 +436,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="ZIP Code"
                     fullWidth
                   />
@@ -530,7 +547,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Crew Assignment */}
-            <Grid xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="assignedUserIds"
                 control={control}

@@ -127,10 +127,10 @@ export async function POST(request: NextRequest) {
     // Create the job
     const jobResult = await query(
       `INSERT INTO "Job" (
-        "jobNumber", "customerId", type, description, status,
+        id, "jobNumber", "customerId", type, description, status,
         address, city, state, zip, "scheduledDate",
         "estimatedHours", "estimatedCost", "createdAt", "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *`,
       [
         jobNumber,
@@ -157,14 +157,12 @@ export async function POST(request: NextRequest) {
       for (const userId of data.assignedUserIds) {
         await query(
           `INSERT INTO "JobAssignment" (
-            id, "jobId", "userId", "assignedBy", "assignedAt", "createdAt", "updatedAt"
-          ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)`,
+            id, "jobId", "userId", "assignedBy", "assignedAt"
+          ) VALUES (gen_random_uuid(), $1, $2, $3, $4)`,
           [
             job.id,
             userId,
             'system', // TODO: Get from authenticated user
-            new Date(),
-            new Date(),
             new Date()
           ]
         )
@@ -175,11 +173,11 @@ export async function POST(request: NextRequest) {
     const completeJobResult = await query(
       `SELECT 
         j.*,
-        c.company_name,
-        c.first_name,
-        c.last_name
+        c."companyName",
+        c."firstName",
+        c."lastName"
       FROM "Job" j
-      INNER JOIN "Customer" c ON j.customer_id = c.id
+      INNER JOIN "Customer" c ON j."customerId" = c.id
       WHERE j.id = $1`,
       [job.id]
     )
