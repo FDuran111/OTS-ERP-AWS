@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 
 export async function GET() {
   try {
@@ -7,32 +7,41 @@ export async function GET() {
     let totalMaterials = 0
     let lowStockCount = 0
     let outOfStockMaterials = 0
-    let categories = []
+    let categories: Array<{name: string, count: number}> = []
     
     try {
-      // Get all materials to calculate stats (simple approach)
-      const allMaterials = await prisma.material.findMany({
-        where: { active: true },
-        select: { 
-          inStock: true, 
-          minStock: true, 
-          category: true 
-        }
-      })
+      // Get material statistics using SQL
+      const [
+        totalResult,
+        lowStockResult,
+        outOfStockResult,
+        categoriesResult
+      ] = await Promise.all([
+        // Total active materials
+        query('SELECT COUNT(*) as count FROM "Material" WHERE active = TRUE'),
+        
+        // Low stock materials
+        query('SELECT COUNT(*) as count FROM "Material" WHERE active = TRUE AND "inStock" <= "minStock"'),
+        
+        // Out of stock materials
+        query('SELECT COUNT(*) as count FROM "Material" WHERE active = TRUE AND "inStock" = 0'),
+        
+        // Materials by category
+        query(`
+          SELECT category, COUNT(*) as count 
+          FROM "Material" 
+          WHERE active = TRUE 
+          GROUP BY category 
+          ORDER BY count DESC
+        `)
+      ])
 
-      totalMaterials = allMaterials.length
-      lowStockCount = allMaterials.filter(m => m.inStock <= m.minStock).length
-      outOfStockMaterials = allMaterials.filter(m => m.inStock === 0).length
-
-      // Simple category counting
-      const categoryMap = new Map()
-      allMaterials.forEach(m => {
-        categoryMap.set(m.category, (categoryMap.get(m.category) || 0) + 1)
-      })
-      
-      categories = Array.from(categoryMap.entries()).map(([name, count]) => ({
-        name,
-        count
+      totalMaterials = parseInt(totalResult.rows[0].count)
+      lowStockCount = parseInt(lowStockResult.rows[0].count)
+      outOfStockMaterials = parseInt(outOfStockResult.rows[0].count)
+      categories = categoriesResult.rows.map(row => ({
+        name: row.category,
+        count: parseInt(row.count)
       }))
     } catch (dbError) {
       console.warn('Database error in stats, using fallback values:', dbError)
@@ -40,7 +49,7 @@ export async function GET() {
     }
 
     const inStockMaterials = Math.max(0, totalMaterials - lowStockCount)
-    const recentUsage = [] // Skip for now
+    const recentUsage: any[] = [] // Skip for now
 
     const stats = [
       {
@@ -71,20 +80,8 @@ export async function GET() {
 
     return NextResponse.json({
       stats,
-      categories: categories.map(cat => ({
-        name: cat.category,
-        count: cat._count.category
-      })),
-      recentUsage: recentUsage.map(usage => ({
-        id: usage.id,
-        materialCode: usage.material.code,
-        materialName: usage.material.name,
-        jobNumber: usage.job.jobNumber,
-        jobDescription: usage.job.description,
-        quantity: usage.quantity,
-        usedAt: usage.usedAt,
-        usedBy: usage.usedBy,
-      }))
+      categories,
+      recentUsage
     })
   } catch (error) {
     console.error('Error fetching material stats:', error)

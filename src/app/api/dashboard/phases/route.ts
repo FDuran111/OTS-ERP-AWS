@@ -1,56 +1,59 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 
 export async function GET() {
   try {
     // Get phase summary grouped by phase type and status
-    const phaseSummary = await prisma.jobPhase.groupBy({
-      by: ['name', 'status'],
-      _count: {
-        id: true
-      }
-    })
+    const phaseSummaryResult = await query(`
+      SELECT name, status, COUNT(*) as count
+      FROM "JobPhase"
+      GROUP BY name, status
+    `)
 
     // Transform to the expected format
     const summary: Record<string, Record<string, number>> = {}
-    phaseSummary.forEach(phase => {
+    phaseSummaryResult.rows.forEach(phase => {
       if (!summary[phase.name]) {
         summary[phase.name] = {}
       }
-      summary[phase.name][phase.status] = phase._count.id
+      summary[phase.name][phase.status] = parseInt(phase.count)
     })
 
     // Get total counts
-    const totalPhases = await prisma.jobPhase.count()
-    const completedPhases = await prisma.jobPhase.count({
-      where: { status: 'COMPLETED' }
-    })
-    const inProgressPhases = await prisma.jobPhase.count({
-      where: { status: 'IN_PROGRESS' }
-    })
+    const [totalResult, completedResult, inProgressResult] = await Promise.all([
+      query('SELECT COUNT(*) as count FROM "JobPhase"'),
+      query('SELECT COUNT(*) as count FROM "JobPhase" WHERE status = $1', ['COMPLETED']),
+      query('SELECT COUNT(*) as count FROM "JobPhase" WHERE status = $1', ['IN_PROGRESS'])
+    ])
 
-    // Get recent updates
-    const recentUpdates = await prisma.jobPhase.findMany({
-      include: {
-        job: {
-          include: {
-            customer: true
-          }
-        }
-      },
-      orderBy: {
-        updatedAt: 'desc'
-      },
-      take: 10
-    })
+    const totalPhases = parseInt(totalResult.rows[0].count)
+    const completedPhases = parseInt(completedResult.rows[0].count)
+    const inProgressPhases = parseInt(inProgressResult.rows[0].count)
 
-    const transformedRecentUpdates = recentUpdates.map(phase => ({
+    // Get recent updates with job and customer info
+    const recentUpdatesResult = await query(`
+      SELECT 
+        p.id,
+        p.name as phase_name,
+        p.status,
+        p."updatedAt",
+        j."jobNumber",
+        j."customerId",
+        COALESCE(c."companyName", c."firstName" || ' ' || c."lastName") as customer_name
+      FROM "JobPhase" p
+      INNER JOIN "Job" j ON p."jobId" = j.id
+      INNER JOIN "Customer" c ON j."customerId" = c.id
+      ORDER BY p."updatedAt" DESC
+      LIMIT 10
+    `)
+
+    const transformedRecentUpdates = recentUpdatesResult.rows.map(phase => ({
       id: phase.id,
-      phaseName: phase.name,
+      phaseName: phase.phase_name,
       status: phase.status,
-      jobNumber: phase.job.jobNumber,
-      customer: phase.job.customer.companyName || `${phase.job.customer.firstName} ${phase.job.customer.lastName}`,
-      updatedAt: phase.updatedAt.toISOString()
+      jobNumber: phase.jobNumber,
+      customer: phase.customer_name,
+      updatedAt: phase.updatedAt
     }))
 
     const completionRate = totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0

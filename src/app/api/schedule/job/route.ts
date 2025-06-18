@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 import { z } from 'zod'
 
 const scheduleJobSchema = z.object({
@@ -16,28 +16,45 @@ export async function POST(request: NextRequest) {
     const { jobId, scheduledDate, estimatedHours, notes, reminderDays } = scheduleJobSchema.parse(body)
 
     // Check if job exists
-    const existingJob = await prisma.job.findUnique({
-      where: { id: jobId },
-    })
+    const existingJobResult = await query(
+      'SELECT * FROM "Job" WHERE id = $1',
+      [jobId]
+    )
 
-    if (!existingJob) {
+    if (existingJobResult.rows.length === 0) {
       return NextResponse.json(
         { error: 'Job not found' },
         { status: 404 }
       )
     }
 
+    const existingJob = existingJobResult.rows[0]
+
     // Update the job with scheduling information
-    const updatedJob = await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        scheduledDate: new Date(scheduledDate),
-        estimatedHours: estimatedHours || existingJob.estimatedHours,
-        status: existingJob.status === 'ESTIMATE' ? 'SCHEDULED' : existingJob.status,
-        // Store scheduling notes - we'll add this field if it doesn't exist
-        ...(notes && { description: `${existingJob.description}\n\nScheduling Notes: ${notes}` }),
-      },
-    })
+    const updatedDescription = notes 
+      ? `${existingJob.description}\n\nScheduling Notes: ${notes}`
+      : existingJob.description
+
+    const updatedJobResult = await query(
+      `UPDATE "Job" SET 
+        scheduledDate = $1,
+        estimatedHours = $2,
+        status = $3,
+        description = $4,
+        updatedAt = $5
+      WHERE id = $6 
+      RETURNING *`,
+      [
+        new Date(scheduledDate),
+        estimatedHours || existingJob.estimatedhours,
+        existingJob.status === 'ESTIMATE' ? 'SCHEDULED' : existingJob.status,
+        updatedDescription,
+        new Date(),
+        jobId
+      ]
+    )
+
+    const updatedJob = updatedJobResult.rows[0]
 
     // TODO: Create reminder system entry
     // For now, we'll store reminder info in a simple way
@@ -47,8 +64,8 @@ export async function POST(request: NextRequest) {
       success: true,
       job: {
         id: updatedJob.id,
-        jobNumber: updatedJob.jobNumber,
-        scheduledDate: updatedJob.scheduledDate,
+        jobNumber: updatedJob.jobnumber,
+        scheduledDate: updatedJob.scheduleddate,
         status: updatedJob.status,
       },
       reminder: {

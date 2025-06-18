@@ -16,7 +16,7 @@ import {
   DollarSign,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { UserRole } from '@prisma/client'
+import { UserRole } from '@/lib/auth'
 
 interface SidebarProps {
   userRole: UserRole

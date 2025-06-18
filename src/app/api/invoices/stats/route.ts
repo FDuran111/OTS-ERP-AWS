@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 import { startOfMonth, endOfMonth } from 'date-fns'
 
 export async function GET() {
@@ -8,141 +8,128 @@ export async function GET() {
     const startOfThisMonth = startOfMonth(now)
     const endOfThisMonth = endOfMonth(now)
 
-    // Get total outstanding invoices (SENT + OVERDUE)
-    const outstandingInvoices = await prisma.invoice.aggregate({
-      where: {
-        status: {
-          in: ['SENT', 'OVERDUE']
-        }
-      },
-      _sum: {
-        totalAmount: true
-      },
-      _count: {
-        id: true
-      }
-    })
+    // Get invoice statistics with parallel queries
+    const [
+      outstandingResult,
+      pendingResult,
+      paidThisMonthResult,
+      overdueResult,
+      recentInvoicesResult
+    ] = await Promise.all([
+      // Total outstanding invoices (SENT + OVERDUE)
+      query(`
+        SELECT 
+          COALESCE(SUM("totalAmount"), 0) as total_amount,
+          COUNT(*) as count
+        FROM "Invoice" 
+        WHERE status IN ('SENT', 'OVERDUE')
+      `),
+      
+      // Pending invoices (DRAFT)
+      query(`
+        SELECT 
+          COALESCE(SUM("totalAmount"), 0) as total_amount,
+          COUNT(*) as count
+        FROM "Invoice" 
+        WHERE status = 'DRAFT'
+      `),
+      
+      // Paid invoices this month
+      query(`
+        SELECT 
+          COALESCE(SUM("totalAmount"), 0) as total_amount,
+          COUNT(*) as count
+        FROM "Invoice" 
+        WHERE status = 'PAID' 
+        AND "paidDate" >= $1 
+        AND "paidDate" <= $2
+      `, [startOfThisMonth, endOfThisMonth]),
+      
+      // Overdue invoices specifically
+      query(`
+        SELECT 
+          COALESCE(SUM("totalAmount"), 0) as total_amount,
+          COUNT(*) as count
+        FROM "Invoice" 
+        WHERE status = 'OVERDUE'
+      `),
+      
+      // Recent invoices
+      query(`
+        SELECT 
+          i.*,
+          c."firstName",
+          c."lastName",
+          c."companyName",
+          j."jobNumber"
+        FROM "Invoice" i
+        INNER JOIN "Customer" c ON i."customerId" = c.id
+        INNER JOIN "Job" j ON i."jobId" = j.id
+        ORDER BY i."createdAt" DESC
+        LIMIT 5
+      `)
+    ])
 
-    // Get pending invoices (DRAFT)
-    const pendingInvoices = await prisma.invoice.aggregate({
-      where: {
-        status: 'DRAFT'
-      },
-      _sum: {
-        totalAmount: true
-      },
-      _count: {
-        id: true
-      }
-    })
-
-    // Get paid invoices this month
-    const paidThisMonth = await prisma.invoice.aggregate({
-      where: {
-        status: 'PAID',
-        paidDate: {
-          gte: startOfThisMonth,
-          lte: endOfThisMonth
-        }
-      },
-      _sum: {
-        totalAmount: true
-      },
-      _count: {
-        id: true
-      }
-    })
-
-    // Get overdue invoices specifically
-    const overdueInvoices = await prisma.invoice.aggregate({
-      where: {
-        status: 'OVERDUE'
-      },
-      _sum: {
-        totalAmount: true
-      },
-      _count: {
-        id: true
-      }
-    })
+    const outstanding = outstandingResult.rows[0]
+    const pending = pendingResult.rows[0]
+    const paidThisMonth = paidThisMonthResult.rows[0]
+    const overdue = overdueResult.rows[0]
 
     const stats = [
       {
         title: 'Total Outstanding',
-        value: `$${(outstandingInvoices._sum.totalAmount || 0).toLocaleString()}`,
+        value: `$${parseFloat(outstanding.total_amount).toLocaleString()}`,
         icon: 'attach_money',
         color: '#1d8cf8',
-        count: outstandingInvoices._count || 0
+        count: parseInt(outstanding.count)
       },
       {
         title: 'Pending (Draft)',
-        value: `${pendingInvoices._count || 0} invoices`,
+        value: `${parseInt(pending.count)} invoices`,
         icon: 'pending_actions',
         color: '#fd5d93',
-        amount: pendingInvoices._sum.totalAmount || 0
+        amount: parseFloat(pending.total_amount)
       },
       {
         title: 'Paid This Month',
-        value: `$${(paidThisMonth._sum.totalAmount || 0).toLocaleString()}`,
+        value: `$${parseFloat(paidThisMonth.total_amount).toLocaleString()}`,
         icon: 'check_circle',
         color: '#00bf9a',
-        count: paidThisMonth._count || 0
+        count: parseInt(paidThisMonth.count)
       },
       {
         title: 'Overdue',
-        value: `${overdueInvoices._count || 0} invoices`,
+        value: `${parseInt(overdue.count)} invoices`,
         icon: 'warning',
         color: '#ff8d72',
-        amount: overdueInvoices._sum.totalAmount || 0
+        amount: parseFloat(overdue.total_amount)
       }
     ]
 
-    // Get recent invoices
-    const recentInvoices = await prisma.invoice.findMany({
-      take: 5,
-      orderBy: {
-        createdAt: 'desc'
-      },
-      include: {
-        customer: {
-          select: {
-            firstName: true,
-            lastName: true,
-            companyName: true
-          }
-        },
-        job: {
-          select: {
-            jobNumber: true
-          }
-        }
-      }
-    })
-
-    const formattedRecentInvoices = recentInvoices.map(invoice => ({
+    const formattedRecentInvoices = recentInvoicesResult.rows.map(invoice => ({
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
-      jobNumber: invoice.job.jobNumber,
-      customerName: invoice.customer.companyName || 
-        `${invoice.customer.firstName} ${invoice.customer.lastName}`,
-      totalAmount: invoice.totalAmount,
+      jobNumber: invoice.jobNumber,
+      customerName: invoice.companyName || 
+        `${invoice.firstName} ${invoice.lastName}`,
+      totalAmount: parseFloat(invoice.totalAmount),
       status: invoice.status,
-      dueDate: invoice.dueDate.toISOString(),
-      createdAt: invoice.createdAt.toISOString()
+      dueDate: invoice.dueDate,
+      createdAt: invoice.createdAt
     }))
 
     return NextResponse.json({
       stats,
       recentInvoices: formattedRecentInvoices,
       details: {
-        outstandingAmount: outstandingInvoices._sum.totalAmount || 0,
-        outstandingCount: outstandingInvoices._count || 0,
-        pendingAmount: pendingInvoices._sum.totalAmount || 0,
-        pendingCount: pendingInvoices._count || 0,
-        paidThisMonthAmount: paidThisMonth._sum.totalAmount || 0,
-        paidThisMonthCount: paidThisMonth._count || 0,
-        overdueAmount: overdueInvoices._sum.totalAmount || 0,
-        overdueCount: overdueInvoices._count || 0
+        outstandingAmount: parseFloat(outstanding.total_amount),
+        outstandingCount: parseInt(outstanding.count),
+        pendingAmount: parseFloat(pending.total_amount),
+        pendingCount: parseInt(pending.count),
+        paidThisMonthAmount: parseFloat(paidThisMonth.total_amount),
+        paidThisMonthCount: parseInt(paidThisMonth.count),
+        overdueAmount: parseFloat(overdue.total_amount),
+        overdueCount: parseInt(overdue.count)
       }
     })
   } catch (error) {

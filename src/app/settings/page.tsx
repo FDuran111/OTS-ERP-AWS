@@ -343,7 +343,7 @@ export default function SettingsPage() {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid size={12}>
+                  <Grid xs={12}>
                     <Button
                       variant="contained"
                       startIcon={<Save />}
@@ -447,7 +447,7 @@ export default function SettingsPage() {
                   Change Password
                 </Typography>
                 <Grid container spacing={2} sx={{ maxWidth: 600 }}>
-                  <Grid size={12}>
+                  <Grid xs={12}>
                     <TextField
                       fullWidth
                       type="password"
@@ -455,7 +455,7 @@ export default function SettingsPage() {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid size={12}>
+                  <Grid xs={12}>
                     <TextField
                       fullWidth
                       type="password"
@@ -463,7 +463,7 @@ export default function SettingsPage() {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid size={12}>
+                  <Grid xs={12}>
                     <TextField
                       fullWidth
                       type="password"

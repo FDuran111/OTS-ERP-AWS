@@ -136,7 +136,7 @@ export default function AddLeadDialog({ open, onClose, onLeadCreated }: AddLeadD
             </Grid>
 
             {/* Company */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="companyName"
                 control={control}
@@ -244,7 +244,7 @@ export default function AddLeadDialog({ open, onClose, onLeadCreated }: AddLeadD
             </Grid>
 
             {/* Description */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="description"
                 control={control}

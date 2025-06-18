@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { UserRole } from '@prisma/client'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+
+export type UserRole = 'ADMIN' | 'USER' | 'TECHNICIAN' | 'VIEWER'
 
 export interface UserPayload {
   id: string

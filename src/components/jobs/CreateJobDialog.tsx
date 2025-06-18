@@ -93,10 +93,12 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
       const response = await fetch('/api/customers')
       if (response.ok) {
         const data = await response.json()
-        setCustomers(data)
+        // Extract customers array from API response
+        setCustomers(data.customers || [])
       }
     } catch (error) {
       console.error('Error fetching customers:', error)
+      setCustomers([]) // Set empty array on error
     }
   }
 
@@ -172,7 +174,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Customer Selection */}
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="customerId"
                 control={control}
@@ -238,7 +240,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
             </Grid>
 
             {/* Description */}
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="description"
                 control={control}
@@ -257,13 +259,13 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
             </Grid>
 
             {/* Address Fields */}
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Job Address
               </Typography>
             </Grid>
             
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="address"
                 control={control}
@@ -360,7 +362,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
             </Grid>
 
             {/* Crew Assignment */}
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="assignedUserIds"
                 control={control}

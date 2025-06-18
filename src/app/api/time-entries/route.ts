@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 import { z } from 'zod'
 
 const createTimeEntrySchema = z.object({
@@ -17,76 +17,66 @@ export async function GET(request: NextRequest) {
     const active = searchParams.get('active') === 'true'
     const limit = parseInt(searchParams.get('limit') || '50')
 
-    const whereClause: any = {}
-    
+    // Build WHERE conditions
+    const conditions = []
+    const params = []
+    let paramIndex = 1
+
     if (userId) {
-      whereClause.userId = userId
+      conditions.push(`te."userId" = $${paramIndex++}`)
+      params.push(userId)
     }
     
     if (active) {
-      whereClause.endTime = null
+      conditions.push(`te."endTime" IS NULL`)
     }
 
-    const timeEntries = await prisma.timeEntry.findMany({
-      where: whereClause,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-          }
-        },
-        job: {
-          select: {
-            id: true,
-            jobNumber: true,
-            description: true,
-            customer: {
-              select: {
-                companyName: true,
-                firstName: true,
-                lastName: true,
-              }
-            }
-          }
-        },
-        phase: {
-          select: {
-            id: true,
-            phase: true,
-          }
-        }
-      },
-      orderBy: {
-        startTime: 'desc'
-      },
-      take: limit
-    })
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    const timeEntriesResult = await query(
+      `SELECT 
+        te.*,
+        u.name as user_name,
+        j."jobNumber",
+        j.description as job_description,
+        c."companyName",
+        c."firstName",
+        c."lastName",
+        p.name as phase_name
+      FROM "TimeEntry" te
+      INNER JOIN "User" u ON te."userId" = u.id
+      INNER JOIN "Job" j ON te."jobId" = j.id
+      INNER JOIN "Customer" c ON j."customerId" = c.id
+      LEFT JOIN "JobPhase" p ON te."phaseId" = p.id
+      ${whereClause}
+      ORDER BY te."startTime" DESC
+      LIMIT $${paramIndex}`,
+      [...params, limit]
+    )
 
     // Transform data for frontend
-    const transformedEntries = timeEntries.map(entry => {
+    const transformedEntries = timeEntriesResult.rows.map(entry => {
       const duration = entry.endTime 
-        ? Math.round((entry.endTime.getTime() - entry.startTime.getTime()) / (1000 * 60 * 60) * 100) / 100
+        ? Math.round((new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60) * 100) / 100
         : null
 
       return {
         id: entry.id,
         userId: entry.userId,
-        userName: entry.user.name,
+        userName: entry.user_name,
         jobId: entry.jobId,
-        jobNumber: entry.job.jobNumber,
-        jobTitle: entry.job.description,
-        customer: entry.job.customer.companyName || 
-                 `${entry.job.customer.firstName} ${entry.job.customer.lastName}`,
+        jobNumber: entry.jobNumber,
+        jobTitle: entry.job_description,
+        customer: entry.companyName || `${entry.firstName} ${entry.lastName}`,
         phaseId: entry.phaseId,
-        phaseName: entry.phase?.phase,
-        date: entry.date.toISOString().split('T')[0],
+        phaseName: entry.phase_name,
+        date: entry.date ? new Date(entry.date).toISOString().split('T')[0] : null,
         startTime: entry.startTime,
         endTime: entry.endTime,
-        hours: entry.hours,
+        hours: parseFloat(entry.hours) || 0,
         calculatedHours: duration,
         description: entry.description,
-        synced: entry.synced,
+        synced: entry.synced || false,
         isActive: !entry.endTime,
         createdAt: entry.createdAt,
         updatedAt: entry.updatedAt,
@@ -115,14 +105,12 @@ export async function POST(request: NextRequest) {
     console.log('Using userId:', userId)
 
     // Check if user has an active timer
-    const activeEntry = await prisma.timeEntry.findFirst({
-      where: {
-        userId: userId,
-        endTime: null
-      }
-    })
+    const activeEntryResult = await query(
+      'SELECT id FROM "TimeEntry" WHERE "userId" = $1 AND "endTime" IS NULL',
+      [userId]
+    )
 
-    if (activeEntry) {
+    if (activeEntryResult.rows.length > 0) {
       return NextResponse.json(
         { error: 'User already has an active timer running' },
         { status: 400 }
@@ -131,40 +119,43 @@ export async function POST(request: NextRequest) {
 
     const startTime = data.startTime ? new Date(data.startTime) : new Date()
 
-    const timeEntry = await prisma.timeEntry.create({
-      data: {
-        userId: userId,
-        jobId: data.jobId,
-        phaseId: data.phaseId,
-        date: startTime,
-        startTime: startTime,
-        hours: 0, // Will be calculated when timer stops
-        description: data.description,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-          }
-        },
-        job: {
-          select: {
-            id: true,
-            jobNumber: true,
-            description: true,
-          }
-        },
-        phase: {
-          select: {
-            id: true,
-            phase: true,
-          }
-        }
-      }
-    })
+    const timeEntryResult = await query(
+      `INSERT INTO "TimeEntry" (
+        id, "userId", "jobId", "phaseId", date, "startTime", hours, description,
+        synced, "createdAt", "updatedAt"
+      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *`,
+      [
+        userId,
+        data.jobId,
+        data.phaseId || null,
+        startTime,
+        startTime,
+        0, // Will be calculated when timer stops
+        data.description || null,
+        false,
+        new Date(),
+        new Date()
+      ]
+    )
 
-    return NextResponse.json(timeEntry, { status: 201 })
+    const timeEntry = timeEntryResult.rows[0]
+
+    // Get related data for response
+    const [userResult, jobResult, phaseResult] = await Promise.all([
+      query('SELECT id, name FROM "User" WHERE id = $1', [userId]),
+      query('SELECT id, "jobNumber", description FROM "Job" WHERE id = $1', [data.jobId]),
+      data.phaseId ? query('SELECT id, name FROM "JobPhase" WHERE id = $1', [data.phaseId]) : Promise.resolve({ rows: [] })
+    ])
+
+    const completeTimeEntry = {
+      ...timeEntry,
+      user: userResult.rows[0] || null,
+      job: jobResult.rows[0] || null,
+      phase: phaseResult.rows[0] || null
+    }
+
+    return NextResponse.json(completeTimeEntry, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

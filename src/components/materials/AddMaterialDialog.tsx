@@ -220,7 +220,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
             </Grid>
 
             {/* Description */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="description"
                 control={control}
@@ -430,7 +430,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
             </Grid>
 
             {/* Vendor */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="vendorId"
                 control={control}

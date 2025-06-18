@@ -51,6 +51,15 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
+      companyName: '',
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
       isCommercial: false,
     },
   })
@@ -108,7 +117,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Customer Type Toggle */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="isCommercial"
                 control={control}
@@ -128,13 +137,14 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
 
             {/* Company Name (if commercial) */}
             {isCommercial && (
-              <Grid size={12}>
+              <Grid xs={12}>
                 <Controller
                   name="companyName"
                   control={control}
                   render={({ field }) => (
                     <TextField
                       {...field}
+                      value={field.value || ''}
                       label="Company Name"
                       fullWidth
                       required={isCommercial}
@@ -152,6 +162,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label={isCommercial ? "Contact First Name *" : "First Name *"}
                     fullWidth
                     error={!!errors.firstName}
@@ -168,6 +179,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label={isCommercial ? "Contact Last Name *" : "Last Name *"}
                     fullWidth
                     error={!!errors.lastName}
@@ -185,6 +197,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Phone Number *"
                     fullWidth
                     error={!!errors.phone}
@@ -201,6 +214,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Email Address"
                     type="email"
                     fullWidth
@@ -212,19 +226,20 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
             </Grid>
 
             {/* Address Information */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Typography variant="subtitle2" gutterBottom>
                 Address Information
               </Typography>
             </Grid>
 
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="address"
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Street Address"
                     fullWidth
                   />
@@ -239,6 +254,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="City"
                     fullWidth
                   />
@@ -253,6 +269,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="State"
                     fullWidth
                   />
@@ -267,6 +284,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="ZIP Code"
                     fullWidth
                   />

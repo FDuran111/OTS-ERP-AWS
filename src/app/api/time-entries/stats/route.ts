@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,65 +15,51 @@ export async function GET(request: NextRequest) {
     const weekStart = new Date(today)
     weekStart.setDate(today.getDate() - today.getDay()) // Start of current week
 
-    // Get today's hours
-    const todayEntries = await prisma.timeEntry.findMany({
-      where: {
-        ...(userId ? { userId } : {}),
-        date: {
-          gte: today,
-          lt: tomorrow
-        }
-      }
-    })
+    // Build user filter
+    const userFilter = userId ? 'AND "userId" = $2' : ''
+    const userParams = userId ? [userId] : []
 
-    const hoursToday = todayEntries.reduce((sum, entry) => {
-      if (entry.endTime) {
-        return sum + entry.hours
-      } else {
-        // Calculate current elapsed time for active timers
-        const elapsed = (new Date().getTime() - entry.startTime.getTime()) / (1000 * 60 * 60)
-        return sum + elapsed
-      }
-    }, 0)
+    // Get today's hours
+    const todayQuery = `
+      SELECT COALESCE(SUM(hours), 0) as total_hours, COUNT(*) as entry_count
+      FROM "TimeEntry" 
+      WHERE date >= $1 AND date < ${userId ? '$3' : '$2'}
+      ${userFilter}
+    `
+    const todayParams = [today, tomorrow, ...userParams]
+    const todayResult = await query(todayQuery, todayParams)
+    const hoursToday = parseFloat(todayResult.rows[0]?.total_hours || 0)
 
     // Get active timers count
-    const activeTimers = await prisma.timeEntry.count({
-      where: {
-        ...(userId ? { userId } : {}),
-        endTime: null
-      }
-    })
+    const activeTimersQuery = `
+      SELECT COUNT(*) as count
+      FROM "TimeEntry" 
+      WHERE "endTime" IS NULL
+      ${userFilter}
+    `
+    const activeTimersParams = userId ? [userId] : []
+    const activeTimersResult = await query(activeTimersQuery, activeTimersParams)
+    const activeTimers = parseInt(activeTimersResult.rows[0]?.count || 0)
 
     // Get this week's hours
-    const weekEntries = await prisma.timeEntry.findMany({
-      where: {
-        ...(userId ? { userId } : {}),
-        date: {
-          gte: weekStart
-        }
-      }
-    })
-
-    const hoursThisWeek = weekEntries.reduce((sum, entry) => {
-      if (entry.endTime) {
-        return sum + entry.hours
-      } else {
-        // Calculate current elapsed time for active timers
-        const elapsed = (new Date().getTime() - entry.startTime.getTime()) / (1000 * 60 * 60)
-        return sum + elapsed
-      }
-    }, 0)
+    const weekQuery = `
+      SELECT COALESCE(SUM(hours), 0) as total_hours
+      FROM "TimeEntry" 
+      WHERE date >= $1
+      ${userFilter}
+    `
+    const weekParams = [weekStart, ...userParams]
+    const weekResult = await query(weekQuery, weekParams)
+    const hoursThisWeek = parseFloat(weekResult.rows[0]?.total_hours || 0)
 
     // Get active employees (users with time entries today)
-    const activeEmployees = await prisma.timeEntry.groupBy({
-      by: ['userId'],
-      where: {
-        date: {
-          gte: today,
-          lt: tomorrow
-        }
-      }
-    })
+    const activeEmployeesQuery = `
+      SELECT COUNT(DISTINCT "userId") as count
+      FROM "TimeEntry" 
+      WHERE date >= $1 AND date < $2
+    `
+    const activeEmployeesResult = await query(activeEmployeesQuery, [today, tomorrow])
+    const activeEmployeesCount = parseInt(activeEmployeesResult.rows[0]?.count || 0)
 
     const stats = [
       { 
@@ -96,7 +82,7 @@ export async function GET(request: NextRequest) {
       },
       { 
         title: 'Active Today', 
-        value: activeEmployees.length.toString(), 
+        value: activeEmployeesCount.toString(), 
         icon: 'group', 
         color: '#fd5d93' 
       },

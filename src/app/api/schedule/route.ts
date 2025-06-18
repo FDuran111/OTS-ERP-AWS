@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 import { startOfWeek, endOfWeek, addDays, format, startOfDay, endOfDay } from 'date-fns'
 
 export async function GET(request: NextRequest) {
@@ -28,30 +28,24 @@ export async function GET(request: NextRequest) {
         endDate = endOfWeek(baseDate, { weekStartsOn: 1 })
     }
 
-    // Simplified query without complex relationships to avoid errors
-    const jobs = await prisma.job.findMany({
-      where: {
-        status: {
-          in: ['SCHEDULED', 'DISPATCHED', 'IN_PROGRESS']
-        }
-      },
-      include: {
-        customer: {
-          select: {
-            firstName: true,
-            lastName: true,
-            companyName: true,
-            phone: true,
-            street: true,
-            city: true,
-            state: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
+    // Get scheduled jobs with customer information
+    const jobsResult = await query(`
+      SELECT 
+        j.*,
+        c."firstName",
+        c."lastName",
+        c."companyName",
+        c.phone,
+        c.address,
+        c.city,
+        c.state
+      FROM "Job" j
+      INNER JOIN "Customer" c ON j."customerId" = c.id
+      WHERE j.status IN ('SCHEDULED', 'DISPATCHED', 'IN_PROGRESS')
+      ORDER BY j."createdAt" DESC
+    `)
+
+    const jobs = jobsResult.rows
 
     // Skip time entries for now to avoid database issues
 
@@ -62,17 +56,17 @@ export async function GET(request: NextRequest) {
       const jobDate = job.scheduledDate || job.startDate
       if (!jobDate) return
       
-      const dateKey = format(jobDate, 'yyyy-MM-dd')
+      const dateKey = format(new Date(jobDate), 'yyyy-MM-dd')
       
       if (!scheduleData[dateKey]) {
         scheduleData[dateKey] = []
       }
       
-      const customerName = job.customer.companyName || 
-        `${job.customer.firstName} ${job.customer.lastName}`
+      const customerName = job.companyName || 
+        `${job.firstName} ${job.lastName}`
       
       const jobTime = job.scheduledTime || 
-        (job.startDate ? format(job.startDate, 'h:mm a') : '9:00 AM')
+        (job.startDate ? format(new Date(job.startDate), 'h:mm a') : '9:00 AM')
       
       scheduleData[dateKey].push({
         id: job.id,
@@ -80,12 +74,12 @@ export async function GET(request: NextRequest) {
         jobNumber: job.jobNumber,
         title: job.description,
         customer: customerName,
-        customerPhone: job.customer.phone,
-        address: `${job.customer.street || ''} ${job.customer.city || ''} ${job.customer.state || ''}`.trim(),
+        customerPhone: job.phone,
+        address: `${job.address || ''} ${job.city || ''} ${job.state || ''}`.trim(),
         status: job.status,
-        priority: job.priority,
-        jobType: job.jobType,
-        estimatedHours: job.estimatedHours,
+        priority: job.priority || 'medium',
+        jobType: job.type,
+        estimatedHours: parseFloat(job.estimatedHours) || 0,
         crew: 'Default Crew',
         crewId: null
       })

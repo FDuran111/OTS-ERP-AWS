@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 import { z } from 'zod'
 
 const createMaterialSchema = z.object({
@@ -26,64 +26,47 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category')
     const lowStock = searchParams.get('lowStock') === 'true'
 
-    const whereClause: any = {
-      active: true
-    }
+    // Build WHERE conditions
+    const conditions = ['active = TRUE']
+    const params = []
+    let paramIndex = 1
 
     if (search) {
-      whereClause.OR = [
-        { code: { contains: search, mode: 'insensitive' } },
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ]
+      conditions.push(`(
+        code ILIKE $${paramIndex} OR 
+        name ILIKE $${paramIndex} OR 
+        description ILIKE $${paramIndex}
+      )`)
+      params.push(`%${search}%`)
+      paramIndex++
     }
 
     if (category) {
-      whereClause.category = category
+      conditions.push(`category = $${paramIndex}`)
+      params.push(category)
+      paramIndex++
     }
 
-    // Note: Low stock filtering will be done post-query due to Prisma limitations
-    // with field-to-field comparisons
-
-    const materials = await prisma.material.findMany({
-      where: whereClause,
-      include: {
-        vendor: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          }
-        },
-        stockLocations: {
-          include: {
-            location: {
-              select: {
-                id: true,
-                name: true,
-                code: true,
-                type: true,
-              }
-            }
-          }
-        }
-      },
-      orderBy: {
-        name: 'asc'
-      }
-    })
-
-    // Filter by low stock if requested (post-query filtering)
-    let filteredMaterials = materials
     if (lowStock) {
-      filteredMaterials = materials.filter(material => material.inStock <= material.minStock)
+      conditions.push(`"inStock" <= "minStock"`)
     }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    // Get materials first - simplified query
+    const result = await query(
+      `SELECT * FROM "Material" ${whereClause} ORDER BY name ASC`,
+      params
+    )
 
     // Transform data for frontend
-    const transformedMaterials = filteredMaterials.map(material => {
-      const stockStatus = material.inStock === 0 
+    const materials = result.rows.map(material => {
+      const inStockNum = parseInt(material.inStock) || 0
+      const minStockNum = parseInt(material.minStock) || 0
+      
+      const stockStatus = inStockNum === 0 
         ? 'Out of Stock' 
-        : material.inStock <= material.minStock 
+        : inStockNum <= minStockNum 
           ? 'Low Stock' 
           : 'In Stock'
 
@@ -91,32 +74,36 @@ export async function GET(request: NextRequest) {
         id: material.id,
         code: material.code,
         name: material.name,
-        description: material.description,
+        description: material.description || '',
         manufacturer: material.manufacturer || null,
         category: material.category,
         unit: material.unit,
-        cost: material.cost,
-        price: material.price,
-        markup: material.markup,
-        inStock: material.inStock,
-        minStock: material.minStock,
+        cost: parseFloat(material.cost) || 0,
+        price: parseFloat(material.price) || 0,
+        markup: parseFloat(material.markup) || 0,
+        inStock: inStockNum,
+        minStock: minStockNum,
         location: material.location || 'Not Set',
-        vendor: material.vendor,
+        vendor: material.vendorId ? {
+          id: material.vendorId,
+          name: 'Unknown Vendor',
+          code: ''
+        } : null,
         status: stockStatus,
-        active: material.active,
-        stockLocations: material.stockLocations || [],
+        active: material.active === true || material.active === 'TRUE',
+        stockLocations: [],
         createdAt: material.createdAt,
         updatedAt: material.updatedAt,
       }
     })
 
-    return NextResponse.json(transformedMaterials)
+    return NextResponse.json(materials)
   } catch (error) {
     console.error('Error fetching materials:', error)
     
     // Check if it's a database connection error
     if (error instanceof Error) {
-      if (error.message.includes('Can\'t reach database server')) {
+      if (error.message.includes('Can\'t reach database server') || error.message.includes('ECONNREFUSED')) {
         return NextResponse.json(
           { 
             error: 'Database connection failed', 
@@ -142,42 +129,58 @@ export async function POST(request: NextRequest) {
     const data = createMaterialSchema.parse(body)
 
     // Check if code already exists
-    const existingMaterial = await prisma.material.findUnique({
-      where: { code: data.code }
-    })
+    const existingResult = await query(
+      'SELECT id FROM "Material" WHERE code = $1',
+      [data.code]
+    )
 
-    if (existingMaterial) {
+    if (existingResult.rows.length > 0) {
       return NextResponse.json(
         { error: 'Material code already exists' },
         { status: 400 }
       )
     }
 
-    const material = await prisma.material.create({
-      data: {
-        code: data.code,
-        name: data.name,
-        description: data.description,
-        unit: data.unit,
-        cost: data.cost,
-        price: data.price,
-        markup: data.markup,
-        category: data.category,
-        vendorId: data.vendorId,
-        inStock: data.inStock,
-        minStock: data.minStock,
-        location: data.location,
-      },
-      include: {
-        vendor: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          }
-        }
+    // Insert new material
+    const result = await query(
+      `INSERT INTO "Material" (
+        id, code, name, description, manufacturer, unit, cost, price, markup,
+        category, "vendorId", "inStock", "minStock", location, active,
+        "createdAt", "updatedAt"
+      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      RETURNING *`,
+      [
+        data.code,
+        data.name,
+        data.description || null,
+        data.manufacturer || null,
+        data.unit,
+        data.cost,
+        data.price,
+        data.markup,
+        data.category,
+        data.vendorId || null,
+        data.inStock,
+        data.minStock,
+        data.location || null,
+        true,
+        new Date(),
+        new Date()
+      ]
+    )
+
+    const material = result.rows[0]
+
+    // Get vendor info if exists
+    if (material.vendorId) {
+      const vendorResult = await query(
+        'SELECT id, name, code FROM "Vendor" WHERE id = $1',
+        [material.vendorId]
+      )
+      if (vendorResult.rows.length > 0) {
+        material.vendor = vendorResult.rows[0]
       }
-    })
+    }
 
     return NextResponse.json(material, { status: 201 })
   } catch (error) {

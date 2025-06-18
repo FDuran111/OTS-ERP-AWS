@@ -170,6 +170,7 @@ export default function InvoicingPage() {
         throw new Error('Failed to fetch invoices')
       }
       const data = await response.json()
+      console.log('Fetched invoices:', data)
       setInvoices(data)
       setError(null)
     } catch (error) {
@@ -504,11 +505,17 @@ export default function InvoicingPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {invoices
+                  {invoices.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center">
+                        No invoices found
+                      </TableCell>
+                    </TableRow>
+                  ) : invoices
                     .filter(invoice => 
-                      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      invoice.job.jobNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      `${invoice.customer.firstName} ${invoice.customer.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+                      invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      invoice.job?.jobNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      `${invoice.customer?.firstName || ''} ${invoice.customer?.lastName || ''}`.toLowerCase().includes(searchTerm.toLowerCase())
                     )
                     .map((invoice) => (
                       <TableRow key={invoice.id} hover>

@@ -157,13 +157,13 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {error && (
-              <Grid size={12}>
+              <Grid size={{ xs: 12 }}>
                 <Alert severity="error">{error}</Alert>
               </Grid>
             )}
 
             {/* Job Selection */}
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="jobId"
                 control={control}
@@ -270,7 +270,7 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
             </Grid>
 
             {/* Notes */}
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="notes"
                 control={control}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 import { comparePassword, generateToken } from '@/lib/auth'
 import { z } from 'zod'
 
@@ -13,9 +13,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email, password } = loginSchema.parse(body)
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-    })
+    // Find user by email
+    const result = await query(
+      'SELECT * FROM "User" WHERE email = $1',
+      [email]
+    )
+
+    const user = result.rows[0]
 
     if (!user || !user.active) {
       return NextResponse.json(

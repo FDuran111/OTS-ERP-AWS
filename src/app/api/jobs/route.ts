@@ -1,70 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 import { z } from 'zod'
 
 // GET all jobs
 export async function GET() {
   try {
-    const jobs = await prisma.job.findMany({
-      include: {
-        customer: true,
-        assignments: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-              }
-            }
-          }
-        },
-        phases: true,
-        jobPhases: {
-          select: {
-            id: true,
-            name: true,
-            status: true,
-          }
-        },
-        timeEntries: {
-          select: {
-            hours: true,
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
+    // Get jobs with customer info and aggregated data
+    const jobsResult = await query(`
+      SELECT 
+        j.*,
+        c."companyName",
+        c."firstName",
+        c."lastName",
+        COALESCE(SUM(te.hours), 0) as total_hours,
+        COUNT(DISTINCT ja."userId") as crew_count,
+        array_agg(DISTINCT u.name) FILTER (WHERE u.name IS NOT NULL) as crew_names
+      FROM "Job" j
+      INNER JOIN "Customer" c ON j."customerId" = c.id
+      LEFT JOIN "TimeEntry" te ON j.id = te."jobId"
+      LEFT JOIN "JobAssignment" ja ON j.id = ja."jobId"
+      LEFT JOIN "User" u ON ja."userId" = u.id
+      GROUP BY j.id, c.id
+      ORDER BY j."createdAt" DESC
+    `)
+
+    // Get job phases separately for simplicity
+    const phasesResult = await query(`
+      SELECT 
+        jp."jobId",
+        jp.id,
+        jp.name,
+        jp.status
+      FROM "JobPhase" jp
+    `)
+
+    // Group phases by job
+    const phasesByJob = phasesResult.rows.reduce((acc, phase) => {
+      if (!acc[phase.jobId]) {
+        acc[phase.jobId] = []
       }
-    })
+      acc[phase.jobId].push({
+        id: phase.id,
+        name: phase.name,
+        status: phase.status
+      })
+      return acc
+    }, {} as Record<string, any[]>)
 
     // Transform the data to match the frontend format
-    const transformedJobs = jobs.map(job => ({
+    const transformedJobs = jobsResult.rows.map(job => ({
       id: job.id,
       jobNumber: job.jobNumber,
       title: job.description,
-      customer: job.customer.companyName || `${job.customer.firstName} ${job.customer.lastName}`,
+      customer: job.companyName || `${job.firstName} ${job.lastName}`,
       customerId: job.customerId,
       status: job.status.toLowerCase(),
       type: job.type,
-      priority: job.estimatedHours && job.estimatedHours > 40 ? 'high' : 'medium',
-      dueDate: job.scheduledDate?.toISOString() || null,
-      completedDate: job.completedDate?.toISOString() || null,
-      crew: job.assignments.map(a => a.user.name),
-      estimatedHours: job.estimatedHours,
-      actualHours: job.timeEntries.reduce((sum, entry) => sum + entry.hours, 0),
-      estimatedCost: job.estimatedCost,
-      actualCost: job.actualCost,
+      priority: job.estimatedHours && parseFloat(job.estimatedHours) > 40 ? 'high' : 'medium',
+      dueDate: job.scheduledDate || null,
+      completedDate: job.completedDate || null,
+      crew: job.crew_names || [],
+      estimatedHours: parseFloat(job.estimatedHours) || 0,
+      actualHours: parseFloat(job.total_hours) || 0,
+      estimatedCost: parseFloat(job.estimatedCost) || 0,
+      actualCost: parseFloat(job.actualCost) || 0,
       address: job.address,
       city: job.city,
       state: job.state,
       zip: job.zip,
-      jobPhases: job.jobPhases,
-      phases: job.phases.map(phase => ({
-        id: phase.id,
-        phase: phase.phase,
-        status: phase.status,
-        jobNumber: phase.jobNumber,
-      }))
+      jobPhases: phasesByJob[job.id] || [],
+      phases: [] // Legacy field
     }))
 
     return NextResponse.json(transformedJobs)
@@ -102,59 +107,84 @@ export async function POST(request: NextRequest) {
     const year = new Date().getFullYear().toString().slice(-2)
     
     // Find the last job number for this year
-    const lastJob = await prisma.job.findFirst({
-      where: {
-        jobNumber: {
-          startsWith: `${year}-`
-        }
-      },
-      orderBy: {
-        jobNumber: 'desc'
-      }
-    })
+    const lastJobResult = await query(
+      `SELECT "jobNumber" FROM "Job" 
+       WHERE "jobNumber" LIKE $1 
+       ORDER BY "jobNumber" DESC 
+       LIMIT 1`,
+      [`${year}-%`]
+    )
 
     // Generate new job number
     let sequence = 1
-    if (lastJob) {
-      const lastSequence = parseInt(lastJob.jobNumber.split('-')[1])
+    if (lastJobResult.rows.length > 0) {
+      const lastSequence = parseInt(lastJobResult.rows[0].jobNumber.split('-')[1])
       sequence = lastSequence + 1
     }
     
     const jobNumber = `${year}-${sequence.toString().padStart(3, '0')}-001`
 
-    // Create the job with assignments
-    const job = await prisma.job.create({
-      data: {
+    // Create the job
+    const jobResult = await query(
+      `INSERT INTO "Job" (
+        "jobNumber", "customerId", type, description, status,
+        address, city, state, zip, "scheduledDate",
+        "estimatedHours", "estimatedCost", "createdAt", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING *`,
+      [
         jobNumber,
-        customerId: data.customerId,
-        type: data.type,
-        description: data.description,
-        status: 'ESTIMATE',
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        zip: data.zip,
-        scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
-        estimatedHours: data.estimatedHours,
-        estimatedCost: data.estimatedCost,
-        assignments: {
-          create: data.assignedUserIds?.map(userId => ({
-            userId,
-            assignedBy: 'system', // TODO: Get from authenticated user
-          })) || []
-        }
-      },
-      include: {
-        customer: true,
-        assignments: {
-          include: {
-            user: true
-          }
-        }
-      }
-    })
+        data.customerId,
+        data.type,
+        data.description,
+        'ESTIMATE',
+        data.address || null,
+        data.city || null,
+        data.state || null,
+        data.zip || null,
+        data.scheduledDate ? new Date(data.scheduledDate) : null,
+        data.estimatedHours || null,
+        data.estimatedCost || null,
+        new Date(),
+        new Date()
+      ]
+    )
 
-    return NextResponse.json(job, { status: 201 })
+    const job = jobResult.rows[0]
+
+    // Create assignments if provided
+    if (data.assignedUserIds && data.assignedUserIds.length > 0) {
+      for (const userId of data.assignedUserIds) {
+        await query(
+          `INSERT INTO "JobAssignment" (
+            id, "jobId", "userId", "assignedBy", "assignedAt", "createdAt", "updatedAt"
+          ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)`,
+          [
+            job.id,
+            userId,
+            'system', // TODO: Get from authenticated user
+            new Date(),
+            new Date(),
+            new Date()
+          ]
+        )
+      }
+    }
+
+    // Get the complete job with customer info
+    const completeJobResult = await query(
+      `SELECT 
+        j.*,
+        c.company_name,
+        c.first_name,
+        c.last_name
+      FROM "Job" j
+      INNER JOIN "Customer" c ON j.customer_id = c.id
+      WHERE j.id = $1`,
+      [job.id]
+    )
+
+    return NextResponse.json(completeJobResult.rows[0], { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

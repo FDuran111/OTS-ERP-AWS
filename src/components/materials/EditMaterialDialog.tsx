@@ -232,7 +232,7 @@ export default function EditMaterialDialog({ open, material, onClose, onMaterial
             </Grid>
 
             {/* Description */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="description"
                 control={control}
@@ -421,7 +421,7 @@ export default function EditMaterialDialog({ open, material, onClose, onMaterial
             </Grid>
 
             {/* Vendor */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="vendorId"
                 control={control}

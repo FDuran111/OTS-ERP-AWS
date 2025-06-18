@@ -1,112 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
+import { query } from '@/lib/db'
+import { withErrorHandler, validateExists } from '@/lib/error-handler'
+import { customerSchema } from '@/lib/validation'
+import { searchCustomers } from '@/lib/search'
 
-// GET all customers
-export async function GET() {
-  try {
-    const customers = await prisma.customer.findMany({
-      include: {
-        _count: {
-          select: {
-            jobs: true
-          }
-        },
-        jobs: {
-          select: {
-            id: true,
-            status: true,
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
-
-    // Transform the data to match the frontend format
-    const transformedCustomers = customers.map(customer => {
-      const activeJobs = customer.jobs.filter(job => 
-        ['SCHEDULED', 'DISPATCHED', 'IN_PROGRESS'].includes(job.status)
-      ).length
-
-      return {
-        id: customer.id,
-        name: customer.companyName || `${customer.firstName} ${customer.lastName}`,
-        companyName: customer.companyName,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        type: customer.companyName ? 'Commercial' : 'Residential',
-        phone: customer.phone,
-        email: customer.email,
-        address: customer.address ? `${customer.address}, ${customer.city}, ${customer.state} ${customer.zip}` : '',
-        addressLine: customer.address,
-        city: customer.city,
-        state: customer.state,
-        zip: customer.zip,
-        totalJobs: customer._count.jobs,
-        activeJobs,
-        status: activeJobs > 0 ? 'active' : 'inactive',
-        quickbooksId: customer.quickbooksId,
-      }
-    })
-
-    return NextResponse.json(transformedCustomers)
-  } catch (error) {
-    console.error('Error fetching customers:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch customers' },
-      { status: 500 }
-    )
+// GET all customers with search and pagination
+export const GET = withErrorHandler(async (request: NextRequest) => {
+  const { searchParams } = new URL(request.url)
+  
+  const options = {
+    q: searchParams.get('q') || undefined,
+    page: parseInt(searchParams.get('page') || '1'),
+    limit: parseInt(searchParams.get('limit') || '20'),
+    sortBy: searchParams.get('sortBy') || 'c."createdAt"',
+    sortOrder: (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc',
+    filters: {
+      ...(searchParams.get('type') && { 
+        type: searchParams.get('type') === 'Commercial' ? '"companyName" IS NOT NULL' : '"companyName" IS NULL'
+      }),
+      ...(searchParams.get('status') && { status: searchParams.get('status') })
+    }
   }
-}
 
-// Schema for creating a customer
-const createCustomerSchema = z.object({
-  companyName: z.string().optional(),
-  firstName: z.string(),
-  lastName: z.string(),
-  email: z.string().email().optional(),
-  phone: z.string(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip: z.string().optional(),
+  const result = await searchCustomers(options)
+
+  // Transform the data to match the frontend format
+  const transformedCustomers = result.data.map((customer: any) => {
+    const activeJobs = parseInt(customer.active_jobs) || 0
+    const totalJobs = parseInt(customer.total_jobs) || 0
+
+    return {
+      id: customer.id,
+      name: customer.companyName || `${customer.firstName} ${customer.lastName}`,
+      companyName: customer.companyName,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      type: customer.companyName ? 'Commercial' : 'Residential',
+      phone: customer.phone,
+      email: customer.email,
+      address: customer.address ? `${customer.address}, ${customer.city}, ${customer.state} ${customer.zip}` : '',
+      addressLine: customer.address,
+      city: customer.city,
+      state: customer.state,
+      zip: customer.zip,
+      totalJobs,
+      activeJobs,
+      status: activeJobs > 0 ? 'active' : 'inactive',
+      quickbooksId: customer.quickbooksId,
+      createdAt: customer.createdAt,
+      updatedAt: customer.updatedAt,
+    }
+  })
+
+  return NextResponse.json({
+    customers: transformedCustomers,
+    pagination: result.pagination
+  })
 })
 
 // POST create a new customer
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const data = createCustomerSchema.parse(body)
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  const body = await request.json()
+  const data = customerSchema.parse(body)
 
-    const customer = await prisma.customer.create({
-      data: {
-        companyName: data.companyName,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        zip: data.zip,
-      }
-    })
-
-    return NextResponse.json(customer, { status: 201 })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
+  // Check for duplicate email if provided
+  if (data.email) {
+    const existingCustomer = await query(
+      'SELECT id FROM "Customer" WHERE email = $1',
+      [data.email]
+    )
+    
+    if (existingCustomer.rows.length > 0) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
-        { status: 400 }
+        { error: 'A customer with this email already exists' },
+        { status: 409 }
       )
     }
-    
-    console.error('Error creating customer:', error)
-    return NextResponse.json(
-      { error: 'Failed to create customer' },
-      { status: 500 }
-    )
   }
-}
+
+  const result = await query(
+    `INSERT INTO "Customer" (
+      id, "companyName", "firstName", "lastName", email, phone,
+      address, city, state, zip, "createdAt", "updatedAt"
+    ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    RETURNING *`,
+    [
+      data.companyName || null,
+      data.firstName,
+      data.lastName,
+      data.email || null,
+      data.phone || null,
+      data.address || null,
+      data.city || null,
+      data.state || null,
+      data.zip || null,
+      new Date(),
+      new Date()
+    ]
+  )
+
+  const customer = result.rows[0]
+  validateExists(customer, 'Customer')
+
+  return NextResponse.json(customer, { status: 201 })
+})

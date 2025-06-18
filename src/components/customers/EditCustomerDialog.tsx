@@ -149,7 +149,7 @@ export default function EditCustomerDialog({ open, onClose, onCustomerUpdated, c
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Customer Type Toggle */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="isCommercial"
                 control={control}
@@ -169,7 +169,7 @@ export default function EditCustomerDialog({ open, onClose, onCustomerUpdated, c
 
             {/* Company Name (if commercial) */}
             {isCommercial && (
-              <Grid size={12}>
+              <Grid xs={12}>
                 <Controller
                   name="companyName"
                   control={control}
@@ -253,13 +253,13 @@ export default function EditCustomerDialog({ open, onClose, onCustomerUpdated, c
             </Grid>
 
             {/* Address Information */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Typography variant="subtitle2" gutterBottom>
                 Address Information
               </Typography>
             </Grid>
 
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="address"
                 control={control}

@@ -347,7 +347,7 @@ export default function JobPhasesManager({ jobId, onPhasesChange }: JobPhasesMan
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid size={12}>
+              <Grid xs={12}>
                 <Controller
                   name="name"
                   control={control}
@@ -370,7 +370,7 @@ export default function JobPhasesManager({ jobId, onPhasesChange }: JobPhasesMan
                 />
               </Grid>
 
-              <Grid size={12}>
+              <Grid xs={12}>
                 <Controller
                   name="description"
                   control={control}
@@ -386,7 +386,7 @@ export default function JobPhasesManager({ jobId, onPhasesChange }: JobPhasesMan
                 />
               </Grid>
 
-              <Grid size={6}>
+              <Grid xs={6}>
                 <Controller
                   name="estimatedHours"
                   control={control}
@@ -404,7 +404,7 @@ export default function JobPhasesManager({ jobId, onPhasesChange }: JobPhasesMan
                 />
               </Grid>
 
-              <Grid size={6}>
+              <Grid xs={6}>
                 <Controller
                   name="estimatedCost"
                   control={control}
@@ -423,7 +423,7 @@ export default function JobPhasesManager({ jobId, onPhasesChange }: JobPhasesMan
                 />
               </Grid>
 
-              <Grid size={12}>
+              <Grid xs={12}>
                 <Controller
                   name="notes"
                   control={control}

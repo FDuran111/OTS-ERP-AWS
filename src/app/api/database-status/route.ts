@@ -1,21 +1,27 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query, testConnection } from '@/lib/db'
 
 export async function GET() {
   try {
     // Test basic database connectivity
     const startTime = Date.now()
-    await prisma.$queryRaw`SELECT 1 as test`
+    const isConnected = await testConnection()
     const connectionTime = Date.now() - startTime
 
+    if (!isConnected) {
+      throw new Error('Database connection test failed')
+    }
+
     // Get database info
-    const dbResult = await prisma.$queryRaw<[{version: string}]>`SELECT version() as version`
-    const version = dbResult[0]?.version || 'Unknown'
+    const dbResult = await query('SELECT version() as version')
+    const version = dbResult.rows[0]?.version || 'Unknown'
 
     // Count basic tables to see if schema exists
-    const userCount = await prisma.user.count()
-    const materialCount = await prisma.material.count()
-    const jobCount = await prisma.job.count()
+    const [userCount, materialCount, jobCount] = await Promise.all([
+      query('SELECT COUNT(*) as count FROM "User"'),
+      query('SELECT COUNT(*) as count FROM "Material"'),
+      query('SELECT COUNT(*) as count FROM "Job"')
+    ])
 
     return NextResponse.json({
       status: 'connected',
@@ -25,9 +31,9 @@ export async function GET() {
         connected: true,
       },
       schema: {
-        users: userCount,
-        materials: materialCount,
-        jobs: jobCount,
+        users: parseInt(userCount.rows[0].count),
+        materials: parseInt(materialCount.rows[0].count),
+        jobs: parseInt(jobCount.rows[0].count),
       },
       timestamp: new Date().toISOString(),
     })
@@ -38,7 +44,7 @@ export async function GET() {
     let suggestion = 'Check database configuration and network connectivity.'
     
     if (error instanceof Error) {
-      if (error.message.includes('Can\'t reach database server')) {
+      if (error.message.includes('Can\'t reach database server') || error.message.includes('ECONNREFUSED')) {
         errorType = 'connection_timeout'
         suggestion = 'The Supabase database may be paused. Check the Supabase dashboard and resume the project if needed.'
       } else if (error.message.includes('password authentication failed')) {

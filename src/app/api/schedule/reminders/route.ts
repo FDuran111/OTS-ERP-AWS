@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { addDays, differenceInDays, isAfter, isBefore } from 'date-fns'
+import { query } from '@/lib/db'
+import { addDays, differenceInDays } from 'date-fns'
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,33 +8,24 @@ export async function GET(request: NextRequest) {
     const in30Days = addDays(now, 30)
 
     // Get all scheduled jobs in the next 30 days
-    const upcomingJobs = await prisma.job.findMany({
-      where: {
-        scheduledDate: {
-          gte: now,
-          lte: in30Days,
-        },
-        status: {
-          in: ['SCHEDULED', 'DISPATCHED']
-        }
-      },
-      include: {
-        customer: {
-          select: {
-            firstName: true,
-            lastName: true,
-            companyName: true,
-          }
-        }
-      },
-      orderBy: {
-        scheduledDate: 'asc'
-      }
-    })
+    const upcomingJobsResult = await query(
+      `SELECT 
+        j.*,
+        c."firstName",
+        c."lastName",
+        c."companyName"
+      FROM "Job" j
+      INNER JOIN "Customer" c ON j."customerId" = c.id
+      WHERE j."scheduledDate" >= $1
+      AND j."scheduledDate" <= $2
+      AND j.status IN ('SCHEDULED', 'DISPATCHED')
+      ORDER BY j."scheduledDate" ASC`,
+      [now, in30Days]
+    )
 
     // Process jobs into reminders
-    const reminders = upcomingJobs.map(job => {
-      const scheduledDate = new Date(job.scheduledDate!)
+    const reminders = upcomingJobsResult.rows.map(job => {
+      const scheduledDate = new Date(job.scheduledDate)
       const daysUntil = differenceInDays(scheduledDate, now)
       
       let priority: 'high' | 'medium' | 'low' = 'low'
@@ -61,8 +52,8 @@ export async function GET(request: NextRequest) {
         type = 'overdue'
       }
 
-      const customerName = job.customer.companyName || 
-        `${job.customer.firstName} ${job.customer.lastName}`
+      const customerName = job.companyName || 
+        `${job.firstName} ${job.lastName}`
 
       return {
         id: `reminder-${job.id}`,
@@ -70,7 +61,7 @@ export async function GET(request: NextRequest) {
         jobNumber: job.jobNumber,
         title: job.description || 'Scheduled Job',
         customer: customerName,
-        scheduledDate: job.scheduledDate!.toISOString(),
+        scheduledDate: scheduledDate.toISOString(),
         daysUntil,
         priority,
         type,

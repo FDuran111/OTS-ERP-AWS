@@ -635,7 +635,7 @@ export default function SchedulePage() {
           ) : (
             <Grid container spacing={3}>
               {scheduleData.length === 0 ? (
-                <Grid size={12}>
+                <Grid xs={12}>
                   <Paper sx={{ p: 4, textAlign: 'center' }}>
                     <Typography color="text.secondary">
                       No scheduled jobs found for this {viewType}.

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from './sidebar'
-import { UserRole } from '@prisma/client'
+import { UserRole } from '@/lib/auth'
 
 interface DashboardLayoutProps {
   children: React.ReactNode

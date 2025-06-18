@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 import { z } from 'zod'
 
 const createLeadSchema = z.object({
@@ -28,23 +28,30 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const assignedTo = searchParams.get('assignedTo')
 
-    const whereClause: any = {}
+    // Build WHERE conditions
+    const conditions = []
+    const params = []
+    let paramIndex = 1
 
     if (status) {
-      whereClause.status = status
+      conditions.push(`status = $${paramIndex++}`)
+      params.push(status)
     }
 
     if (assignedTo) {
-      whereClause.assignedTo = assignedTo
+      conditions.push(`"assignedTo" = $${paramIndex++}`)
+      params.push(assignedTo)
     }
 
-    // Simple query without any includes to test basic functionality
-    const leads = await prisma.lead.findMany({
-      where: whereClause,
-      orderBy: [
-        { updatedAt: 'desc' }
-      ]
-    })
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    // Simple SQL query to get leads
+    const result = await query(
+      `SELECT * FROM "Lead" ${whereClause} ORDER BY "updatedAt" DESC`,
+      params
+    )
+
+    const leads = result.rows
 
     // Group leads by status for pipeline view
     const leadsByStatus = leads.reduce((acc, lead) => {
@@ -54,9 +61,9 @@ export async function GET(request: NextRequest) {
       acc[lead.status].push({
         ...lead,
         daysSinceLastContact: lead.lastContactDate 
-          ? Math.floor((new Date().getTime() - lead.lastContactDate.getTime()) / (1000 * 60 * 60 * 24))
+          ? Math.floor((new Date().getTime() - new Date(lead.lastContactDate).getTime()) / (1000 * 60 * 60 * 24))
           : null,
-        overdue: lead.nextFollowUpDate && lead.nextFollowUpDate < new Date()
+        overdue: lead.nextFollowUpDate && new Date(lead.nextFollowUpDate) < new Date()
       })
       return acc
     }, {} as Record<string, any[]>)
@@ -85,38 +92,60 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createLeadSchema.parse(body)
 
-    const lead = await prisma.lead.create({
-      data: {
-        ...data,
-        source: data.source as any,
-        lastContactDate: new Date()
-      },
-      include: {
-        assignedUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
-      }
-    })
+    // Insert lead using SQL
+    const result = await query(
+      `INSERT INTO "Lead" (
+        id, "firstName", "lastName", "companyName", email, phone,
+        street, city, state, zip, source, "estimatedValue",
+        priority, description, notes, "nextFollowUpDate",
+        "assignedTo", "lastContactDate", status, "createdAt", "updatedAt"
+      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      RETURNING *`,
+      [
+        data.firstName,
+        data.lastName,
+        data.companyName || null,
+        data.email || null,
+        data.phone || null,
+        data.street || null,
+        data.city || null,
+        data.state || null,
+        data.zip || null,
+        data.source || 'MANUAL',
+        data.estimatedValue || null,
+        data.priority || 'MEDIUM',
+        data.description || null,
+        data.notes || null,
+        data.nextFollowUpDate || null,
+        data.assignedTo || null,
+        new Date(),
+        'NEW',
+        new Date(),
+        new Date()
+      ]
+    )
 
-    // Create initial activity (only if assignedTo exists and is a valid user)
+    const lead = result.rows[0]
+
+    // Create initial activity if assignedTo exists
     if (data.assignedTo) {
       try {
-        await prisma.leadActivity.create({
-          data: {
-            leadId: lead.id,
-            type: 'NOTE',
-            description: 'Lead created',
-            completedDate: new Date(),
-            createdBy: data.assignedTo
-          }
-        })
+        await query(
+          `INSERT INTO "LeadActivity" (
+            id, "leadId", type, description, "completedDate", "createdBy", "createdAt", "updatedAt"
+          ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)`,
+          [
+            lead.id,
+            'NOTE',
+            'Lead created',
+            new Date(),
+            data.assignedTo,
+            new Date(),
+            new Date()
+          ]
+        )
       } catch (error) {
         console.warn('Could not create initial activity:', error)
-        // Continue without the activity if user doesn't exist
       }
     }
 

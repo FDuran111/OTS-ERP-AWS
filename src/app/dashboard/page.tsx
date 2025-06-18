@@ -2,7 +2,6 @@
 
 // Force dynamic rendering to prevent caching issues
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -441,7 +440,7 @@ export default function DashboardPage() {
                   ) : phaseData ? (
                     <Box>
                       <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid size={4}>
+                        <Grid size={{ xs: 4 }}>
                           <Typography variant="caption" color="text.secondary">
                             Underground
                           </Typography>
@@ -463,7 +462,7 @@ export default function DashboardPage() {
                             />
                           </Stack>
                         </Grid>
-                        <Grid size={4}>
+                        <Grid size={{ xs: 4 }}>
                           <Typography variant="caption" color="text.secondary">
                             Rough-in
                           </Typography>
@@ -485,7 +484,7 @@ export default function DashboardPage() {
                             />
                           </Stack>
                         </Grid>
-                        <Grid size={4}>
+                        <Grid size={{ xs: 4 }}>
                           <Typography variant="caption" color="text.secondary">
                             Finish
                           </Typography>

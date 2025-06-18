@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 import { z } from 'zod'
 
 // GET a single customer
@@ -9,32 +9,42 @@ export async function GET(
 ) {
   const resolvedParams = await params
   try {
-    const customer = await prisma.customer.findUnique({
-      where: { id: resolvedParams.id },
-      include: {
-        jobs: {
-          select: {
-            id: true,
-            jobNumber: true,
-            description: true,
-            status: true,
-            createdAt: true,
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        }
-      }
-    })
+    // Get customer with their jobs
+    const customerResult = await query(
+      'SELECT * FROM "Customer" WHERE id = $1',
+      [resolvedParams.id]
+    )
 
-    if (!customer) {
+    if (customerResult.rows.length === 0) {
       return NextResponse.json(
         { error: 'Customer not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json(customer)
+    const customer = customerResult.rows[0]
+
+    // Get customer's jobs
+    const jobsResult = await query(
+      `SELECT id, "jobNumber", description, status, "createdAt"
+       FROM "Job" 
+       WHERE "customerId" = $1 
+       ORDER BY "createdAt" DESC`,
+      [resolvedParams.id]
+    )
+
+    const customerWithJobs = {
+      ...customer,
+      jobs: jobsResult.rows.map(job => ({
+        id: job.id,
+        jobNumber: job.jobNumber,
+        description: job.description,
+        status: job.status,
+        createdAt: job.createdAt
+      }))
+    }
+
+    return NextResponse.json(customerWithJobs)
   } catch (error) {
     console.error('Error fetching customer:', error)
     return NextResponse.json(
@@ -67,22 +77,66 @@ export async function PATCH(
     const body = await request.json()
     const data = updateCustomerSchema.parse(body)
 
-    const customer = await prisma.customer.update({
-      where: { id: resolvedParams.id },
-      data: {
-        companyName: data.companyName,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email || null,
-        phone: data.phone,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        zip: data.zip,
-      }
-    })
+    // Build update fields
+    const updateFields = []
+    const updateValues = []
+    let paramIndex = 1
 
-    return NextResponse.json(customer)
+    if (data.companyName !== undefined) {
+      updateFields.push(`"companyName" = $${paramIndex++}`)
+      updateValues.push(data.companyName)
+    }
+    if (data.firstName !== undefined) {
+      updateFields.push(`"firstName" = $${paramIndex++}`)
+      updateValues.push(data.firstName)
+    }
+    if (data.lastName !== undefined) {
+      updateFields.push(`"lastName" = $${paramIndex++}`)
+      updateValues.push(data.lastName)
+    }
+    if (data.email !== undefined) {
+      updateFields.push(`email = $${paramIndex++}`)
+      updateValues.push(data.email || null)
+    }
+    if (data.phone !== undefined) {
+      updateFields.push(`phone = $${paramIndex++}`)
+      updateValues.push(data.phone)
+    }
+    if (data.address !== undefined) {
+      updateFields.push(`address = $${paramIndex++}`)
+      updateValues.push(data.address)
+    }
+    if (data.city !== undefined) {
+      updateFields.push(`city = $${paramIndex++}`)
+      updateValues.push(data.city)
+    }
+    if (data.state !== undefined) {
+      updateFields.push(`state = $${paramIndex++}`)
+      updateValues.push(data.state)
+    }
+    if (data.zip !== undefined) {
+      updateFields.push(`zip = $${paramIndex++}`)
+      updateValues.push(data.zip)
+    }
+
+    if (updateFields.length > 0) {
+      updateFields.push(`"updatedAt" = $${paramIndex++}`)
+      updateValues.push(new Date())
+      updateValues.push(resolvedParams.id)
+
+      await query(
+        `UPDATE "Customer" SET ${updateFields.join(', ')} WHERE id = $${paramIndex}`,
+        updateValues
+      )
+    }
+
+    // Get updated customer
+    const updatedCustomerResult = await query(
+      'SELECT * FROM "Customer" WHERE id = $1',
+      [resolvedParams.id]
+    )
+
+    return NextResponse.json(updatedCustomerResult.rows[0])
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -107,9 +161,12 @@ export async function DELETE(
   const resolvedParams = await params
   try {
     // Check if customer has any jobs
-    const jobCount = await prisma.job.count({
-      where: { customerId: resolvedParams.id }
-    })
+    const jobCountResult = await query(
+      'SELECT COUNT(*) as count FROM "Job" WHERE "customerId" = $1',
+      [resolvedParams.id]
+    )
+
+    const jobCount = parseInt(jobCountResult.rows[0].count)
 
     if (jobCount > 0) {
       return NextResponse.json(
@@ -118,9 +175,7 @@ export async function DELETE(
       )
     }
 
-    await prisma.customer.delete({
-      where: { id: resolvedParams.id }
-    })
+    await query('DELETE FROM "Customer" WHERE id = $1', [resolvedParams.id])
 
     return NextResponse.json({ success: true })
   } catch (error) {

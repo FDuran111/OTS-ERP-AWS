@@ -330,7 +330,7 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
                   />
                 </Grid>
 
-                <Grid size={12}>
+                <Grid xs={12}>
                   <Controller
                     name="description"
                     control={control}

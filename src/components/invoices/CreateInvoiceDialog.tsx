@@ -319,7 +319,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
 
             {/* Customer Info */}
             {selectedJob && (
-              <Grid size={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" gutterBottom>
                   Customer: {selectedJob.customer.firstName} {selectedJob.customer.lastName}
                 </Typography>
@@ -327,7 +327,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
             )}
 
             {/* Line Items */}
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">Line Items</Typography>
                 <Button
@@ -458,7 +458,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
             </Grid>
 
             {/* Notes */}
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="notes"
                 control={control}

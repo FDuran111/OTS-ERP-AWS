@@ -240,7 +240,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             <Box>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Customer Selection */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="customerId"
                 control={control}
@@ -313,7 +313,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Description */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="description"
                 control={control}
@@ -365,13 +365,13 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Address Fields */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Typography variant="subtitle2" gutterBottom>
                 Job Address
               </Typography>
             </Grid>
             
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="address"
                 control={control}
@@ -530,7 +530,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Crew Assignment */}
-            <Grid size={12}>
+            <Grid xs={12}>
               <Controller
                 name="assignedUserIds"
                 control={control}

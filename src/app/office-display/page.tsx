@@ -303,7 +303,7 @@ export default function OfficeDisplayPage() {
         <Grid container spacing={3}>
           {/* Urgent Reminders */}
           {reminders.length > 0 && (
-            <Grid size={12}>
+            <Grid xs={12}>
               <Card sx={{ border: '2px solid', borderColor: 'warning.main', mb: 3 }}>
                 <CardContent>
                   <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

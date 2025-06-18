@@ -1,5 +1,6 @@
-import { prisma } from './prisma'
-import { JobPhase } from '@prisma/client'
+import { query } from './db'
+
+export type JobPhase = 'UNDERGROUND' | 'ROUGH_IN' | 'FINISH' | 'INSPECTION' | 'COMPLETE'
 
 /**
  * Generates a job number in the format YY-###-SSS
@@ -11,20 +12,17 @@ export async function generateJobNumber(): Promise<string> {
   const year = new Date().getFullYear().toString().slice(-2)
   
   // Get the highest job number for the current year
-  const lastJob = await prisma.job.findFirst({
-    where: {
-      jobNumber: {
-        startsWith: `${year}-`
-      }
-    },
-    orderBy: {
-      jobNumber: 'desc'
-    }
-  })
+  const lastJobResult = await query(
+    `SELECT job_number FROM "Job" 
+     WHERE job_number LIKE $1 
+     ORDER BY job_number DESC 
+     LIMIT 1`,
+    [`${year}-%`]
+  )
   
   let sequentialNumber = 1
-  if (lastJob) {
-    const parts = lastJob.jobNumber.split('-')
+  if (lastJobResult.rows.length > 0) {
+    const parts = lastJobResult.rows[0].job_number.split('-')
     if (parts.length >= 2) {
       sequentialNumber = parseInt(parts[1]) + 1
     }
@@ -56,20 +54,17 @@ export async function generatePurchaseOrderNumber(
   const baseNumber = phase ? `${jobNumber}-${phase}` : jobNumber
   
   // Get the highest PO number for this job/vendor combination
-  const lastPO = await prisma.purchaseOrder.findFirst({
-    where: {
-      poNumber: {
-        startsWith: `${baseNumber}-${vendorCode}-`
-      }
-    },
-    orderBy: {
-      poNumber: 'desc'
-    }
-  })
+  const lastPOResult = await query(
+    `SELECT po_number FROM "PurchaseOrder" 
+     WHERE po_number LIKE $1 
+     ORDER BY po_number DESC 
+     LIMIT 1`,
+    [`${baseNumber}-${vendorCode}-%`]
+  )
   
   let poSequence = 1
-  if (lastPO) {
-    const parts = lastPO.poNumber.split('-')
+  if (lastPOResult.rows.length > 0) {
+    const parts = lastPOResult.rows[0].po_number.split('-')
     const lastSequence = parts[parts.length - 1]
     poSequence = parseInt(lastSequence) + 1
   }
