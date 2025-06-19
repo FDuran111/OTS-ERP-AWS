@@ -3,8 +3,33 @@ import { query } from '@/lib/db'
 import { z } from 'zod'
 
 // GET all jobs
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const statusFilter = searchParams.get('status')
+    const unscheduled = searchParams.get('unscheduled') === 'true'
+
+    let whereClause = ''
+    let joinClause = ''
+    const params: any[] = []
+    let paramIndex = 1
+
+    if (statusFilter) {
+      const statuses = statusFilter.split(',').map(s => s.trim().toUpperCase())
+      const statusPlaceholders = statuses.map(() => `$${paramIndex++}`).join(', ')
+      whereClause += `WHERE j.status::text IN (${statusPlaceholders})`
+      params.push(...statuses)
+    }
+
+    if (unscheduled) {
+      joinClause = 'LEFT JOIN "JobSchedule" js ON j.id = js."jobId"'
+      if (whereClause) {
+        whereClause += ' AND js.id IS NULL'
+      } else {
+        whereClause = 'WHERE js.id IS NULL'
+      }
+    }
+
     // Get jobs with customer info and aggregated data
     const jobsResult = await query(`
       SELECT 
@@ -20,9 +45,11 @@ export async function GET() {
       LEFT JOIN "TimeEntry" te ON j.id = te."jobId"
       LEFT JOIN "JobAssignment" ja ON j.id = ja."jobId"
       LEFT JOIN "User" u ON ja."userId" = u.id
+      ${joinClause}
+      ${whereClause}
       GROUP BY j.id, c.id
       ORDER BY j."createdAt" DESC
-    `)
+    `, params)
 
     // Get job phases separately for simplicity
     const phasesResult = await query(`

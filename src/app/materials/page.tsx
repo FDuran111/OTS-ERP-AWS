@@ -40,6 +40,10 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -61,11 +65,17 @@ import {
   Error as ErrorIcon,
   TrendingUp,
   Clear as ClearIcon,
+  History as HistoryIcon,
 } from '@mui/icons-material'
 import AddMaterialDialog from '@/components/materials/AddMaterialDialog'
 import EditMaterialDialog from '@/components/materials/EditMaterialDialog'
 import MaterialActionsMenu from '@/components/materials/MaterialActionsMenu'
+import MaterialReservationDialog from '@/components/materials/MaterialReservationDialog'
 import StorageLocationDialog from '@/components/materials/StorageLocationDialog'
+import StockMovementHistory from '@/components/materials/StockMovementHistory'
+import LowStockNotification from '@/components/notifications/LowStockNotification'
+import StockAnalyticsDashboard from '@/components/analytics/StockAnalyticsDashboard'
+import ReorderSuggestions from '@/components/materials/ReorderSuggestions'
 
 const drawerWidth = 240
 
@@ -86,6 +96,8 @@ interface Material {
   unit: string
   inStock: number
   minStock: number
+  totalReserved: number
+  availableStock: number
   cost: number
   price: number
   location?: string
@@ -160,6 +172,11 @@ export default function MaterialsPage() {
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
   const [showOnlyLowStock, setShowOnlyLowStock] = useState(false)
   const [storageLocationDialogOpen, setStorageLocationDialogOpen] = useState(false)
+  const [stockHistoryDialogOpen, setStockHistoryDialogOpen] = useState(false)
+  const [analyticsDialogOpen, setAnalyticsDialogOpen] = useState(false)
+  const [reorderDialogOpen, setReorderDialogOpen] = useState(false)
+  const [reservationDialogOpen, setReservationDialogOpen] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -172,10 +189,49 @@ export default function MaterialsPage() {
 
   useEffect(() => {
     if (user) {
-      fetchMaterials()
-      fetchStats()
+      fetchCombinedData()
     }
   }, [user])
+
+  // Check URL params for filters on component mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('filter') === 'lowStock') {
+      setShowOnlyLowStock(true)
+    }
+  }, [])
+
+  const fetchCombinedData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const response = await fetch('/api/materials/combined', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch materials: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      setMaterials(data.materials || [])
+      setStats(data.stats || [])
+      
+      // Extract unique categories and manufacturers for filters
+      const categories = [...new Set(data.materials.map((m: Material) => m.category).filter(Boolean))] as string[]
+      const manufacturers = [...new Set(data.materials.map((m: Material) => m.manufacturer).filter(Boolean))] as string[]
+      
+      setAvailableCategories(categories.sort())
+      setAvailableManufacturers(manufacturers.sort())
+    } catch (error) {
+      console.error('Error fetching materials:', error)
+      setError('Failed to load materials')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchMaterials = async () => {
     try {
@@ -302,18 +358,18 @@ export default function MaterialsPage() {
   }
 
   const handleMaterialCreated = () => {
-    fetchMaterials()
-    fetchStats()
+    fetchCombinedData()
+    setRefreshTrigger(prev => prev + 1)
   }
 
   const handleMaterialUpdated = () => {
-    fetchMaterials()
-    fetchStats()
+    fetchCombinedData()
+    setRefreshTrigger(prev => prev + 1)
   }
 
   const handleStockUpdated = () => {
-    fetchMaterials()
-    fetchStats()
+    fetchCombinedData()
+    setRefreshTrigger(prev => prev + 1)
   }
 
   const getStatsIconComponent = (iconName: string) => {
@@ -471,10 +527,7 @@ export default function MaterialsPage() {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
                 variant="outlined"
-                onClick={() => {
-                  fetchMaterials()
-                  fetchStats()
-                }}
+                onClick={() => fetchCombinedData()}
                 disabled={loading}
               >
                 {loading ? 'Loading...' : 'Refresh'}
@@ -485,6 +538,34 @@ export default function MaterialsPage() {
                 onClick={() => setStorageLocationDialogOpen(true)}
               >
                 Manage Locations
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setStockHistoryDialogOpen(true)}
+              >
+                Stock History
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<AssessmentIcon />}
+                onClick={() => setAnalyticsDialogOpen(true)}
+              >
+                Analytics
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<TrendingUp />}
+                onClick={() => setReorderDialogOpen(true)}
+              >
+                Reorder Suggestions
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<ScheduleIcon />}
+                onClick={() => setReservationDialogOpen(true)}
+              >
+                Reserve Materials
               </Button>
               <Button
                 variant="contained"
@@ -537,6 +618,9 @@ export default function MaterialsPage() {
               )
             })}
           </Grid>
+
+          {/* Low Stock Notification */}
+          <LowStockNotification refreshTrigger={refreshTrigger} />
 
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -737,11 +821,12 @@ export default function MaterialsPage() {
                     <TableCell>Name</TableCell>
                     <TableCell>Brand</TableCell>
                     <TableCell>Category</TableCell>
-                    <TableCell>Stock</TableCell>
+                    <TableCell>Total Stock</TableCell>
+                    <TableCell>Reserved</TableCell>
+                    <TableCell>Available</TableCell>
                     <TableCell>Min Stock</TableCell>
                     <TableCell>Location</TableCell>
                     <TableCell>Cost</TableCell>
-                    <TableCell>Price</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
@@ -794,47 +879,41 @@ export default function MaterialsPage() {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>
                               {(() => {
-                                const stockPercentage = material.minStock > 0 ? (material.inStock / material.minStock) * 100 : 0
+                                const stockPercentage = material.minStock > 0 ? (material.availableStock / material.minStock) * 100 : 0
                                 if (material.inStock === 0 || stockPercentage < 5) return '🚨'
-                                if (material.inStock <= material.minStock) return '⚠️'
+                                if (material.availableStock <= material.minStock) return '⚠️'
                                 if (stockPercentage >= 150) return '✅'
                                 return '📦'
                               })()}
                             </Typography>
-                            <Box>
-                              <Typography variant="body2" fontWeight="medium">
-                                Total: {material.inStock} {material.unit}
-                              </Typography>
-                              {material.stockLocations && material.stockLocations.length > 0 && (
-                                <Box sx={{ mt: 0.5 }}>
-                                  {material.stockLocations
-                                    .filter(stock => stock.quantity > 0)
-                                    .map((stock, index) => (
-                                    <Typography 
-                                      key={stock.id} 
-                                      variant="caption" 
-                                      color="text.secondary"
-                                      sx={{ display: 'block', fontSize: '0.7rem' }}
-                                    >
-                                      {stock.location.code}: {stock.quantity} {material.unit}
-                                    </Typography>
-                                  ))}
-                                  {material.stockLocations.filter(stock => stock.quantity > 0).length === 0 && (
-                                    <Typography variant="caption" color="error" sx={{ fontSize: '0.7rem' }}>
-                                      No stock at any location
-                                    </Typography>
-                                  )}
-                                </Box>
-                              )}
-                            </Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {material.inStock} {material.unit}
+                            </Typography>
                           </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography 
+                            variant="body2" 
+                            color={material.totalReserved > 0 ? 'primary.main' : 'text.secondary'}
+                            fontWeight={material.totalReserved > 0 ? 'medium' : 'normal'}
+                          >
+                            {material.totalReserved || 0} {material.unit}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography 
+                            variant="body2" 
+                            color={material.availableStock <= 0 ? 'error.main' : 'text.primary'}
+                            fontWeight="medium"
+                          >
+                            {material.availableStock || 0} {material.unit}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           {material.minStock} {material.unit}
                         </TableCell>
                         <TableCell>{material.location || '-'}</TableCell>
                         <TableCell>${material.cost.toFixed(2)}</TableCell>
-                        <TableCell>${material.price.toFixed(2)}</TableCell>
                         <TableCell>
                           <Chip
                             label={material.status}
@@ -886,6 +965,78 @@ export default function MaterialsPage() {
             onLocationsUpdated={() => {
               fetchMaterials()
               fetchStats()
+            }}
+          />
+
+          {/* Stock Movement History Dialog */}
+          <Dialog 
+            open={stockHistoryDialogOpen} 
+            onClose={() => setStockHistoryDialogOpen(false)}
+            maxWidth="xl"
+            fullWidth
+          >
+            <DialogTitle>
+              Stock Movement History
+            </DialogTitle>
+            <DialogContent sx={{ p: 3 }}>
+              <StockMovementHistory showMaterialInfo={true} />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setStockHistoryDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Stock Analytics Dialog */}
+          <Dialog 
+            open={analyticsDialogOpen} 
+            onClose={() => setAnalyticsDialogOpen(false)}
+            maxWidth="xl"
+            fullWidth
+            PaperProps={{ sx: { height: '90vh' } }}
+          >
+            <DialogTitle>
+              Stock Analytics Dashboard
+            </DialogTitle>
+            <DialogContent sx={{ p: 3, overflow: 'auto' }}>
+              <StockAnalyticsDashboard />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setAnalyticsDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Reorder Suggestions Dialog */}
+          <Dialog 
+            open={reorderDialogOpen} 
+            onClose={() => setReorderDialogOpen(false)}
+            maxWidth="xl"
+            fullWidth
+            PaperProps={{ sx: { height: '90vh' } }}
+          >
+            <DialogTitle>
+              Automated Reorder Suggestions
+            </DialogTitle>
+            <DialogContent sx={{ p: 3, overflow: 'auto' }}>
+              <ReorderSuggestions />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setReorderDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Material Reservation Dialog */}
+          <MaterialReservationDialog
+            open={reservationDialogOpen}
+            onClose={() => setReservationDialogOpen(false)}
+            onReservationCreated={() => {
+              fetchCombinedData()
+              setRefreshTrigger(prev => prev + 1)
             }}
           />
         </Container>

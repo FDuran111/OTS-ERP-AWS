@@ -1,147 +1,283 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { startOfWeek, endOfWeek, addDays, format, startOfDay, endOfDay } from 'date-fns'
+import { z } from 'zod'
+
+const scheduleJobSchema = z.object({
+  jobId: z.string(),
+  startDate: z.string(),
+  endDate: z.string().optional(),
+  estimatedHours: z.number().positive(),
+  assignedCrew: z.array(z.string()).default([]),
+  notes: z.string().optional(),
+})
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const viewType = searchParams.get('viewType') || 'week'
-    const dateParam = searchParams.get('date')
-    
-    const baseDate = dateParam ? new Date(dateParam) : new Date()
-    
-    let startDate: Date
-    let endDate: Date
-    
-    switch (viewType) {
-      case 'day':
-        startDate = startOfDay(baseDate)
-        endDate = endOfDay(baseDate)
-        break
-      case 'month':
-        // Get jobs for the entire month
-        startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1)
-        endDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0)
-        break
-      default: // week
-        startDate = startOfWeek(baseDate, { weekStartsOn: 1 }) // Monday start
-        endDate = endOfWeek(baseDate, { weekStartsOn: 1 })
+    const month = searchParams.get('month') // Format: YYYY-MM
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    const userId = searchParams.get('userId') // Filter by crew member
+    const unscheduled = searchParams.get('unscheduled') === 'true'
+
+    if (unscheduled) {
+      // Return unscheduled jobs
+      const unscheduledResult = await query(`
+        SELECT 
+          j.*,
+          COALESCE(c."companyName", CONCAT(c."firstName", ' ', c."lastName")) as "customerName"
+        FROM "Job" j
+        LEFT JOIN "Customer" c ON j."customerId" = c.id
+        LEFT JOIN "JobSchedule" js ON j.id = js."jobId"
+        WHERE j.status::text IN ('ESTIMATE', 'APPROVED', 'SCHEDULED')
+        AND js.id IS NULL
+        ORDER BY j.priority DESC, j."createdAt" ASC
+      `)
+
+      const jobs = unscheduledResult.rows.map(row => ({
+        id: row.id,
+        jobNumber: row.jobNumber,
+        title: row.description,
+        customer: row.customerName || 'Unknown Customer',
+        customerName: row.customerName,
+        type: row.type,
+        status: row.status,
+        priority: row.priority,
+        estimatedHours: parseFloat(row.estimatedHours || 0),
+        dueDate: row.scheduledDate,
+        address: row.address,
+        description: row.description,
+      }))
+
+      return NextResponse.json(jobs)
     }
 
-    // Get scheduled jobs with customer information
-    const jobsResult = await query(`
+    let dateFilter = ''
+    const params: any[] = []
+    let paramIndex = 1
+
+    if (month) {
+      // Get all schedules for a specific month
+      const [year, monthNum] = month.split('-')
+      const monthStart = `${year}-${monthNum}-01`
+      // Calculate the last day of the month
+      const nextMonth = new Date(parseInt(year), parseInt(monthNum), 1)
+      const lastDay = new Date(nextMonth.getTime() - 1).getDate()
+      const monthEnd = `${year}-${monthNum}-${lastDay.toString().padStart(2, '0')}`
+      
+      dateFilter = `AND js."startDate" >= $${paramIndex}::date AND js."startDate" <= $${paramIndex + 1}::date`
+      params.push(monthStart, monthEnd)
+      paramIndex += 2
+    } else if (startDate && endDate) {
+      // Get schedules for a specific date range
+      dateFilter = `AND js."startDate" >= $${paramIndex} AND js."startDate" <= $${paramIndex + 1}`
+      params.push(startDate, endDate)
+      paramIndex += 2
+    } else if (startDate) {
+      // Get schedules for a specific day
+      dateFilter = `AND DATE(js."startDate") = $${paramIndex}::date`
+      params.push(startDate)
+      paramIndex++
+    }
+
+    let crewFilter = ''
+    if (userId) {
+      crewFilter = `AND EXISTS (
+        SELECT 1 FROM "CrewAssignment" ca 
+        WHERE ca."scheduleId" = js.id 
+        AND ca."userId" = $${paramIndex}
+        AND ca.status = 'ASSIGNED'
+      )`
+      params.push(userId)
+      paramIndex++
+    }
+
+    const result = await query(`
       SELECT 
-        j.*,
-        c."firstName",
-        c."lastName",
-        c."companyName",
-        c.phone,
-        c.address,
-        c.city,
-        c.state
-      FROM "Job" j
-      INNER JOIN "Customer" c ON j."customerId" = c.id
-      WHERE j.status IN ('SCHEDULED', 'DISPATCHED', 'IN_PROGRESS')
-      ORDER BY j."createdAt" DESC
-    `)
+        js.id,
+        js."jobId",
+        js."startDate",
+        js."endDate", 
+        js."estimatedHours",
+        js."actualHours",
+        js.status,
+        js.notes,
+        js."createdAt",
+        
+        -- Job information
+        j."jobNumber",
+        j.description as title,
+        j."customerId",
+        j.type,
+        j.priority,
+        j.status as "jobStatus",
+        j.address,
+        j.city,
+        j.state,
+        j.zip,
+        
+        -- Customer information
+        COALESCE(c."companyName", CONCAT(c."firstName", ' ', c."lastName")) as "customerName",
+        
+        -- Crew assignments
+        COALESCE(
+          JSON_AGG(
+            CASE WHEN ca.id IS NOT NULL THEN
+              JSON_BUILD_OBJECT(
+                'userId', ca."userId",
+                'userName', u.name,
+                'role', ca.role,
+                'status', ca.status,
+                'checkedInAt', ca."checkedInAt",
+                'checkedOutAt', ca."checkedOutAt"
+              )
+            END
+          ) FILTER (WHERE ca.id IS NOT NULL),
+          '[]'::json
+        ) as crew
+        
+      FROM "JobSchedule" js
+      INNER JOIN "Job" j ON js."jobId" = j.id
+      LEFT JOIN "Customer" c ON j."customerId" = c.id
+      LEFT JOIN "CrewAssignment" ca ON js.id = ca."scheduleId" AND ca.status != 'REMOVED'
+      LEFT JOIN "User" u ON ca."userId" = u.id
+      WHERE 1=1 ${dateFilter} ${crewFilter}
+      GROUP BY js.id, j.id, c.id
+      ORDER BY js."startDate" ASC
+    `, params)
 
-    const jobs = jobsResult.rows
-
-    // Skip time entries for now to avoid database issues
-
-    // Group jobs by date
-    const scheduleData: Record<string, any[]> = {}
-    
-    jobs.forEach(job => {
-      const jobDate = job.scheduledDate || job.startDate
-      if (!jobDate) return
-      
-      const dateKey = format(new Date(jobDate), 'yyyy-MM-dd')
-      
-      if (!scheduleData[dateKey]) {
-        scheduleData[dateKey] = []
-      }
-      
-      const customerName = job.companyName || 
-        `${job.firstName} ${job.lastName}`
-      
-      const jobTime = job.scheduledTime || 
-        (job.startDate ? format(new Date(job.startDate), 'h:mm a') : '9:00 AM')
-      
-      scheduleData[dateKey].push({
-        id: job.id,
-        time: jobTime,
-        jobNumber: job.jobNumber,
-        title: job.description,
-        customer: customerName,
-        customerPhone: job.phone,
-        address: `${job.address || ''} ${job.city || ''} ${job.state || ''}`.trim(),
-        status: job.status,
-        priority: job.priority || 'medium',
-        jobType: job.type,
-        estimatedHours: parseFloat(job.estimatedHours) || 0,
-        crew: 'Default Crew',
-        crewId: null
-      })
-    })
-
-    // Simplified crew availability - just return sample data for now
-    const crewAvailability = [
-      {
-        name: 'Main Crew',
-        totalHours: 32,
-        scheduledHours: 24,
-        availableHours: 16,
-        status: 'available' as const
+    const schedules = result.rows.map(row => ({
+      id: row.id,
+      jobId: row.jobId,
+      startDate: row.startDate,
+      endDate: row.endDate,
+      estimatedHours: parseFloat(row.estimatedHours || 0),
+      actualHours: parseFloat(row.actualHours || 0),
+      status: row.status,
+      notes: row.notes,
+      createdAt: row.createdAt,
+      job: {
+        id: row.jobId,
+        jobNumber: row.jobNumber,
+        title: row.title,
+        customerId: row.customerId,
+        customerName: row.customerName,
+        type: row.type,
+        priority: row.priority,
+        status: row.jobStatus,
+        address: row.address,
+        city: row.city,
+        state: row.state,
+        zip: row.zip,
       },
-      {
-        name: 'Service Team',
-        totalHours: 28,
-        scheduledHours: 20,
-        availableHours: 20,
-        status: 'available' as const
-      }
-    ]
+      crew: Array.isArray(row.crew) ? row.crew : []
+    }))
 
-    // Generate date range for calendar display
-    const dateRange = []
-    let currentDate = new Date(startDate)
+    return NextResponse.json(schedules)
+  } catch (error) {
+    console.error('Error fetching schedule:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch schedule' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST /api/schedule - Schedule a job
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const data = scheduleJobSchema.parse(body)
+
+    // Check if job exists and is not already scheduled
+    const jobCheck = await query(
+      'SELECT id, status FROM "Job" WHERE id = $1',
+      [data.jobId]
+    )
     
-    while (currentDate <= endDate) {
-      const dateKey = format(currentDate, 'yyyy-MM-dd')
-      dateRange.push({
-        date: dateKey,
-        displayDate: format(currentDate, 'EEEE, MMMM d'),
-        jobs: scheduleData[dateKey] || []
-      })
-      currentDate = addDays(currentDate, 1)
+    if (jobCheck.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Job not found' },
+        { status: 404 }
+      )
     }
 
-    // Summary statistics
-    const totalJobs = jobs.length
-    const jobsByStatus = {
-      SCHEDULED: jobs.filter(job => job.status === 'SCHEDULED').length,
-      DISPATCHED: jobs.filter(job => job.status === 'DISPATCHED').length,
-      IN_PROGRESS: jobs.filter(job => job.status === 'IN_PROGRESS').length
+    const existingSchedule = await query(
+      'SELECT id FROM "JobSchedule" WHERE "jobId" = $1',
+      [data.jobId]
+    )
+    
+    if (existingSchedule.rows.length > 0) {
+      return NextResponse.json(
+        { error: 'Job is already scheduled' },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({
-      dateRange,
-      crewAvailability,
-      summary: {
-        totalJobs,
-        jobsByStatus,
-        period: {
-          start: startDate.toISOString(),
-          end: endDate.toISOString(),
-          viewType
+    // Start transaction
+    await query('BEGIN')
+
+    try {
+      // Create schedule entry
+      const scheduleResult = await query(`
+        INSERT INTO "JobSchedule" (
+          "jobId", "startDate", "endDate", "estimatedHours", notes
+        ) VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `, [
+        data.jobId,
+        new Date(data.startDate),
+        data.endDate ? new Date(data.endDate) : null,
+        data.estimatedHours,
+        data.notes || null
+      ])
+
+      const schedule = scheduleResult.rows[0]
+
+      // Assign crew members
+      if (data.assignedCrew.length > 0) {
+        for (const userId of data.assignedCrew) {
+          await query(`
+            INSERT INTO "CrewAssignment" (
+              "scheduleId", "userId", "jobId", role
+            ) VALUES ($1, $2, $3, $4)
+          `, [schedule.id, userId, data.jobId, 'TECHNICIAN'])
         }
       }
-    })
+
+      await query('COMMIT')
+
+      // Fetch the complete schedule with job and crew info
+      const completeSchedule = await query(`
+        SELECT 
+          js.*,
+          j."jobNumber",
+          j.description as title,
+          j."customerId",
+          COALESCE(c."companyName", CONCAT(c."firstName", ' ', c."lastName")) as "customerName"
+        FROM "JobSchedule" js
+        INNER JOIN "Job" j ON js."jobId" = j.id
+        LEFT JOIN "Customer" c ON j."customerId" = c.id
+        WHERE js.id = $1
+      `, [schedule.id])
+
+      return NextResponse.json(completeSchedule.rows[0], { status: 201 })
+    } catch (error) {
+      await query('ROLLBACK')
+      throw error
+    }
   } catch (error) {
-    console.error('Error fetching schedule data:', error)
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid request data', details: error.errors },
+        { status: 400 }
+      )
+    }
+    
+    console.error('Error scheduling job:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch schedule data' },
+      { error: 'Failed to schedule job' },
       { status: 500 }
     )
   }

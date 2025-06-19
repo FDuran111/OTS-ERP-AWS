@@ -237,9 +237,7 @@ export default function JobsPage() {
   }
 
   const handleViewJob = (job: Job) => {
-    // For now, just open edit dialog in view mode
-    // Later could be a separate view dialog
-    handleEditJob(job)
+    router.push(`/jobs/${job.id}`)
   }
 
   const filteredJobs = jobs.filter(job => {

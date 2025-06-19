@@ -1,0 +1,359 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import {
+  Box,
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  Chip,
+  Tab,
+  Tabs,
+  Paper,
+  IconButton,
+  AppBar,
+  Toolbar,
+  Button,
+  Grid,
+  Divider,
+} from '@mui/material'
+import {
+  ArrowBack as ArrowBackIcon,
+  Edit as EditIcon,
+  Work as WorkIcon,
+  Schedule as ScheduleIcon,
+  Inventory as InventoryIcon,
+  Assessment as AssessmentIcon,
+  AttachMoney as MoneyIcon,
+} from '@mui/icons-material'
+import JobMaterialReservations from '@/components/jobs/JobMaterialReservations'
+import JobPhasesManager from '@/components/jobs/JobPhasesManager'
+import MaterialUsageTracker from '@/components/jobs/MaterialUsageTracker'
+
+interface Job {
+  id: string
+  jobNumber: string
+  title: string
+  customer: string
+  customerId: string
+  customerName: string
+  type: 'SERVICE_CALL' | 'COMMERCIAL_PROJECT'
+  status: string
+  priority: string
+  description?: string
+  dueDate: string | null
+  completedDate: string | null
+  estimatedHours?: number
+  actualHours?: number
+  estimatedCost?: number
+  actualCost?: number
+  billedAmount?: number
+  address?: string
+  city?: string
+  state?: string
+  zip?: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface TabPanelProps {
+  children?: React.ReactNode
+  index: number
+  value: number
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`job-tabpanel-${index}`}
+      aria-labelledby={`job-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
+  )
+}
+
+export default function JobDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
+  const router = useRouter()
+  const [job, setJob] = useState<Job | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState(0)
+
+  useEffect(() => {
+    params.then(setResolvedParams)
+  }, [params])
+
+  useEffect(() => {
+    if (resolvedParams?.id) {
+      fetchJob()
+    }
+  }, [resolvedParams])
+
+  const fetchJob = async () => {
+    if (!resolvedParams?.id) return
+
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/jobs/${resolvedParams.id}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError('Job not found')
+        } else {
+          throw new Error('Failed to fetch job')
+        }
+        return
+      }
+      
+      const data = await response.json()
+      setJob(data)
+    } catch (error) {
+      console.error('Error fetching job:', error)
+      setError('Failed to load job details')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+    switch (status.toLowerCase()) {
+      case 'in_progress':
+        return 'success'
+      case 'scheduled':
+      case 'dispatched':
+        return 'warning'
+      case 'completed':
+      case 'billed':
+        return 'info'
+      case 'cancelled':
+        return 'error'
+      default:
+        return 'default'
+    }
+  }
+
+  const getPriorityColor = (priority: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+    switch (priority) {
+      case 'High':
+        return 'error'
+      case 'Medium':
+        return 'warning'
+      case 'Low':
+        return 'info'
+      default:
+        return 'default'
+    }
+  }
+
+  if (loading) {
+    return (
+      <Container maxWidth="xl" sx={{ mt: 4 }}>
+        <Typography align="center">Loading job details...</Typography>
+      </Container>
+    )
+  }
+
+  if (error || !job) {
+    return (
+      <Container maxWidth="xl" sx={{ mt: 4 }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" color="error" gutterBottom>
+            {error || 'Job not found'}
+          </Typography>
+          <Button onClick={() => router.push('/jobs')} startIcon={<ArrowBackIcon />}>
+            Back to Jobs
+          </Button>
+        </Box>
+      </Container>
+    )
+  }
+
+  return (
+    <Box>
+      {/* Header */}
+      <AppBar position="static" color="default" elevation={0}>
+        <Toolbar>
+          <IconButton onClick={() => router.push('/jobs')} sx={{ mr: 2 }}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6">
+              {job.jobNumber} - {job.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {job.customerName || job.customer}
+            </Typography>
+          </Box>
+          <Button
+            startIcon={<EditIcon />}
+            onClick={() => router.push(`/jobs/${job.id}/edit`)}
+          >
+            Edit Job
+          </Button>
+        </Toolbar>
+      </AppBar>
+
+      <Container maxWidth="xl" sx={{ mt: 3 }}>
+        {/* Job Summary Card */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={8}>
+                <Typography variant="h5" gutterBottom>
+                  {job.title}
+                </Typography>
+                <Typography variant="body1" color="text.secondary" paragraph>
+                  {job.description || 'No description provided'}
+                </Typography>
+                
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                  <Chip
+                    label={job.status.replace('_', ' ')}
+                    color={getStatusColor(job.status)}
+                  />
+                  <Chip
+                    label={job.priority}
+                    color={getPriorityColor(job.priority)}
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={job.type === 'SERVICE_CALL' ? 'Service Call' : 'Commercial Project'}
+                    variant="outlined"
+                  />
+                </Box>
+
+                {job.address && (
+                  <Typography variant="body2" color="text.secondary">
+                    📍 {job.address}
+                    {job.city && `, ${job.city}`}
+                    {job.state && `, ${job.state}`}
+                    {job.zip && ` ${job.zip}`}
+                  </Typography>
+                )}
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {job.dueDate && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Due Date
+                      </Typography>
+                      <Typography variant="body2">
+                        {new Date(job.dueDate).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {job.estimatedHours && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Estimated Hours
+                      </Typography>
+                      <Typography variant="body2">
+                        {job.estimatedHours} hours
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {job.estimatedCost && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Estimated Cost
+                      </Typography>
+                      <Typography variant="body2">
+                        ${job.estimatedCost.toLocaleString()}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Tabs */}
+        <Paper sx={{ mb: 3 }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab 
+              icon={<WorkIcon />} 
+              label="Phases" 
+              iconPosition="start"
+            />
+            <Tab 
+              icon={<InventoryIcon />} 
+              label="Material Reservations" 
+              iconPosition="start"
+            />
+            <Tab 
+              icon={<AssessmentIcon />} 
+              label="Material Usage" 
+              iconPosition="start"
+            />
+            <Tab 
+              icon={<ScheduleIcon />} 
+              label="Time Tracking" 
+              iconPosition="start"
+            />
+            <Tab 
+              icon={<MoneyIcon />} 
+              label="Billing" 
+              iconPosition="start"
+            />
+          </Tabs>
+        </Paper>
+
+        {/* Tab Panels */}
+        <TabPanel value={activeTab} index={0}>
+          <JobPhasesManager jobId={job.id} />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={1}>
+          <JobMaterialReservations 
+            jobId={job.id} 
+            jobTitle={job.title}
+          />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <MaterialUsageTracker 
+            jobId={job.id}
+            jobTitle={job.title}
+          />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={3}>
+          <Typography variant="h6" gutterBottom>
+            Time Tracking
+          </Typography>
+          <Typography color="text.secondary">
+            Time tracking functionality will be implemented here.
+          </Typography>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={4}>
+          <Typography variant="h6" gutterBottom>
+            Billing Information
+          </Typography>
+          <Typography color="text.secondary">
+            Billing and invoicing functionality will be implemented here.
+          </Typography>
+        </TabPanel>
+      </Container>
+    </Box>
+  )
+}

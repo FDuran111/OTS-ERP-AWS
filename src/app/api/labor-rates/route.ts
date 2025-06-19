@@ -57,15 +57,12 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, description, hourlyRate, skillLevel } = body
 
-    const laborRate = await prisma.laborRate.create({
-      data: {
-        name,
-        description,
-        hourlyRate,
-        skillLevel,
-        active: true,
-      }
-    })
+    const result = await query(
+      `INSERT INTO "LaborRate" (name, description, "hourlyRate", "skillLevel", active, "createdAt") 
+       VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
+      [name, description, hourlyRate, skillLevel, true]
+    )
+    const laborRate = result.rows[0]
 
     return NextResponse.json(laborRate, { status: 201 })
   } catch (error) {

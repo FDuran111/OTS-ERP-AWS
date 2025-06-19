@@ -34,6 +34,8 @@ import {
   TableRow,
   TextField,
   InputAdornment,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -57,9 +59,12 @@ import {
   MoreVert as MoreVertIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  ViewList as ViewListIcon,
+  ViewColumn as ViewColumnIcon,
 } from '@mui/icons-material'
 import AddLeadDialog from '@/components/leads/AddLeadDialog'
 import EditLeadDialog from '@/components/leads/EditLeadDialog'
+import LeadsPipelineView from '@/components/leads/LeadsPipelineView'
 
 const drawerWidth = 240
 
@@ -131,6 +136,7 @@ export default function LeadsPage() {
   const [editLeadDialogOpen, setEditLeadDialogOpen] = useState(false)
   const [leadMenuAnchor, setLeadMenuAnchor] = useState<{ [key: string]: HTMLElement | null }>({})
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [viewMode, setViewMode] = useState<'table' | 'pipeline'>('pipeline')
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -259,6 +265,47 @@ export default function LeadsPage() {
         console.error('Error deleting lead:', error)
       }
       handleLeadMenuClose(selectedLead.id)
+    }
+  }
+
+  const handleUpdateLeadStatus = async (leadId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (response.ok) {
+        fetchLeads()
+      }
+    } catch (error) {
+      console.error('Error updating lead status:', error)
+    }
+  }
+
+  const handleViewModeChange = (event: React.MouseEvent<HTMLElement>, newViewMode: 'table' | 'pipeline' | null) => {
+    if (newViewMode !== null) {
+      setViewMode(newViewMode)
+    }
+  }
+
+  const handlePipelineEditLead = (lead: Lead) => {
+    setSelectedLead(lead)
+    setEditLeadDialogOpen(true)
+  }
+
+  const handlePipelineDeleteLead = async (lead: Lead) => {
+    if (confirm('Are you sure you want to delete this lead?')) {
+      try {
+        const response = await fetch(`/api/leads/${lead.id}`, {
+          method: 'DELETE',
+        })
+        if (response.ok) {
+          fetchLeads()
+        }
+      } catch (error) {
+        console.error('Error deleting lead:', error)
+      }
     }
   }
 
@@ -440,151 +487,185 @@ export default function LeadsPage() {
                 ),
               }}
             />
-            <Button
-              variant="outlined"
-              onClick={() => fetchLeads()}
-              disabled={loading}
-              size="small"
-            >
-              {loading ? 'Loading...' : 'Refresh'}
-            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={handleViewModeChange}
+                size="small"
+              >
+                <ToggleButton value="pipeline">
+                  <ViewColumnIcon sx={{ mr: 1 }} />
+                  Pipeline
+                </ToggleButton>
+                <ToggleButton value="table">
+                  <ViewListIcon sx={{ mr: 1 }} />
+                  Table
+                </ToggleButton>
+              </ToggleButtonGroup>
+              <Button
+                variant="outlined"
+                onClick={() => fetchLeads()}
+                disabled={loading}
+                size="small"
+              >
+                {loading ? 'Loading...' : 'Refresh'}
+              </Button>
+            </Box>
           </Box>
 
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Contact</TableCell>
-                  <TableCell>Source</TableCell>
-                  <TableCell>Value</TableCell>
-                  <TableCell>Priority</TableCell>
-                  <TableCell>Last Contact</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
+          {/* Conditional View Rendering */}
+          {viewMode === 'pipeline' ? (
+            loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Loading leads...</Typography>
+              </Box>
+            ) : (
+              <LeadsPipelineView
+                leads={leads}
+                onEditLead={handlePipelineEditLead}
+                onDeleteLead={handlePipelineDeleteLead}
+                onUpdateLeadStatus={handleUpdateLeadStatus}
+              />
+            )
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={8} align="center">
-                      Loading leads...
-                    </TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Contact</TableCell>
+                    <TableCell>Source</TableCell>
+                    <TableCell>Value</TableCell>
+                    <TableCell>Priority</TableCell>
+                    <TableCell>Last Contact</TableCell>
+                    <TableCell align="right">Actions</TableCell>
                   </TableRow>
-                ) : leads.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} align="center">
-                      No leads found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  leads.map((lead) => (
-                    <TableRow key={lead.id} hover>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" fontWeight="medium">
-                            {lead.companyName || `${lead.firstName} ${lead.lastName}`}
-                          </Typography>
-                          {lead.description && (
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                              {lead.description.length > 50 ? `${lead.description.substring(0, 50)}...` : lead.description}
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={leadStages.find(s => s.key === lead.status)?.label || lead.status}
-                          size="small"
-                          color={lead.overdue ? 'error' : 'default'}
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {lead.phone && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <PhoneIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2">{lead.phone}</Typography>
-                            </Box>
-                          )}
-                          {lead.email && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <EmailIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2">{lead.email}</Typography>
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {lead.source || 'N/A'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <AttachMoney sx={{ fontSize: 16, color: 'success.main' }} />
-                          <Typography variant="body2" color="success.main" fontWeight="medium">
-                            {formatCurrency(lead.estimatedValue)}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        {lead.priority && (
-                          <Chip
-                            label={lead.priority}
-                            size="small"
-                            color={getPriorityColor(lead.priority) as any}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {lead.daysSinceLastContact !== null && (
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 0.5,
-                            color: lead.overdue ? 'error.main' : 'text.secondary'
-                          }}>
-                            {lead.overdue && <WarningIcon sx={{ fontSize: 16 }} />}
-                            <Typography variant="body2" color="inherit">
-                              {lead.daysSinceLastContact} days ago
-                            </Typography>
-                          </Box>
-                        )}
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton 
-                          size="small"
-                          onClick={(e) => handleLeadMenuClick(e, lead)}
-                        >
-                          <MoreVertIcon />
-                        </IconButton>
-                        <Menu
-                          anchorEl={leadMenuAnchor[lead.id]}
-                          open={Boolean(leadMenuAnchor[lead.id])}
-                          onClose={() => handleLeadMenuClose(lead.id)}
-                        >
-                          <MenuItem onClick={handleEditLead}>
-                            <ListItemIcon>
-                              <EditIcon fontSize="small" />
-                            </ListItemIcon>
-                            Edit Lead
-                          </MenuItem>
-                          <MenuItem onClick={handleDeleteLead}>
-                            <ListItemIcon>
-                              <DeleteIcon fontSize="small" />
-                            </ListItemIcon>
-                            Delete Lead
-                          </MenuItem>
-                        </Menu>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center">
+                        Loading leads...
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  ) : leads.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center">
+                        No leads found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    leads.map((lead) => (
+                      <TableRow key={lead.id} hover>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {lead.companyName || `${lead.firstName} ${lead.lastName}`}
+                            </Typography>
+                            {lead.description && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                {lead.description.length > 50 ? `${lead.description.substring(0, 50)}...` : lead.description}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={leadStages.find(s => s.key === lead.status)?.label || lead.status}
+                            size="small"
+                            color={lead.overdue ? 'error' : 'default'}
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            {lead.phone && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <PhoneIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="body2">{lead.phone}</Typography>
+                              </Box>
+                            )}
+                            {lead.email && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <EmailIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="body2">{lead.email}</Typography>
+                              </Box>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {lead.source || 'N/A'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <AttachMoney sx={{ fontSize: 16, color: 'success.main' }} />
+                            <Typography variant="body2" color="success.main" fontWeight="medium">
+                              {formatCurrency(lead.estimatedValue)}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          {lead.priority && (
+                            <Chip
+                              label={lead.priority}
+                              size="small"
+                              color={getPriorityColor(lead.priority) as any}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {lead.daysSinceLastContact !== null && (
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: 0.5,
+                              color: lead.overdue ? 'error.main' : 'text.secondary'
+                            }}>
+                              {lead.overdue && <WarningIcon sx={{ fontSize: 16 }} />}
+                              <Typography variant="body2" color="inherit">
+                                {lead.daysSinceLastContact} days ago
+                              </Typography>
+                            </Box>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton 
+                            size="small"
+                            onClick={(e) => handleLeadMenuClick(e, lead)}
+                          >
+                            <MoreVertIcon />
+                          </IconButton>
+                          <Menu
+                            anchorEl={leadMenuAnchor[lead.id]}
+                            open={Boolean(leadMenuAnchor[lead.id])}
+                            onClose={() => handleLeadMenuClose(lead.id)}
+                          >
+                            <MenuItem onClick={handleEditLead}>
+                              <ListItemIcon>
+                                <EditIcon fontSize="small" />
+                              </ListItemIcon>
+                              Edit Lead
+                            </MenuItem>
+                            <MenuItem onClick={handleDeleteLead}>
+                              <ListItemIcon>
+                                <DeleteIcon fontSize="small" />
+                              </ListItemIcon>
+                              Delete Lead
+                            </MenuItem>
+                          </Menu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </Container>
       </Box>
 

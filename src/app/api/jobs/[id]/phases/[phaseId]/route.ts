@@ -21,12 +21,11 @@ export async function GET(
 ) {
   const resolvedParams = await params
   try {
-    const phase = await prisma.jobPhase.findUnique({
-      where: { 
-        id: resolvedParams.phaseId,
-        jobId: resolvedParams.id
-      }
-    })
+    const phaseResult = await query(
+      'SELECT * FROM "JobPhase" WHERE id = $1 AND "jobId" = $2',
+      [resolvedParams.phaseId, resolvedParams.id]
+    )
+    const phase = phaseResult.rows[0]
 
     if (!phase) {
       return NextResponse.json(
@@ -74,13 +73,37 @@ export async function PATCH(
       updateData.completedDate = data.completedDate ? new Date(data.completedDate) : null
     }
 
-    const phase = await prisma.jobPhase.update({
-      where: { 
-        id: resolvedParams.phaseId,
-        jobId: resolvedParams.id
-      },
-      data: updateData
-    })
+    // Build dynamic UPDATE query
+    const setFields = []
+    const values = []
+    let paramCount = 1
+
+    for (const [key, value] of Object.entries(updateData)) {
+      if (value !== undefined) {
+        setFields.push(`"${key}" = $${paramCount}`)
+        values.push(value)
+        paramCount++
+      }
+    }
+
+    if (setFields.length === 0) {
+      return NextResponse.json(
+        { error: 'No fields to update' },
+        { status: 400 }
+      )
+    }
+
+    values.push(resolvedParams.phaseId, resolvedParams.id)
+    
+    const updateQuery = `
+      UPDATE "JobPhase" 
+      SET ${setFields.join(', ')}, "updatedAt" = NOW()
+      WHERE id = $${paramCount} AND "jobId" = $${paramCount + 1}
+      RETURNING *
+    `
+
+    const result = await query(updateQuery, values)
+    const phase = result.rows[0]
 
     return NextResponse.json(phase)
   } catch (error) {
@@ -106,12 +129,10 @@ export async function DELETE(
 ) {
   const resolvedParams = await params
   try {
-    await prisma.jobPhase.delete({
-      where: { 
-        id: resolvedParams.phaseId,
-        jobId: resolvedParams.id
-      }
-    })
+    await query(
+      'DELETE FROM "JobPhase" WHERE id = $1 AND "jobId" = $2',
+      [resolvedParams.phaseId, resolvedParams.id]
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

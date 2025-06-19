@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import StartTimerDialog from '@/components/time/StartTimerDialog'
+import SimpleTimeEntry from '@/components/time/SimpleTimeEntry'
+import ScheduledJobSuggestions from '@/components/time/ScheduledJobSuggestions'
 import ActiveTimerCard from '@/components/time/ActiveTimerCard'
 import {
   Box,
@@ -137,7 +138,6 @@ export default function TimePage() {
   const [activeTimers, setActiveTimers] = useState<TimeEntry[]>([])
   const [stats, setStats] = useState<TimeStat[]>([])
   const [loading, setLoading] = useState(true)
-  const [startTimerOpen, setStartTimerOpen] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -335,22 +335,14 @@ export default function TimePage() {
       >
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="h4">
-              Time Tracking
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<PlayArrow />}
-              onClick={() => setStartTimerOpen(true)}
-              sx={{
-                backgroundColor: '#00bf9a',
-                '&:hover': {
-                  backgroundColor: '#00a884',
-                },
-              }}
-            >
-              Start Timer
-            </Button>
+            <Box>
+              <Typography variant="h4">
+                Time Tracking
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Log time worked on jobs - simplified workflow, no timers needed
+              </Typography>
+            </Box>
           </Box>
 
           <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -398,41 +390,59 @@ export default function TimePage() {
             )}
           </Grid>
 
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Active Timers
-              </Typography>
-              {loading ? (
-                <Typography>Loading active timers...</Typography>
-              ) : activeTimers.length === 0 ? (
-                <Typography color="text.secondary">No active timers</Typography>
-              ) : (
-                <Grid container spacing={2}>
-                  {activeTimers.map((timer) => (
-                    <Grid size={{ xs: 12, md: 6 }} key={timer.id}>
-                      <ActiveTimerCard
-                        timer={{
-                          id: timer.id,
-                          userName: timer.userName,
-                          jobNumber: timer.jobNumber,
-                          jobTitle: timer.jobTitle,
-                          customer: timer.customer,
-                          phaseName: timer.phaseName,
-                          startTime: timer.startTime,
-                          description: timer.description,
-                        }}
-                        onTimerStopped={fetchTimeData}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-            </CardContent>
-          </Card>
+          {/* Scheduled Job Suggestions */}
+          <Box sx={{ mb: 3 }}>
+            <ScheduledJobSuggestions onCreateTimeEntry={(schedule) => {
+              // This will trigger the SimpleTimeEntry to pre-fill with the schedule
+              // For now, we'll just show an alert, but you could enhance this further
+              alert(`Creating time entry for ${schedule.job.jobNumber}`)
+            }} />
+          </Box>
+
+          {/* Quick Time Entry */}
+          <Box sx={{ mb: 3 }}>
+            <SimpleTimeEntry onTimeEntryCreated={fetchTimeData} />
+          </Box>
+
+          {/* Active Timers - Legacy Support */}
+          {activeTimers.length > 0 && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  ⏱️ Active Timers (Legacy)
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  These are old-style timers that are still running. Stop them to complete the time entries.
+                </Typography>
+                {loading ? (
+                  <Typography>Loading active timers...</Typography>
+                ) : (
+                  <Grid container spacing={2}>
+                    {activeTimers.map((timer) => (
+                      <Grid size={{ xs: 12, md: 6 }} key={timer.id}>
+                        <ActiveTimerCard
+                          timer={{
+                            id: timer.id,
+                            userName: timer.userName,
+                            jobNumber: timer.jobNumber,
+                            jobTitle: timer.jobTitle,
+                            customer: timer.customer,
+                            phaseName: timer.phaseName,
+                            startTime: timer.startTime,
+                            description: timer.description,
+                          }}
+                          onTimerStopped={fetchTimeData}
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Typography variant="h6" sx={{ mb: 2 }}>
-            Recent Time Entries
+            📋 Recent Time Entries
           </Typography>
           <TableContainer component={Paper}>
             <Table>
@@ -512,14 +522,6 @@ export default function TimePage() {
         </Container>
       </Box>
 
-      <StartTimerDialog
-        open={startTimerOpen}
-        onClose={() => setStartTimerOpen(false)}
-        onTimerStarted={() => {
-          fetchTimeData()
-          setStartTimerOpen(false)
-        }}
-      />
     </Box>
   )
 }

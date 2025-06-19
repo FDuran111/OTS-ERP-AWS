@@ -1,12 +1,20 @@
 import { Pool } from 'pg'
 
-// Simple PostgreSQL connection pool
+// Simple PostgreSQL connection pool with retry logic
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // Simple connection settings for Supabase
   max: 5, // Maximum 5 connections
   idleTimeoutMillis: 30000, // Close idle connections after 30s
   connectionTimeoutMillis: 10000, // 10s connection timeout
+  // Add retry logic for DNS issues
+  query_timeout: 30000,
+  statement_timeout: 30000,
+})
+
+// Log pool errors
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle database client', err)
 })
 
 // Enhanced query function with better error handling

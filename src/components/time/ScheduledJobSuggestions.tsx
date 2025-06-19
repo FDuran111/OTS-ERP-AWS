@@ -1,0 +1,170 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import {
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Box,
+  Chip,
+  Alert,
+  Stack,
+  Grid,
+} from '@mui/material'
+import {
+  Schedule as ScheduleIcon,
+  Add as AddIcon,
+  AccessTime as TimeIcon,
+} from '@mui/icons-material'
+import { format } from 'date-fns'
+
+interface ScheduledJob {
+  id: string
+  jobId: string
+  job: {
+    id: string
+    jobNumber: string
+    title: string
+    customer: string
+  }
+  startDate: string
+  estimatedHours: number
+  crew: any[]
+}
+
+interface ScheduledJobSuggestionsProps {
+  onCreateTimeEntry: (schedule: ScheduledJob) => void
+}
+
+export default function ScheduledJobSuggestions({ onCreateTimeEntry }: ScheduledJobSuggestionsProps) {
+  const [todaysSchedule, setTodaysSchedule] = useState<ScheduledJob[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchTodaysSchedule()
+  }, [])
+
+  const fetchTodaysSchedule = async () => {
+    try {
+      setLoading(true)
+      const today = format(new Date(), 'yyyy-MM-dd')
+      const response = await fetch(`/api/schedule?startDate=${today}&endDate=${today}`)
+      
+      if (response.ok) {
+        const scheduleData = await response.json()
+        setTodaysSchedule(scheduleData)
+      }
+    } catch (error) {
+      console.error('Error fetching schedule:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent>
+          <Typography>Loading today's schedule...</Typography>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (todaysSchedule.length === 0) {
+    return (
+      <Card>
+        <CardContent>
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            <ScheduleIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+            <Typography variant="h6" color="text.secondary">
+              No Jobs Scheduled Today
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Check the schedule page to assign jobs to today's date
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardContent>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <ScheduleIcon color="primary" />
+          <Typography variant="h6">
+            Today's Scheduled Jobs
+          </Typography>
+          <Chip 
+            label={`${todaysSchedule.length} job${todaysSchedule.length !== 1 ? 's' : ''}`} 
+            size="small" 
+            color="primary"
+          />
+        </Box>
+        
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Quick-create time entries for jobs scheduled today
+        </Typography>
+
+        <Grid container spacing={2}>
+          {todaysSchedule.map((schedule) => (
+            <Grid key={schedule.id} size={{ xs: 12, md: 6 }}>
+              <Card variant="outlined" sx={{ height: '100%' }}>
+                <CardContent>
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {schedule.job.jobNumber}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {schedule.job.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {schedule.job.customer}
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Chip 
+                        icon={<TimeIcon />}
+                        label={`${schedule.estimatedHours}h estimated`} 
+                        size="small" 
+                        variant="outlined"
+                      />
+                      {schedule.crew.length > 0 && (
+                        <Chip 
+                          label={`${schedule.crew.length} crew`} 
+                          size="small" 
+                          variant="outlined"
+                          color="primary"
+                        />
+                      )}
+                    </Box>
+
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => onCreateTimeEntry(schedule)}
+                      size="small"
+                      sx={{
+                        mt: 1,
+                        backgroundColor: '#00bf9a',
+                        '&:hover': {
+                          backgroundColor: '#00a884',
+                        },
+                      }}
+                    >
+                      Create Time Entry
+                    </Button>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </CardContent>
+    </Card>
+  )
+}

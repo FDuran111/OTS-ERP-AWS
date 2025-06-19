@@ -44,6 +44,7 @@ import {
   Group,
   TrendingUp,
 } from '@mui/icons-material'
+import LowStockNotification from '@/components/notifications/LowStockNotification'
 
 const drawerWidth = 240
 
@@ -332,6 +333,9 @@ export default function DashboardPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
             Here's what's happening with your jobs today
           </Typography>
+
+          {/* Low Stock Notification */}
+          <LowStockNotification refreshTrigger={loading ? 0 : 1} />
 
           <Grid container spacing={3}>
             {loading ? (

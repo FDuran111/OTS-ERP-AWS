@@ -148,7 +148,7 @@ export default function StartTimerDialog({ open, onClose, onTimerStarted }: Star
         <DialogTitle>Start Timer</DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="jobId"
                 control={control}
@@ -192,7 +192,7 @@ export default function StartTimerDialog({ open, onClose, onTimerStarted }: Star
             </Grid>
 
             {selectedJob?.jobPhases && selectedJob.jobPhases.length > 0 && (
-              <Grid xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Controller
                   name="phaseId"
                   control={control}
@@ -219,7 +219,7 @@ export default function StartTimerDialog({ open, onClose, onTimerStarted }: Star
               </Grid>
             )}
 
-            <Grid xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="description"
                 control={control}

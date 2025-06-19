@@ -22,12 +22,11 @@ export async function GET(
 ) {
   const resolvedParams = await params
   try {
-    const phases = await prisma.jobPhase.findMany({
-      where: { jobId: resolvedParams.id },
-      orderBy: {
-        createdAt: 'asc'
-      }
-    })
+    const result = await query(
+      'SELECT * FROM "JobPhase" WHERE "jobId" = $1 ORDER BY "createdAt" ASC',
+      [resolvedParams.id]
+    )
+    const phases = result.rows
 
     return NextResponse.json(phases)
   } catch (error) {
@@ -50,11 +49,12 @@ export async function POST(
     const data = createPhaseSchema.parse(body)
 
     // Verify job exists
-    const job = await prisma.job.findUnique({
-      where: { id: resolvedParams.id }
-    })
+    const jobResult = await query(
+      'SELECT id FROM "Job" WHERE id = $1',
+      [resolvedParams.id]
+    )
 
-    if (!job) {
+    if (jobResult.rows.length === 0) {
       return NextResponse.json(
         { error: 'Job not found' },
         { status: 404 }
@@ -62,12 +62,11 @@ export async function POST(
     }
 
     // Check if phase already exists for this job
-    const existingPhase = await prisma.jobPhase.findFirst({
-      where: {
-        jobId: resolvedParams.id,
-        name: data.name
-      }
-    })
+    const existingPhaseResult = await query(
+      'SELECT id FROM "JobPhase" WHERE "jobId" = $1 AND name = $2',
+      [resolvedParams.id, data.name]
+    )
+    const existingPhase = existingPhaseResult.rows[0]
 
     if (existingPhase) {
       return NextResponse.json(
@@ -76,21 +75,28 @@ export async function POST(
       )
     }
 
-    const phase = await prisma.jobPhase.create({
-      data: {
-        jobId: resolvedParams.id,
-        name: data.name,
-        description: data.description,
-        estimatedHours: data.estimatedHours,
-        actualHours: data.actualHours,
-        estimatedCost: data.estimatedCost,
-        actualCost: data.actualCost,
-        status: data.status,
-        startDate: data.startDate ? new Date(data.startDate) : null,
-        completedDate: data.completedDate ? new Date(data.completedDate) : null,
-        notes: data.notes,
-      }
-    })
+    const result = await query(
+      `INSERT INTO "JobPhase" (
+        "jobId", name, description, "estimatedHours", "actualHours", 
+        "estimatedCost", "actualCost", status, "startDate", "completedDate", 
+        notes, "createdAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) 
+      RETURNING *`,
+      [
+        resolvedParams.id,
+        data.name,
+        data.description,
+        data.estimatedHours,
+        data.actualHours,
+        data.estimatedCost,
+        data.actualCost,
+        data.status,
+        data.startDate ? new Date(data.startDate) : null,
+        data.completedDate ? new Date(data.completedDate) : null,
+        data.notes
+      ]
+    )
+    const phase = result.rows[0]
 
     return NextResponse.json(phase, { status: 201 })
   } catch (error) {
