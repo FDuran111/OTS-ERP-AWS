@@ -37,16 +37,16 @@ export async function POST(request: NextRequest) {
 
     const updatedJobResult = await query(
       `UPDATE "Job" SET 
-        scheduledDate = $1,
-        estimatedHours = $2,
+        "scheduledDate" = $1,
+        "estimatedHours" = $2,
         status = $3,
         description = $4,
-        updatedAt = $5
+        "updatedAt" = $5
       WHERE id = $6 
       RETURNING *`,
       [
         new Date(scheduledDate),
-        estimatedHours || existingJob.estimatedhours,
+        estimatedHours || existingJob.estimatedHours,
         existingJob.status === 'ESTIMATE' ? 'SCHEDULED' : existingJob.status,
         updatedDescription,
         new Date(),
@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
       success: true,
       job: {
         id: updatedJob.id,
-        jobNumber: updatedJob.jobnumber,
-        scheduledDate: updatedJob.scheduleddate,
+        jobNumber: updatedJob.jobNumber,
+        scheduledDate: updatedJob.scheduledDate,
         status: updatedJob.status,
       },
       reminder: {

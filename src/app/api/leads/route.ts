@@ -90,7 +90,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('Creating lead with data:', body)
     const data = createLeadSchema.parse(body)
+    console.log('Parsed lead data:', data)
 
     // Insert lead using SQL
     const result = await query(
@@ -111,7 +113,7 @@ export async function POST(request: NextRequest) {
         data.city || null,
         data.state || null,
         data.zip || null,
-        data.source || 'MANUAL',
+        data.source || null,
         data.estimatedValue || null,
         data.priority || 'MEDIUM',
         data.description || null,
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
         data.nextFollowUpDate || null,
         data.assignedTo || null,
         new Date(),
-        'NEW',
+        'COLD_LEAD',
         new Date(),
         new Date()
       ]

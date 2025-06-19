@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -20,10 +20,25 @@ import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 
-interface AddLeadDialogProps {
+interface Lead {
+  id: string
+  firstName: string
+  lastName: string
+  companyName?: string | null
+  email?: string | null
+  phone?: string | null
+  source?: string | null
+  priority?: string | null
+  estimatedValue?: number | null
+  description?: string | null
+  status: string
+}
+
+interface EditLeadDialogProps {
   open: boolean
   onClose: () => void
-  onLeadCreated: () => void
+  onLeadUpdated: () => void
+  lead: Lead | null
 }
 
 const leadSchema = z.object({
@@ -36,6 +51,7 @@ const leadSchema = z.object({
   priority: z.enum(['HIGH', 'MEDIUM', 'LOW']).optional(),
   estimatedValue: z.number().min(0).optional(),
   description: z.string().optional(),
+  status: z.string(),
 })
 
 type LeadFormData = z.infer<typeof leadSchema>
@@ -50,7 +66,18 @@ const leadSources = [
   { value: 'OTHER', label: 'Other' }
 ]
 
-export default function AddLeadDialog({ open, onClose, onLeadCreated }: AddLeadDialogProps) {
+const leadStatuses = [
+  { value: 'COLD_LEAD', label: 'Cold Lead' },
+  { value: 'WARM_LEAD', label: 'Warm Lead' },
+  { value: 'ESTIMATE_REQUESTED', label: 'Estimate Requested' },
+  { value: 'ESTIMATE_SENT', label: 'Estimate Sent' },
+  { value: 'ESTIMATE_APPROVED', label: 'Approved' },
+  { value: 'JOB_SCHEDULED', label: 'Job Scheduled' },
+  { value: 'FOLLOW_UP_REQUIRED', label: 'Follow-up Required' },
+  { value: 'LOST', label: 'Lost' },
+]
+
+export default function EditLeadDialog({ open, onClose, onLeadUpdated, lead }: EditLeadDialogProps) {
   const [submitting, setSubmitting] = useState(false)
 
   const {
@@ -60,32 +87,47 @@ export default function AddLeadDialog({ open, onClose, onLeadCreated }: AddLeadD
     formState: { errors },
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadSchema),
-    defaultValues: {
-      priority: 'MEDIUM',
-    }
   })
 
+  useEffect(() => {
+    if (open && lead) {
+      reset({
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        companyName: lead.companyName || '',
+        email: lead.email || '',
+        phone: lead.phone || '',
+        source: lead.source || '',
+        priority: lead.priority as 'HIGH' | 'MEDIUM' | 'LOW' | undefined,
+        estimatedValue: lead.estimatedValue || undefined,
+        description: lead.description || '',
+        status: lead.status,
+      })
+    }
+  }, [open, lead, reset])
+
   const onSubmit = async (data: LeadFormData) => {
+    if (!lead) return
+
     try {
       setSubmitting(true)
 
-      const response = await fetch('/api/leads', {
-        method: 'POST',
+      const response = await fetch(`/api/leads/${lead.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create lead')
+        throw new Error(errorData.error || 'Failed to update lead')
       }
 
-      onLeadCreated()
+      onLeadUpdated()
       onClose()
-      reset()
     } catch (error) {
-      console.error('Error creating lead:', error)
-      alert(error instanceof Error ? error.message : 'Failed to create lead')
+      console.error('Error updating lead:', error)
+      alert(error instanceof Error ? error.message : 'Failed to update lead')
     } finally {
       setSubmitting(false)
     }
@@ -96,10 +138,12 @@ export default function AddLeadDialog({ open, onClose, onLeadCreated }: AddLeadD
     onClose()
   }
 
+  if (!lead) return null
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>Add New Lead</DialogTitle>
+        <DialogTitle>Edit Lead</DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Name */}
@@ -229,6 +273,26 @@ export default function AddLeadDialog({ open, onClose, onLeadCreated }: AddLeadD
 
             <Grid size={{ xs: 12, md: 4 }}>
               <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Status</InputLabel>
+                    <Select {...field} value={field.value || ''} label="Status">
+                      {leadStatuses.map((status) => (
+                        <MenuItem key={status.value} value={status.value}>
+                          {status.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </Grid>
+
+            {/* Estimated Value */}
+            <Grid size={{ xs: 12 }}>
+              <Controller
                 name="estimatedValue"
                 control={control}
                 render={({ field: { value, onChange, ...field } }) => (
@@ -281,7 +345,7 @@ export default function AddLeadDialog({ open, onClose, onLeadCreated }: AddLeadD
               '&:hover': { backgroundColor: '#d236b8' },
             }}
           >
-            {submitting ? 'Creating...' : 'Create Lead'}
+            {submitting ? 'Updating...' : 'Update Lead'}
           </Button>
         </DialogActions>
       </form>

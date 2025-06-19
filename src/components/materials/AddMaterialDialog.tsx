@@ -192,6 +192,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Material Code *"
                     fullWidth
                     error={!!errors.code}
@@ -209,6 +210,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Material Name *"
                     fullWidth
                     error={!!errors.name}
@@ -220,13 +222,14 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
             </Grid>
 
             {/* Description */}
-            <Grid xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="description"
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Description"
                     fullWidth
                     multiline
@@ -421,6 +424,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    value={field.value || ''}
                     label="Storage Location"
                     fullWidth
                     placeholder="e.g., A1-B2"
@@ -430,7 +434,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
             </Grid>
 
             {/* Vendor */}
-            <Grid xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="vendorId"
                 control={control}

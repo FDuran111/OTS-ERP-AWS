@@ -4,12 +4,11 @@ import { query } from '@/lib/db'
 // GET all vendors
 export async function GET() {
   try {
-    const vendors = await prisma.vendor.findMany({
-      where: { active: true },
-      orderBy: { name: 'asc' }
-    })
+    const result = await query(
+      'SELECT * FROM "Vendor" WHERE active = true ORDER BY name ASC'
+    )
 
-    return NextResponse.json(vendors)
+    return NextResponse.json(result.rows)
   } catch (error) {
     console.error('Error fetching vendors:', error)
     return NextResponse.json(
@@ -26,30 +25,36 @@ export async function POST(request: Request) {
     const { name, code, contactName, email, phone, address } = body
 
     // Check if vendor code already exists
-    const existingVendor = await prisma.vendor.findUnique({
-      where: { code }
-    })
+    const existingResult = await query(
+      'SELECT id FROM "Vendor" WHERE code = $1',
+      [code]
+    )
 
-    if (existingVendor) {
+    if (existingResult.rows.length > 0) {
       return NextResponse.json(
         { error: 'Vendor code already exists' },
         { status: 400 }
       )
     }
 
-    const vendor = await prisma.vendor.create({
-      data: {
+    const result = await query(
+      `INSERT INTO "Vendor" (
+        id, name, code, "contactName", email, phone, address, active, "createdAt", "updatedAt"
+      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, true, $7, $8)
+      RETURNING *`,
+      [
         name,
         code,
-        contactName,
-        email,
-        phone,
-        address,
-        active: true,
-      }
-    })
+        contactName || null,
+        email || null,
+        phone || null,
+        address || null,
+        new Date(),
+        new Date()
+      ]
+    )
 
-    return NextResponse.json(vendor, { status: 201 })
+    return NextResponse.json(result.rows[0], { status: 201 })
   } catch (error) {
     console.error('Error creating vendor:', error)
     return NextResponse.json(

@@ -343,7 +343,7 @@ export async function DELETE(
     await Promise.all([
       query('DELETE FROM "JobAssignment" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "JobPhase" WHERE "jobId" = $1', [resolvedParams.id]),
-      query('DELETE FROM "TimeEntry" WHERE job_id = $1', [resolvedParams.id]),
+      query('DELETE FROM "TimeEntry" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "MaterialUsage" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "ChangeOrder" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "JobNote" WHERE "jobId" = $1', [resolvedParams.id])

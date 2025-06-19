@@ -81,7 +81,9 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
       const response = await fetch('/api/jobs?status=ESTIMATE,SCHEDULED&limit=50')
       if (response.ok) {
         const data = await response.json()
-        setJobs(data.jobs || [])
+        console.log('Fetched jobs for scheduling:', data)
+        // The API returns an array of jobs directly, not wrapped in a jobs property
+        setJobs(Array.isArray(data) ? data : [])
       }
     } catch (error) {
       console.error('Error fetching jobs:', error)

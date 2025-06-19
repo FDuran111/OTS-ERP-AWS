@@ -55,8 +55,11 @@ import {
   AttachMoney,
   Search as SearchIcon,
   MoreVert as MoreVertIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material'
 import AddLeadDialog from '@/components/leads/AddLeadDialog'
+import EditLeadDialog from '@/components/leads/EditLeadDialog'
 
 const drawerWidth = 240
 
@@ -125,6 +128,9 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [addLeadDialogOpen, setAddLeadDialogOpen] = useState(false)
+  const [editLeadDialogOpen, setEditLeadDialogOpen] = useState(false)
+  const [leadMenuAnchor, setLeadMenuAnchor] = useState<{ [key: string]: HTMLElement | null }>({})
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -203,6 +209,10 @@ export default function LeadsPage() {
     fetchLeads()
   }
 
+  const handleLeadUpdated = () => {
+    fetchLeads()
+  }
+
   const getPriorityColor = (priority?: string) => {
     switch (priority) {
       case 'HIGH':
@@ -218,6 +228,38 @@ export default function LeadsPage() {
 
   const formatCurrency = (amount?: number) => {
     return amount ? `$${amount.toLocaleString()}` : 'TBD'
+  }
+
+  const handleLeadMenuClick = (event: React.MouseEvent<HTMLElement>, lead: Lead) => {
+    setLeadMenuAnchor({ ...leadMenuAnchor, [lead.id]: event.currentTarget })
+    setSelectedLead(lead)
+  }
+
+  const handleLeadMenuClose = (leadId: string) => {
+    setLeadMenuAnchor({ ...leadMenuAnchor, [leadId]: null })
+  }
+
+  const handleEditLead = () => {
+    if (selectedLead) {
+      setEditLeadDialogOpen(true)
+      handleLeadMenuClose(selectedLead.id)
+    }
+  }
+
+  const handleDeleteLead = async () => {
+    if (selectedLead && confirm('Are you sure you want to delete this lead?')) {
+      try {
+        const response = await fetch(`/api/leads/${selectedLead.id}`, {
+          method: 'DELETE',
+        })
+        if (response.ok) {
+          fetchLeads()
+        }
+      } catch (error) {
+        console.error('Error deleting lead:', error)
+      }
+      handleLeadMenuClose(selectedLead.id)
+    }
   }
 
   if (!user) return null
@@ -512,9 +554,30 @@ export default function LeadsPage() {
                         )}
                       </TableCell>
                       <TableCell align="right">
-                        <IconButton size="small">
+                        <IconButton 
+                          size="small"
+                          onClick={(e) => handleLeadMenuClick(e, lead)}
+                        >
                           <MoreVertIcon />
                         </IconButton>
+                        <Menu
+                          anchorEl={leadMenuAnchor[lead.id]}
+                          open={Boolean(leadMenuAnchor[lead.id])}
+                          onClose={() => handleLeadMenuClose(lead.id)}
+                        >
+                          <MenuItem onClick={handleEditLead}>
+                            <ListItemIcon>
+                              <EditIcon fontSize="small" />
+                            </ListItemIcon>
+                            Edit Lead
+                          </MenuItem>
+                          <MenuItem onClick={handleDeleteLead}>
+                            <ListItemIcon>
+                              <DeleteIcon fontSize="small" />
+                            </ListItemIcon>
+                            Delete Lead
+                          </MenuItem>
+                        </Menu>
                       </TableCell>
                     </TableRow>
                   ))
@@ -529,6 +592,13 @@ export default function LeadsPage() {
         open={addLeadDialogOpen}
         onClose={() => setAddLeadDialogOpen(false)}
         onLeadCreated={handleLeadCreated}
+      />
+
+      <EditLeadDialog
+        open={editLeadDialogOpen}
+        onClose={() => setEditLeadDialogOpen(false)}
+        onLeadUpdated={handleLeadUpdated}
+        lead={selectedLead}
       />
     </Box>
   )

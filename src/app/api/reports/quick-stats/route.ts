@@ -27,75 +27,48 @@ export async function GET(request: NextRequest) {
     }
 
     // Revenue this period (from paid invoices)
-    const revenueResult = await prisma.invoice.aggregate({
-      where: {
-        status: 'PAID',
-        paidDate: {
-          gte: startDate,
-          lte: endDate
-        }
-      },
-      _sum: {
-        totalAmount: true
-      },
-      _count: {
-        id: true
-      }
-    })
+    const revenueResult = await query(
+      `SELECT COALESCE(SUM("totalAmount"), 0) as total_revenue, COUNT(*) as paid_count 
+       FROM "Invoice" 
+       WHERE status = 'PAID' AND "paidDate" >= $1 AND "paidDate" <= $2`,
+      [startDate, endDate]
+    )
 
-    const revenue = revenueResult._sum.totalAmount || 0
-    const paidInvoiceCount = revenueResult._count || 0
+    const revenue = parseFloat(revenueResult.rows[0].total_revenue || 0)
+    const paidInvoiceCount = parseInt(revenueResult.rows[0].paid_count || 0)
 
     // Jobs completed this period
-    const completedJobs = await prisma.job.count({
-      where: {
-        status: 'COMPLETED',
-        completedAt: {
-          gte: startDate,
-          lte: endDate
-        }
-      }
-    })
+    const completedJobsResult = await query(
+      `SELECT COUNT(*) as completed_count 
+       FROM "Job" 
+       WHERE status = 'COMPLETED' AND "completedAt" >= $1 AND "completedAt" <= $2`,
+      [startDate, endDate]
+    )
+
+    const completedJobs = parseInt(completedJobsResult.rows[0].completed_count || 0)
 
     // Average job value (from completed jobs with billed amounts)
-    const completedJobsWithBilling = await prisma.job.aggregate({
-      where: {
-        status: 'COMPLETED',
-        completedAt: {
-          gte: startDate,
-          lte: endDate
-        },
-        billedAmount: {
-          gt: 0
-        }
-      },
-      _avg: {
-        billedAmount: true
-      },
-      _count: {
-        id: true
-      }
-    })
+    const completedJobsWithBillingResult = await query(
+      `SELECT AVG("billedAmount") as avg_billed, COUNT(*) as billing_count 
+       FROM "Job" 
+       WHERE status = 'COMPLETED' 
+       AND "completedAt" >= $1 AND "completedAt" <= $2 
+       AND "billedAmount" > 0`,
+      [startDate, endDate]
+    )
 
-    const averageJobValue = completedJobsWithBilling._avg.billedAmount || 0
+    const averageJobValue = parseFloat(completedJobsWithBillingResult.rows[0].avg_billed || 0)
+    const completedJobsWithBillingCount = parseInt(completedJobsWithBillingResult.rows[0].billing_count || 0)
 
     // Outstanding invoices (not paid)
-    const outstandingInvoices = await prisma.invoice.aggregate({
-      where: {
-        status: {
-          in: ['SENT', 'OVERDUE']
-        }
-      },
-      _sum: {
-        totalAmount: true
-      },
-      _count: {
-        id: true
-      }
-    })
+    const outstandingInvoicesResult = await query(
+      `SELECT COALESCE(SUM("totalAmount"), 0) as outstanding_amount, COUNT(*) as outstanding_count 
+       FROM "Invoice" 
+       WHERE status IN ('SENT', 'OVERDUE')`
+    )
 
-    const outstandingAmount = outstandingInvoices._sum.totalAmount || 0
-    const outstandingCount = outstandingInvoices._count || 0
+    const outstandingAmount = parseFloat(outstandingInvoicesResult.rows[0].outstanding_amount || 0)
+    const outstandingCount = parseInt(outstandingInvoicesResult.rows[0].outstanding_count || 0)
 
     return NextResponse.json({
       revenueThisPeriod: revenue,
@@ -105,7 +78,7 @@ export async function GET(request: NextRequest) {
       details: {
         paidInvoiceCount,
         outstandingInvoiceCount: outstandingCount,
-        completedJobsWithBillingCount: completedJobsWithBilling._count
+        completedJobsWithBillingCount: completedJobsWithBillingCount
       },
       period: {
         start: startDate.toISOString(),

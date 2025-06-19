@@ -1,16 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { z } from 'zod'
 
-const prisma = new PrismaClient()
+const updateLocationSchema = z.object({
+  name: z.string().optional(),
+  code: z.string().optional(),
+  type: z.enum(['WAREHOUSE', 'SHOP', 'TRUCK', 'OFFICE', 'SUPPLIER']).optional(),
+  address: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+})
+
+// GET single storage location
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params
+  try {
+    const result = await query(
+      'SELECT * FROM "StorageLocation" WHERE id = $1',
+      [resolvedParams.id]
+    )
+
+    if (result.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Storage location not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(result.rows[0])
+  } catch (error) {
+    console.error('Error fetching storage location:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch storage location' },
+      { status: 500 }
+    )
+  }
+}
 
 // PATCH /api/storage-locations/[id] - Update a storage location
 export async function PATCH(
   request: NextRequest,
-  props: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
-    const params = await props.params
-    const { id } = params
     const body = await request.json()
     const { name, code, type, address, description } = body
 
@@ -23,39 +58,46 @@ export async function PATCH(
     }
 
     // Check if name or code already exists (excluding current location)
-    const existing = await prisma.storageLocation.findFirst({
-      where: {
-        AND: [
-          { id: { not: id } },
-          {
-            OR: [
-              { name: name },
-              { code: code }
-            ]
-          }
-        ]
-      }
-    })
+    const existingResult = await query(
+      'SELECT id FROM "StorageLocation" WHERE id != $1 AND (name = $2 OR code = $3)',
+      [resolvedParams.id, name, code.toUpperCase()]
+    )
 
-    if (existing) {
+    if (existingResult.rows.length > 0) {
       return NextResponse.json(
         { error: 'Storage location with this name or code already exists' },
         { status: 400 }
       )
     }
 
-    const location = await prisma.storageLocation.update({
-      where: { id },
-      data: {
+    const result = await query(
+      `UPDATE "StorageLocation" SET 
+        name = $1,
+        code = $2,
+        type = $3,
+        address = $4,
+        description = $5,
+        "updatedAt" = $6
+      WHERE id = $7 RETURNING *`,
+      [
         name,
-        code: code.toUpperCase(),
+        code.toUpperCase(),
         type,
-        address: address || null,
-        description: description || null,
-      }
-    })
+        address || null,
+        description || null,
+        new Date(),
+        resolvedParams.id
+      ]
+    )
 
-    return NextResponse.json(location)
+    if (result.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Storage location not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(result.rows[0])
   } catch (error) {
     console.error('Error updating storage location:', error)
     return NextResponse.json(
@@ -68,27 +110,36 @@ export async function PATCH(
 // DELETE /api/storage-locations/[id] - Delete a storage location
 export async function DELETE(
   request: NextRequest,
-  props: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
-    const params = await props.params
-    const { id } = params
+    // Check if location is being used by any materials
+    const usageResult = await query(
+      'SELECT COUNT(*) as count FROM "Material" WHERE location = (SELECT code FROM "StorageLocation" WHERE id = $1)',
+      [resolvedParams.id]
+    )
 
-    // Check if location has any stock records
-    const stockCount = await prisma.materialStockLocation.count({
-      where: { locationId: id }
-    })
+    const usageCount = parseInt(usageResult.rows[0].count)
 
-    if (stockCount > 0) {
+    if (usageCount > 0) {
       return NextResponse.json(
-        { error: 'Cannot delete location that has stock records. Please transfer or remove all stock first.' },
+        { error: 'Cannot delete location that has materials assigned to it. Please reassign or remove all materials first.' },
         { status: 400 }
       )
     }
 
-    await prisma.storageLocation.delete({
-      where: { id }
-    })
+    const result = await query(
+      'DELETE FROM "StorageLocation" WHERE id = $1 RETURNING *',
+      [resolvedParams.id]
+    )
+
+    if (result.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Storage location not found' },
+        { status: 404 }
+      )
+    }
 
     return NextResponse.json({ message: 'Storage location deleted successfully' })
   } catch (error) {

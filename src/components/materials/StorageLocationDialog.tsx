@@ -269,6 +269,7 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
                     render={({ field }) => (
                       <TextField
                         {...field}
+                        value={field.value || ''}
                         label="Location Name *"
                         fullWidth
                         error={!!errors.name}
@@ -286,6 +287,7 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
                     render={({ field }) => (
                       <TextField
                         {...field}
+                        value={field.value || ''}
                         label="Location Code *"
                         fullWidth
                         error={!!errors.code}
@@ -303,7 +305,7 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
                     render={({ field }) => (
                       <FormControl fullWidth>
                         <InputLabel>Location Type *</InputLabel>
-                        <Select {...field} label="Location Type *">
+                        <Select {...field} value={field.value || ''} label="Location Type *">
                           <MenuItem value="WAREHOUSE">Warehouse</MenuItem>
                           <MenuItem value="SHOP">Shop</MenuItem>
                           <MenuItem value="TRUCK">Truck</MenuItem>
@@ -322,6 +324,7 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
                     render={({ field }) => (
                       <TextField
                         {...field}
+                        value={field.value || ''}
                         label="Address"
                         fullWidth
                         placeholder="Optional address"
@@ -330,13 +333,14 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
                   />
                 </Grid>
 
-                <Grid xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Controller
                     name="description"
                     control={control}
                     render={({ field }) => (
                       <TextField
                         {...field}
+                        value={field.value || ''}
                         label="Description"
                         fullWidth
                         multiline

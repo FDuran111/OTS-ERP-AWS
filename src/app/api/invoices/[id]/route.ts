@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-// import { prisma } from '@/lib/prisma'
+import { query } from '@/lib/db'
 import { z } from 'zod'
 
 const updateInvoiceSchema = z.object({
@@ -164,8 +164,29 @@ export async function DELETE(
 ) {
   const resolvedParams = await params
   try {
-    // Mock deletion success for now
-    return NextResponse.json({ success: true })
+    // Delete invoice line items first
+    await query(
+      'DELETE FROM "InvoiceLineItem" WHERE "invoiceId" = $1',
+      [resolvedParams.id]
+    )
+
+    // Delete the invoice
+    const result = await query(
+      'DELETE FROM "Invoice" WHERE id = $1 RETURNING *',
+      [resolvedParams.id]
+    )
+
+    if (result.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Invoice not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Invoice deleted successfully' 
+    })
   } catch (error) {
     console.error('Error deleting invoice:', error)
     return NextResponse.json(
