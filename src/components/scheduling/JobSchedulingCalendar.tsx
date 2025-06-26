@@ -328,7 +328,7 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
                   />
                 </Box>
                 {/* Show crew count if assigned */}
-                {entry.crew && entry.crew.length > 0 && (
+                {entry.assignedCrew && entry.assignedCrew.length > 0 && (
                   <Box 
                     sx={{ 
                       position: 'absolute', 
@@ -346,7 +346,7 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
                       fontWeight: 'bold'
                     }}
                   >
-                    {entry.crew.length}
+                    {entry.assignedCrew.length}
                   </Box>
                 )}
               </Box>
