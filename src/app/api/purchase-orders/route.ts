@@ -1,0 +1,139 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { 
+  createSimplePurchaseOrder, 
+  getSimplePurchaseOrders,
+  getSimplePendingApprovals
+} from '@/lib/purchase-orders-simple'
+
+const createPOSchema = z.object({
+  vendorId: z.string(),
+  jobId: z.string().optional(),
+  createdBy: z.string(),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).optional(),
+  requiredDate: z.string().optional(),
+  subtotal: z.number().min(0),
+  taxAmount: z.number().min(0).optional(),
+  shippingAmount: z.number().min(0).optional(),
+  discountAmount: z.number().min(0).optional(),
+  shipToAddress: z.string().optional(),
+  shipToCity: z.string().optional(),
+  shipToState: z.string().optional(),
+  shipToZip: z.string().optional(),
+  paymentTerms: z.string().optional(),
+  notes: z.string().optional(),
+  internalNotes: z.string().optional(),
+  items: z.array(z.object({
+    materialId: z.string().optional(),
+    itemCode: z.string().optional(),
+    description: z.string(),
+    quantity: z.number().positive(),
+    unit: z.string(),
+    unitPrice: z.number().min(0),
+    taxRate: z.number().min(0).max(100).optional()
+  })).optional()
+})
+
+// GET - List purchase orders with filters
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    
+    const filters = {
+      vendorId: searchParams.get('vendorId') || undefined,
+      jobId: searchParams.get('jobId') || undefined,
+      status: searchParams.get('status') || undefined,
+      startDate: searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : undefined,
+      endDate: searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : undefined,
+      limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50,
+      offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
+    }
+    
+    // Check if we want pending approvals specifically
+    if (searchParams.get('pendingApprovals') === 'true') {
+      const pendingCount = await getSimplePendingApprovals()
+      return NextResponse.json({
+        success: true,
+        data: [],
+        total: pendingCount
+      })
+    }
+    
+    const orders = await getSimplePurchaseOrders(filters)
+    
+    return NextResponse.json({
+      success: true,
+      data: orders,
+      total: orders.length,
+      filters
+    })
+    
+  } catch (error) {
+    console.error('Error fetching purchase orders:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch purchase orders' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST - Create new purchase order
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const data = createPOSchema.parse(body)
+    
+    // Create the PO using simple version
+    const po = await createSimplePurchaseOrder({
+      vendorId: data.vendorId,
+      jobId: data.jobId,
+      createdBy: data.createdBy,
+      totalAmount: data.subtotal || 0,
+      status: 'DRAFT'
+    })
+    
+    // Create line items if provided
+    if (data.items && data.items.length > 0) {
+      const { createPurchaseOrderItem } = await import('@/lib/purchase-orders')
+      
+      for (let i = 0; i < data.items.length; i++) {
+        const item = data.items[i]
+        await createPurchaseOrderItem({
+          purchaseOrderId: po.id,
+          lineNumber: i + 1,
+          ...item,
+          taxRate: item.taxRate || 0,
+          notes: undefined
+        })
+      }
+      
+      // Fetch the complete PO with items
+      const { getPurchaseOrderById } = await import('@/lib/purchase-orders')
+      const completeOrder = await getPurchaseOrderById(po.id)
+      
+      return NextResponse.json({
+        success: true,
+        data: completeOrder
+      }, { status: 201 })
+    }
+    
+    return NextResponse.json({
+      success: true,
+      data: po
+    }, { status: 201 })
+    
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid data', details: error.errors },
+        { status: 400 }
+      )
+    }
+    
+    console.error('Error creating purchase order:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to create purchase order' },
+      { status: 500 }
+    )
+  }
+}

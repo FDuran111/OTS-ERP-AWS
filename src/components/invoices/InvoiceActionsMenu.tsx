@@ -110,8 +110,8 @@ export default function InvoiceActionsMenu({
   }
 
   const handleViewPrint = () => {
-    // TODO: Implement view/print functionality
-    window.open(`/invoices/${invoice.id}/print`, '_blank')
+    console.log('Opening print view for invoice:', invoice.id)
+    window.open(`/invoicing/${invoice.id}/print`, '_blank')
     handleClose()
   }
 

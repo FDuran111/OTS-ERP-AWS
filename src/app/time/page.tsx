@@ -343,6 +343,14 @@ export default function TimePage() {
                 Log time worked on jobs - simplified workflow, no timers needed
               </Typography>
             </Box>
+            <Button
+              variant="contained"
+              startIcon={<TimeIcon />}
+              onClick={() => router.push('/time/mobile')}
+              sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
+            >
+              Mobile Clock
+            </Button>
           </Box>
 
           <Grid container spacing={3} sx={{ mb: 3 }}>

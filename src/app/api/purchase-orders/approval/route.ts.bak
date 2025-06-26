@@ -1,0 +1,151 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { 
+  getPendingApprovals,
+  approvePurchaseOrder,
+  rejectPurchaseOrder,
+  updatePurchaseOrder
+} from '@/lib/purchase-orders'
+
+const bulkApprovalSchema = z.object({
+  purchaseOrderIds: z.array(z.string()),
+  action: z.enum(['APPROVE', 'REJECT', 'SUBMIT']),
+  approverId: z.string(),
+  comments: z.string().optional(),
+  reason: z.string().optional()
+})
+
+// GET - Get purchase orders pending approval
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const approverId = searchParams.get('approverId') || undefined
+    const minAmount = searchParams.get('minAmount') ? parseFloat(searchParams.get('minAmount')!) : undefined
+    const maxAmount = searchParams.get('maxAmount') ? parseFloat(searchParams.get('maxAmount')!) : undefined
+    
+    const orders = await getPendingApprovals(approverId)
+    
+    // Filter by amount range if specified
+    let filteredOrders = orders
+    if (minAmount !== undefined || maxAmount !== undefined) {
+      filteredOrders = orders.filter(order => {
+        const amount = order.totalAmount
+        if (minAmount !== undefined && amount < minAmount) return false
+        if (maxAmount !== undefined && amount > maxAmount) return false
+        return true
+      })
+    }
+    
+    // Group orders by approval requirements
+    const approvalSummary = {
+      totalPending: filteredOrders.length,
+      totalValue: filteredOrders.reduce((sum, order) => sum + order.totalAmount, 0),
+      highValue: filteredOrders.filter(order => order.totalAmount > 10000).length,
+      urgent: filteredOrders.filter(order => order.priority === 'URGENT').length,
+      aging: {
+        today: filteredOrders.filter(order => {
+          const daysDiff = Math.floor((new Date().getTime() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+          return daysDiff === 0
+        }).length,
+        thisWeek: filteredOrders.filter(order => {
+          const daysDiff = Math.floor((new Date().getTime() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+          return daysDiff <= 7 && daysDiff > 0
+        }).length,
+        older: filteredOrders.filter(order => {
+          const daysDiff = Math.floor((new Date().getTime() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+          return daysDiff > 7
+        }).length
+      }
+    }
+    
+    return NextResponse.json({
+      success: true,
+      data: filteredOrders,
+      summary: approvalSummary
+    })
+    
+  } catch (error) {
+    console.error('Error fetching pending approvals:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch pending approvals' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST - Process approval actions (single or bulk)
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const data = bulkApprovalSchema.parse(body)
+    
+    const results = []
+    const errors = []
+    
+    for (const poId of data.purchaseOrderIds) {
+      try {
+        let updatedPO
+        
+        switch (data.action) {
+          case 'APPROVE':
+            updatedPO = await approvePurchaseOrder(poId, data.approverId, data.comments)
+            break
+            
+          case 'REJECT':
+            updatedPO = await rejectPurchaseOrder(poId, data.approverId, data.reason || 'No reason provided')
+            break
+            
+          case 'SUBMIT':
+            updatedPO = await updatePurchaseOrder(poId, { status: 'PENDING_APPROVAL' })
+            break
+        }
+        
+        if (updatedPO) {
+          results.push({
+            poId,
+            poNumber: updatedPO.poNumber,
+            status: updatedPO.status,
+            action: data.action
+          })
+        } else {
+          errors.push({
+            poId,
+            error: 'Purchase order not found'
+          })
+        }
+        
+      } catch (error) {
+        errors.push({
+          poId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+    }
+    
+    return NextResponse.json({
+      success: errors.length === 0,
+      message: `${data.action.toLowerCase()} processed for ${results.length} purchase orders`,
+      results,
+      errors: errors.length > 0 ? errors : undefined,
+      summary: {
+        processed: results.length,
+        failed: errors.length,
+        total: data.purchaseOrderIds.length
+      }
+    })
+    
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid data', details: error.errors },
+        { status: 400 }
+      )
+    }
+    
+    console.error('Error processing approvals:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to process approvals' },
+      { status: 500 }
+    )
+  }
+}

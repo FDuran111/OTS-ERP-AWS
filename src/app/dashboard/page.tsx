@@ -43,6 +43,8 @@ import {
   AccessTime,
   Group,
   TrendingUp,
+  ShoppingCart as PurchaseOrderIcon,
+  Web as CustomerPortalIcon,
 } from '@mui/icons-material'
 import LowStockNotification from '@/components/notifications/LowStockNotification'
 
@@ -98,6 +100,7 @@ const iconMap = {
   'access_time': AccessTime,
   'attach_money': AttachMoney,
   'pending_actions': Group,
+  'shopping_cart': PurchaseOrderIcon,
 }
 
 const colorMap = {
@@ -115,7 +118,9 @@ const menuItems = [
   { text: 'Customers', icon: PeopleIcon, path: '/customers' },
   { text: 'Leads', icon: TrendingUp, path: '/leads' },
   { text: 'Materials', icon: InventoryIcon, path: '/materials' },
+  { text: 'Purchase Orders', icon: PurchaseOrderIcon, path: '/purchase-orders' },
   { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
+  { text: 'Customer Portal', icon: CustomerPortalIcon, path: '/customer-portal' },
   { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
   { text: 'Settings', icon: SettingsIcon, path: '/settings' },
 ]

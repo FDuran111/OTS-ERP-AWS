@@ -29,7 +29,8 @@ export async function GET() {
       yesterdayHoursResult,
       thisMonthRevenueResult,
       lastMonthRevenueResult,
-      recentJobsResult
+      recentJobsResult,
+      pendingPurchaseOrdersResult
     ] = await Promise.all([
       // Active jobs count
       query(
@@ -86,6 +87,12 @@ export async function GET() {
          LEFT JOIN "Customer" c ON j."customerId" = c.id
          ORDER BY j."updatedAt" DESC 
          LIMIT 5`
+      ),
+
+      // Pending Purchase Orders
+      query(
+        `SELECT COUNT(*) as count FROM "PurchaseOrder" 
+         WHERE status = 'PENDING' OR status = 'DRAFT'`
       )
     ])
 
@@ -97,6 +104,7 @@ export async function GET() {
     const hoursYesterday = parseFloat(yesterdayHoursResult.rows[0].total) || 0
     const revenueThis = parseFloat(thisMonthRevenueResult.rows[0].total) || 0
     const revenueLast = parseFloat(lastMonthRevenueResult.rows[0].total) || 0
+    const pendingPurchaseOrders = parseInt(pendingPurchaseOrdersResult.rows[0].count) || 0
 
     // Calculate changes
     const jobsChange = lastMonthActiveJobs > 0 
@@ -120,24 +128,24 @@ export async function GET() {
         color: 'primary' as const,
       },
       {
-        title: 'Hours Today',
-        value: hoursToday.toFixed(1),
-        change: `${hoursChange}% from yesterday`,
-        icon: 'access_time',
-        color: 'success' as const,
+        title: 'Pending Purchase Orders',
+        value: pendingPurchaseOrders.toString(),
+        change: 'Awaiting approval',
+        icon: 'shopping_cart',
+        color: 'warning' as const,
       },
       {
         title: 'Revenue This Month',
         value: `$${revenueThis.toLocaleString()}`,
         change: `${revenueChange}% from last month`,
         icon: 'attach_money',
-        color: 'warning' as const,
+        color: 'success' as const,
       },
       {
-        title: 'Pending Estimates',
-        value: pendingEstimates.toString(),
-        change: 'Awaiting approval',
-        icon: 'pending_actions',
+        title: 'Hours Today',
+        value: hoursToday.toFixed(1),
+        change: `${hoursChange}% from yesterday`,
+        icon: 'access_time',
         color: 'info' as const,
       },
     ]

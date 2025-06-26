@@ -29,14 +29,54 @@ export async function GET(
 ) {
   const resolvedParams = await params
   try {
-    // Mock specific invoice data with line items
+    // Mock line items first to calculate correct totals
+    const lineItems = [
+      {
+        id: '1',
+        type: 'LABOR',
+        description: 'Electrical panel installation',
+        quantity: 8,
+        unitPrice: 85,
+        totalPrice: 680, // 8 × $85 = $680
+        materialId: null,
+        laborRateId: '3',
+      },
+      {
+        id: '2',
+        type: 'MATERIAL',
+        description: '200A Main Panel',
+        quantity: 1,
+        unitPrice: 425,
+        totalPrice: 425, // 1 × $425 = $425
+        materialId: 'MAT002',
+        laborRateId: null,
+      },
+      {
+        id: '3',
+        type: 'MATERIAL',
+        description: '12 AWG Wire',
+        quantity: 250,
+        unitPrice: 0.68,
+        totalPrice: 170, // 250 × $0.68 = $170
+        materialId: 'MAT001',
+        laborRateId: null,
+      }
+    ]
+
+    // Calculate correct financial totals from line items
+    const subtotalAmount = lineItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0)
+    const taxRate = 0.142 // 14.2% tax rate
+    const taxAmount = subtotalAmount * taxRate
+    const totalAmount = subtotalAmount + taxAmount
+
+    // Mock specific invoice data with CORRECT calculated totals
     const mockInvoice = {
       id: resolvedParams.id,
       invoiceNumber: 'INV-2025-001',
       status: 'DRAFT',
-      totalAmount: 2450.00,
-      subtotalAmount: 2268.52,
-      taxAmount: 181.48,
+      totalAmount: Math.round(totalAmount * 100) / 100, // Round to 2 decimal places
+      subtotalAmount: Math.round(subtotalAmount * 100) / 100,
+      taxAmount: Math.round(taxAmount * 100) / 100,
       dueDate: '2025-06-15T00:00:00.000Z',
       sentDate: null,
       paidDate: null,
@@ -57,38 +97,7 @@ export async function GET(
         state: 'CA',
         zip: '12345',
       },
-      lineItems: [
-        {
-          id: '1',
-          type: 'LABOR',
-          description: 'Electrical panel installation',
-          quantity: 8,
-          unitPrice: 85,
-          totalPrice: 680,
-          materialId: null,
-          laborRateId: '3',
-        },
-        {
-          id: '2',
-          type: 'MATERIAL',
-          description: '200A Main Panel',
-          quantity: 1,
-          unitPrice: 425,
-          totalPrice: 425,
-          materialId: 'MAT002',
-          laborRateId: null,
-        },
-        {
-          id: '3',
-          type: 'MATERIAL',
-          description: '12 AWG Wire',
-          quantity: 250,
-          unitPrice: 0.68,
-          totalPrice: 170,
-          materialId: 'MAT001',
-          laborRateId: null,
-        }
-      ]
+      lineItems: lineItems
     }
 
     return NextResponse.json(mockInvoice)

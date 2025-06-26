@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import {
   Box,
   Container,
@@ -27,6 +30,9 @@ import {
   Tabs,
   Tab,
   Grid,
+  Alert,
+  Snackbar,
+  CircularProgress,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -56,6 +62,35 @@ interface User {
   name: string
   role: string
 }
+
+// Validation schemas
+const CompanySettingsSchema = z.object({
+  company_name: z.string().min(1, 'Company name is required'),
+  business_address: z.string().optional(),
+  phone_number: z.string().optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  license_number: z.string().optional(),
+  tax_id: z.string().optional(),
+  default_hourly_rate: z.string().optional(),
+  invoice_terms: z.string().optional(),
+})
+
+const SecuritySettingsSchema = z.object({
+  current_password: z.string().optional(),
+  new_password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
+  confirm_password: z.string().optional(),
+}).refine((data) => {
+  if (data.new_password && data.new_password !== data.confirm_password) {
+    return false
+  }
+  return true
+}, {
+  message: "Passwords don't match",
+  path: ["confirm_password"],
+})
+
+type CompanySettings = z.infer<typeof CompanySettingsSchema>
+type SecuritySettings = z.infer<typeof SecuritySettingsSchema>
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -98,12 +133,126 @@ export default function SettingsPage() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [tabValue, setTabValue] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   // Settings state
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [smsNotifications, setSmsNotifications] = useState(false)
+  const [newJobAssignments, setNewJobAssignments] = useState(true)
+  const [scheduleChanges, setScheduleChanges] = useState(true)
+  const [invoiceReminders, setInvoiceReminders] = useState(true)
+  const [materialLowStockAlerts, setMaterialLowStockAlerts] = useState(false)
+  const [customerMessages, setCustomerMessages] = useState(true)
+  const [dailySummary, setDailySummary] = useState(false)
   const [twoFactorAuth, setTwoFactorAuth] = useState(false)
   const [darkMode, setDarkMode] = useState(true)
+  const [showJobNumbers, setShowJobNumbers] = useState(true)
+  const [compactView, setCompactView] = useState(true)
+  const [showTooltips, setShowTooltips] = useState(false)
+
+  // Form setup
+  const companyForm = useForm<CompanySettings>({
+    resolver: zodResolver(CompanySettingsSchema),
+    defaultValues: {
+      company_name: 'Ortmeier Technicians',
+      business_address: '123 Electric Ave, Anytown, ST 12345',
+      phone_number: '(555) 123-4567',
+      email: 'info@ortmeiertech.com',
+      license_number: 'EC-123456',
+      tax_id: '12-3456789',
+      default_hourly_rate: '125.00',
+      invoice_terms: 'Net 30',
+    }
+  })
+
+  const securityForm = useForm<SecuritySettings>({
+    resolver: zodResolver(SecuritySettingsSchema),
+    defaultValues: {
+      current_password: '',
+      new_password: '',
+      confirm_password: '',
+    }
+  })
+
+  // Load settings from API
+  const loadSettings = async () => {
+    try {
+      const response = await fetch('/api/settings')
+      if (!response.ok) {
+        throw new Error('Failed to load settings')
+      }
+      const settings = await response.json()
+      
+      // Update company form
+      if (settings.company) {
+        companyForm.reset({
+          company_name: settings.company.company_name || 'Ortmeier Technicians',
+          business_address: settings.company.business_address || '',
+          phone_number: settings.company.phone_number || '',
+          email: settings.company.email || '',
+          license_number: settings.company.license_number || '',
+          tax_id: settings.company.tax_id || '',
+          default_hourly_rate: settings.company.default_hourly_rate?.toString() || '125.00',
+          invoice_terms: settings.company.invoice_terms || 'Net 30',
+        })
+      }
+      
+      // Update notification settings
+      if (settings.notifications) {
+        setEmailNotifications(settings.notifications.email_notifications ?? true)
+        setSmsNotifications(settings.notifications.sms_notifications ?? false)
+        setNewJobAssignments(settings.notifications.new_job_assignments ?? true)
+        setScheduleChanges(settings.notifications.schedule_changes ?? true)
+        setInvoiceReminders(settings.notifications.invoice_reminders ?? true)
+        setMaterialLowStockAlerts(settings.notifications.material_low_stock_alerts ?? false)
+        setCustomerMessages(settings.notifications.customer_messages ?? true)
+        setDailySummary(settings.notifications.daily_summary ?? false)
+      }
+      
+      // Update security settings
+      if (settings.security) {
+        setTwoFactorAuth(settings.security.two_factor_auth ?? false)
+      }
+      
+      // Update appearance settings
+      if (settings.appearance) {
+        setDarkMode(settings.appearance.dark_mode ?? true)
+        setShowJobNumbers(settings.appearance.show_job_numbers ?? true)
+        setCompactView(settings.appearance.compact_view ?? true)
+        setShowTooltips(settings.appearance.show_tooltips ?? false)
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error)
+      setMessage({ type: 'error', text: 'Failed to load settings' })
+    }
+  }
+
+  // Save settings to API
+  const saveSettings = async (type: 'company' | 'notifications' | 'security' | 'appearance', data: any) => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type, data }),
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save settings')
+      }
+      
+      setMessage({ type: 'success', text: 'Settings saved successfully!' })
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to save settings' })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -112,6 +261,7 @@ export default function SettingsPage() {
       return
     }
     setUser(JSON.parse(storedUser))
+    loadSettings()
   }, [router])
 
   const handleDrawerToggle = () => {
@@ -134,6 +284,66 @@ export default function SettingsPage() {
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
+  }
+
+  // Form submit handlers
+  const onCompanySubmit = async (data: CompanySettings) => {
+    const companyData = {
+      ...data,
+      default_hourly_rate: parseFloat(data.default_hourly_rate || '125.00'),
+    }
+    await saveSettings('company', companyData)
+  }
+
+  const onSecuritySubmit = async (data: SecuritySettings) => {
+    if (data.new_password && !data.current_password) {
+      setMessage({ type: 'error', text: 'Current password is required to change password' })
+      return
+    }
+    
+    const securityData = {
+      two_factor_auth: twoFactorAuth,
+      ...(data.new_password ? {
+        current_password: data.current_password,
+        new_password: data.new_password,
+        confirm_password: data.confirm_password,
+      } : {})
+    }
+    
+    await saveSettings('security', securityData)
+    
+    // Clear password fields after successful submission
+    if (data.new_password) {
+      securityForm.reset({
+        current_password: '',
+        new_password: '',
+        confirm_password: '',
+      })
+    }
+  }
+
+  const handleNotificationSave = async () => {
+    const notificationData = {
+      email_notifications: emailNotifications,
+      sms_notifications: smsNotifications,
+      new_job_assignments: newJobAssignments,
+      schedule_changes: scheduleChanges,
+      invoice_reminders: invoiceReminders,
+      material_low_stock_alerts: materialLowStockAlerts,
+      customer_messages: customerMessages,
+      daily_summary: dailySummary,
+    }
+    await saveSettings('notifications', notificationData)
+  }
+
+  const handleAppearanceSave = async () => {
+    const appearanceData = {
+      dark_mode: darkMode,
+      show_job_numbers: showJobNumbers,
+      compact_view: compactView,
+      show_tooltips: showTooltips,
+    }
+    await saveSettings('appearance', appearanceData)
   }
 
   if (!user) return null
@@ -288,77 +498,133 @@ export default function SettingsPage() {
               </Tabs>
 
               <TabPanel value={tabValue} index={0}>
-                <Grid container spacing={3}>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="Company Name"
-                      defaultValue="Ortmeier Technicians"
-                      margin="normal"
-                    />
-                    <TextField
-                      fullWidth
-                      label="Business Address"
-                      defaultValue="123 Electric Ave, Anytown, ST 12345"
-                      margin="normal"
-                      multiline
-                      rows={2}
-                    />
-                    <TextField
-                      fullWidth
-                      label="Phone Number"
-                      defaultValue="(555) 123-4567"
-                      margin="normal"
-                    />
-                    <TextField
-                      fullWidth
-                      label="Email"
-                      defaultValue="info@ortmeiertech.com"
-                      margin="normal"
-                    />
+                <form onSubmit={companyForm.handleSubmit(onCompanySubmit)}>
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="company_name"
+                        control={companyForm.control}
+                        render={({ field, fieldState }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="Company Name"
+                            margin="normal"
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="business_address"
+                        control={companyForm.control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="Business Address"
+                            margin="normal"
+                            multiline
+                            rows={2}
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="phone_number"
+                        control={companyForm.control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="Phone Number"
+                            margin="normal"
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="email"
+                        control={companyForm.control}
+                        render={({ field, fieldState }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="Email"
+                            margin="normal"
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="license_number"
+                        control={companyForm.control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="License Number"
+                            margin="normal"
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="tax_id"
+                        control={companyForm.control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="Tax ID"
+                            margin="normal"
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="default_hourly_rate"
+                        control={companyForm.control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="Default Hourly Rate"
+                            margin="normal"
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="invoice_terms"
+                        control={companyForm.control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="Invoice Terms"
+                            margin="normal"
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                        disabled={loading}
+                        sx={{
+                          mt: 2,
+                          backgroundColor: '#e14eca',
+                          '&:hover': {
+                            backgroundColor: '#d236b8',
+                          },
+                        }}
+                      >
+                        Save Company Settings
+                      </Button>
+                    </Grid>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="License Number"
-                      defaultValue="EC-123456"
-                      margin="normal"
-                    />
-                    <TextField
-                      fullWidth
-                      label="Tax ID"
-                      defaultValue="12-3456789"
-                      margin="normal"
-                    />
-                    <TextField
-                      fullWidth
-                      label="Default Hourly Rate"
-                      defaultValue="$125.00"
-                      margin="normal"
-                    />
-                    <TextField
-                      fullWidth
-                      label="Invoice Terms"
-                      defaultValue="Net 30"
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <Button
-                      variant="contained"
-                      startIcon={<Save />}
-                      sx={{
-                        mt: 2,
-                        backgroundColor: '#e14eca',
-                        '&:hover': {
-                          backgroundColor: '#d236b8',
-                        },
-                      }}
-                    >
-                      Save Company Settings
-                    </Button>
-                  </Grid>
-                </Grid>
+                </form>
               </TabPanel>
 
               <TabPanel value={tabValue} index={1}>
@@ -398,20 +664,70 @@ export default function SettingsPage() {
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 12, md: 6 }}>
-                    <FormControlLabel control={<Switch defaultChecked />} label="New Job Assignments" />
-                    <FormControlLabel control={<Switch defaultChecked />} label="Schedule Changes" />
-                    <FormControlLabel control={<Switch defaultChecked />} label="Invoice Reminders" />
+                    <FormControlLabel 
+                      control={
+                        <Switch 
+                          checked={newJobAssignments}
+                          onChange={(e) => setNewJobAssignments(e.target.checked)}
+                        />
+                      } 
+                      label="New Job Assignments" 
+                    />
+                    <FormControlLabel 
+                      control={
+                        <Switch 
+                          checked={scheduleChanges}
+                          onChange={(e) => setScheduleChanges(e.target.checked)}
+                        />
+                      } 
+                      label="Schedule Changes" 
+                    />
+                    <FormControlLabel 
+                      control={
+                        <Switch 
+                          checked={invoiceReminders}
+                          onChange={(e) => setInvoiceReminders(e.target.checked)}
+                        />
+                      } 
+                      label="Invoice Reminders" 
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
-                    <FormControlLabel control={<Switch />} label="Material Low Stock Alerts" />
-                    <FormControlLabel control={<Switch defaultChecked />} label="Customer Messages" />
-                    <FormControlLabel control={<Switch />} label="Daily Summary" />
+                    <FormControlLabel 
+                      control={
+                        <Switch 
+                          checked={materialLowStockAlerts}
+                          onChange={(e) => setMaterialLowStockAlerts(e.target.checked)}
+                        />
+                      } 
+                      label="Material Low Stock Alerts" 
+                    />
+                    <FormControlLabel 
+                      control={
+                        <Switch 
+                          checked={customerMessages}
+                          onChange={(e) => setCustomerMessages(e.target.checked)}
+                        />
+                      } 
+                      label="Customer Messages" 
+                    />
+                    <FormControlLabel 
+                      control={
+                        <Switch 
+                          checked={dailySummary}
+                          onChange={(e) => setDailySummary(e.target.checked)}
+                        />
+                      } 
+                      label="Daily Summary" 
+                    />
                   </Grid>
                 </Grid>
 
                 <Button
                   variant="contained"
-                  startIcon={<Save />}
+                  startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                  disabled={loading}
+                  onClick={handleNotificationSave}
                   sx={{
                     mt: 3,
                     backgroundColor: '#e14eca',
@@ -446,46 +762,77 @@ export default function SettingsPage() {
                 <Typography variant="h6" gutterBottom>
                   Change Password
                 </Typography>
-                <Grid container spacing={2} sx={{ maxWidth: 600 }}>
-                  <Grid size={{ xs: 12 }}>
-                    <TextField
-                      fullWidth
-                      type="password"
-                      label="Current Password"
-                      margin="normal"
-                    />
+                <form onSubmit={securityForm.handleSubmit(onSecuritySubmit)}>
+                  <Grid container spacing={2} sx={{ maxWidth: 600 }}>
+                    <Grid size={{ xs: 12 }}>
+                      <Controller
+                        name="current_password"
+                        control={securityForm.control}
+                        render={({ field, fieldState }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            type="password"
+                            label="Current Password"
+                            margin="normal"
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Controller
+                        name="new_password"
+                        control={securityForm.control}
+                        render={({ field, fieldState }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            type="password"
+                            label="New Password"
+                            margin="normal"
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Controller
+                        name="confirm_password"
+                        control={securityForm.control}
+                        render={({ field, fieldState }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            type="password"
+                            label="Confirm New Password"
+                            margin="normal"
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
+                      />
+                    </Grid>
                   </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <TextField
-                      fullWidth
-                      type="password"
-                      label="New Password"
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <TextField
-                      fullWidth
-                      type="password"
-                      label="Confirm New Password"
-                      margin="normal"
-                    />
-                  </Grid>
-                </Grid>
 
-                <Button
-                  variant="contained"
-                  startIcon={<Save />}
-                  sx={{
-                    mt: 3,
-                    backgroundColor: '#e14eca',
-                    '&:hover': {
-                      backgroundColor: '#d236b8',
-                    },
-                  }}
-                >
-                  Update Password
-                </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                    disabled={loading}
+                    sx={{
+                      mt: 3,
+                      backgroundColor: '#e14eca',
+                      '&:hover': {
+                        backgroundColor: '#d236b8',
+                      },
+                    }}
+                  >
+                    Update Password
+                  </Button>
+                </form>
               </TabPanel>
 
               <TabPanel value={tabValue} index={3}>
@@ -510,13 +857,39 @@ export default function SettingsPage() {
                 <Typography variant="h6" gutterBottom>
                   Display Options
                 </Typography>
-                <FormControlLabel control={<Switch defaultChecked />} label="Show job numbers in lists" />
-                <FormControlLabel control={<Switch defaultChecked />} label="Compact view for tables" />
-                <FormControlLabel control={<Switch />} label="Show tooltips" />
+                <FormControlLabel 
+                  control={
+                    <Switch 
+                      checked={showJobNumbers}
+                      onChange={(e) => setShowJobNumbers(e.target.checked)}
+                    />
+                  } 
+                  label="Show job numbers in lists" 
+                />
+                <FormControlLabel 
+                  control={
+                    <Switch 
+                      checked={compactView}
+                      onChange={(e) => setCompactView(e.target.checked)}
+                    />
+                  } 
+                  label="Compact view for tables" 
+                />
+                <FormControlLabel 
+                  control={
+                    <Switch 
+                      checked={showTooltips}
+                      onChange={(e) => setShowTooltips(e.target.checked)}
+                    />
+                  } 
+                  label="Show tooltips" 
+                />
 
                 <Button
                   variant="contained"
-                  startIcon={<Save />}
+                  startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                  disabled={loading}
+                  onClick={handleAppearanceSave}
                   sx={{
                     mt: 3,
                     backgroundColor: '#e14eca',
@@ -531,6 +904,22 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </Container>
+        
+        {/* Notification Snackbar */}
+        <Snackbar
+          open={!!message}
+          autoHideDuration={6000}
+          onClose={() => setMessage(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={() => setMessage(null)} 
+            severity={message?.type} 
+            sx={{ width: '100%' }}
+          >
+            {message?.text}
+          </Alert>
+        </Snackbar>
       </Box>
     </Box>
   )
