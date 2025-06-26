@@ -13,7 +13,7 @@ const UpdateLaborRateSchema = z.object({
 // PUT /api/jobs/[id]/labor-rates/[rateId] - Update a labor rate override
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; rateId: string } }
+  { params }: { params: Promise<{ id: string; rateId: string }> }
 ) {
   try {
     // Verify authentication
@@ -29,15 +29,15 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const { client } = await connectToDatabase()
-    const { id: jobId, rateId } = params
+    const resolvedParams = await params
+    const { id: jobId, rateId } = resolvedParams
     const body = await request.json()
 
     // Validate request body
     const validatedData = UpdateLaborRateSchema.parse(body)
 
     // Verify the rate exists and belongs to the job
-    const existingRateResult = await client.query(`
+    const existingRateResult = await query(`
       SELECT id FROM "JobLaborRates" 
       WHERE id = $1 AND job_id = $2
     `, [rateId, jobId])
@@ -47,7 +47,7 @@ export async function PUT(
     }
 
     // Update the labor rate override
-    await client.query(`
+    await query(`
       UPDATE "JobLaborRates" 
       SET 
         overridden_rate = $1,
@@ -62,7 +62,7 @@ export async function PUT(
     ])
 
     // Get the updated rate with user details
-    const rateResult = await client.query(`
+    const rateResult = await query(`
       SELECT 
         jlr.id,
         jlr.job_id,
@@ -100,7 +100,7 @@ export async function PUT(
 // DELETE /api/jobs/[id]/labor-rates/[rateId] - Delete a labor rate override
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; rateId: string } }
+  { params }: { params: Promise<{ id: string; rateId: string }> }
 ) {
   try {
     // Verify authentication
@@ -116,11 +116,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const { client } = await connectToDatabase()
-    const { id: jobId, rateId } = params
+    const resolvedParams = await params
+    const { id: jobId, rateId } = resolvedParams
 
     // Verify the rate exists and belongs to the job
-    const existingRateResult = await client.query(`
+    const existingRateResult = await query(`
       SELECT id, user_id FROM "JobLaborRates" 
       WHERE id = $1 AND job_id = $2
     `, [rateId, jobId])
@@ -130,7 +130,7 @@ export async function DELETE(
     }
 
     // Delete the labor rate override
-    await client.query(`
+    await query(`
       DELETE FROM "JobLaborRates" 
       WHERE id = $1 AND job_id = $2
     `, [rateId, jobId])

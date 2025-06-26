@@ -15,7 +15,7 @@ const CreateLaborRateSchema = z.object({
 // GET /api/jobs/[id]/labor-rates - Get all labor rate overrides for a job
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
@@ -31,11 +31,11 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const { client } = await connectToDatabase()
-    const jobId = params.id
+    const resolvedParams = await params
+    const jobId = resolvedParams.id
 
     // Verify job exists and user has access
-    const jobResult = await client.query(
+    const jobResult = await query(
       'SELECT id FROM "Job" WHERE id = $1',
       [jobId]
     )
@@ -45,7 +45,7 @@ export async function GET(
     }
 
     // Get labor rate overrides with user details
-    const ratesResult = await client.query(`
+    const ratesResult = await query(`
       SELECT 
         jlr.id,
         jlr.user_id,
@@ -76,7 +76,7 @@ export async function GET(
 // POST /api/jobs/[id]/labor-rates - Create a new labor rate override
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
@@ -92,15 +92,15 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const { client } = await connectToDatabase()
-    const jobId = params.id
+    const resolvedParams = await params
+    const jobId = resolvedParams.id
     const body = await request.json()
 
     // Validate request body
     const validatedData = CreateLaborRateSchema.parse(body)
 
     // Verify job exists
-    const jobResult = await client.query(
+    const jobResult = await query(
       'SELECT id FROM "Job" WHERE id = $1',
       [jobId]
     )
@@ -110,7 +110,7 @@ export async function POST(
     }
 
     // Verify user exists
-    const userResult = await client.query(
+    const userResult = await query(
       'SELECT id, name FROM "User" WHERE id = $1',
       [validatedData.userId]
     )
@@ -120,7 +120,7 @@ export async function POST(
     }
 
     // Create the labor rate override
-    const insertResult = await client.query(`
+    const insertResult = await query(`
       INSERT INTO "JobLaborRates" (
         job_id, 
         user_id, 
@@ -139,7 +139,7 @@ export async function POST(
     ])
 
     // Get the created rate with user details
-    const rateResult = await client.query(`
+    const rateResult = await query(`
       SELECT 
         jlr.id,
         jlr.job_id,
