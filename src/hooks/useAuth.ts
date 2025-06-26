@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, createContext, useContext } from 'react'
+import React, { useState, useEffect, useCallback, createContext, useContext } from 'react'
 import { UserRole, UserPayload, hasRole, hasPermission, canAccessResource, getRoleDisplayName } from '@/lib/auth'
 
 // Types for auth context
