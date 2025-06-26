@@ -8,7 +8,6 @@ import {
   DialogActions,
   Button,
   TextField,
-  Grid,
   FormControl,
   InputLabel,
   Select,
@@ -36,6 +35,25 @@ import {
   Cancel as CancelIcon,
   Search as SearchIcon,
 } from '@mui/icons-material'
+
+// Temporary Grid component for compatibility
+const Grid = ({ children, container, spacing, xs, md, size, alignItems, justifyContent, ...props }: any) => (
+  <Box 
+    sx={{ 
+      display: container ? 'flex' : 'block',
+      flexWrap: container ? 'wrap' : undefined,
+      gap: container && spacing ? spacing : undefined,
+      flex: xs ? '1 1 auto' : undefined,
+      width: xs === 12 ? '100%' : undefined,
+      alignItems,
+      justifyContent,
+      ...props.sx
+    }}
+    {...props}
+  >
+    {children}
+  </Box>
+)
 
 interface User {
   id: string
