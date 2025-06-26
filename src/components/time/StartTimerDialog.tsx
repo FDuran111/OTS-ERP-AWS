@@ -114,6 +114,7 @@ export default function StartTimerDialog({ open, onClose, onTimerStarted }: Star
       const response = await fetch('/api/time-entries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           ...data,
           userId: user.id,

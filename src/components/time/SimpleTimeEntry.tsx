@@ -72,8 +72,12 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
   const fetchData = async () => {
     try {
       const [jobsRes, scheduleRes] = await Promise.all([
-        fetch('/api/jobs?status=estimate,scheduled,dispatched,in_progress'),
-        fetch(`/api/schedule?startDate=${format(startOfDay(new Date()), 'yyyy-MM-dd')}&endDate=${format(startOfDay(new Date()), 'yyyy-MM-dd')}`)
+        fetch('/api/jobs?status=estimate,scheduled,dispatched,in_progress', {
+          credentials: 'include'
+        }),
+        fetch(`/api/schedule?startDate=${format(startOfDay(new Date()), 'yyyy-MM-dd')}&endDate=${format(startOfDay(new Date()), 'yyyy-MM-dd')}`, {
+          credentials: 'include'
+        })
       ])
 
       if (jobsRes.ok) {
@@ -146,6 +150,7 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
       const response = await fetch('/api/time-entries/direct', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           userId: user.id,
           jobId: selectedJob.id,

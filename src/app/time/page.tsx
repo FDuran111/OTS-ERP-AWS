@@ -117,8 +117,12 @@ export default function TimePage() {
     try {
       setLoading(true)
       const [entriesResponse, statsResponse] = await Promise.all([
-        fetch('/api/time-entries?limit=20'),
-        fetch('/api/time-entries/stats')
+        fetch('/api/time-entries?limit=20', {
+          credentials: 'include'
+        }),
+        fetch('/api/time-entries/stats', {
+          credentials: 'include'
+        })
       ])
 
       if (entriesResponse.ok) {

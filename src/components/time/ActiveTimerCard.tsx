@@ -67,6 +67,7 @@ export default function ActiveTimerCard({ timer, onTimerStopped }: ActiveTimerCa
       const response = await fetch(`/api/time-entries/${timer.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           endTime: new Date().toISOString(),
           description: description || undefined,

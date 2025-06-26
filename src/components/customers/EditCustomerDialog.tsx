@@ -118,6 +118,7 @@ export default function EditCustomerDialog({ open, onClose, onCustomerUpdated, c
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(submitData),
       })
 

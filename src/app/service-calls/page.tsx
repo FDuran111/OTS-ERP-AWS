@@ -148,7 +148,9 @@ export default function ServiceCallsPage() {
 
   const loadCustomers = async () => {
     try {
-      const response = await fetch('/api/customers')
+      const response = await fetch('/api/customers', {
+        credentials: 'include'
+      })
       const data = await response.json()
       if (data.success) setCustomers(data.data)
     } catch (err) {

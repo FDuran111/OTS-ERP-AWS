@@ -90,7 +90,9 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch('/api/customers')
+      const response = await fetch('/api/customers', {
+        credentials: 'include'
+      })
       if (response.ok) {
         const data = await response.json()
         // Extract customers array from API response

@@ -237,14 +237,23 @@ export default function JobsPage() {
   const fetchJobs = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/jobs')
+      const response = await fetch('/api/jobs', {
+        credentials: 'include'
+      })
       if (!response.ok) {
         throw new Error('Failed to fetch jobs')
       }
       const data = await response.json()
-      setJobs(data)
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setJobs(data)
+      } else {
+        console.error('API returned non-array data:', data)
+        setJobs([])
+      }
     } catch (error) {
       console.error('Error fetching jobs:', error)
+      setJobs([]) // Ensure jobs is always an array
     } finally {
       setLoading(false)
     }
@@ -260,6 +269,7 @@ export default function JobsPage() {
     try {
       const response = await fetch(`/api/jobs/${job.id}`, {
         method: 'DELETE',
+        credentials: 'include'
       })
       
       if (!response.ok) {
@@ -285,7 +295,7 @@ export default function JobsPage() {
     router.push(`/jobs/${job.id}`)
   }
 
-  const filteredJobs = jobs.filter(job => {
+  const filteredJobs = (Array.isArray(jobs) ? jobs : []).filter(job => {
     // Text search
     const matchesSearch = !searchTerm || 
       job.jobNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||

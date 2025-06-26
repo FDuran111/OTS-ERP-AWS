@@ -88,6 +88,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(submitData),
       })
 

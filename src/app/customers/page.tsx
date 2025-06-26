@@ -84,7 +84,9 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/customers')
+      const response = await fetch('/api/customers', {
+        credentials: 'include'
+      })
       if (!response.ok) {
         throw new Error('Failed to fetch customers')
       }
@@ -107,6 +109,7 @@ export default function CustomersPage() {
     try {
       const response = await fetch(`/api/customers/${customer.id}`, {
         method: 'DELETE',
+        credentials: 'include'
       })
       
       if (!response.ok) {

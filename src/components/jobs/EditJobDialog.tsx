@@ -154,7 +154,9 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch('/api/customers')
+      const response = await fetch('/api/customers', {
+        credentials: 'include'
+      })
       if (response.ok) {
         const data = await response.json()
         // Extract customers array from API response
