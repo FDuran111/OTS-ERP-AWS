@@ -44,6 +44,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -155,6 +157,8 @@ const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | '
 
 export default function MaterialsPage() {
   const router = useRouter()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)

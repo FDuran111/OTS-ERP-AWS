@@ -203,64 +203,109 @@ export default function DashboardPage() {
           <LowStockNotification refreshTrigger={loading ? 0 : 1} />
         </Box>
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-            {loading ? (
-              Array.from({ length: 4 }).map((_, index) => (
-                <Box key={index} sx={{ flex: '1 1 calc(25% - 18px)', minWidth: '200px' }}>
-                  <Card>
-                    <CardContent>
-                      <Typography>Loading...</Typography>
-                    </CardContent>
-                  </Card>
-                </Box>
-              ))
-            ) : (
-              stats.map((stat) => (
-                <Box key={stat.title} sx={{ flex: '1 1 calc(25% - 18px)', minWidth: '200px' }}>
-                  <Card>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 48,
-                            height: 48,
-                            borderRadius: '12px',
-                            backgroundColor: `${stat.color}20`,
-                            mr: 2,
+        {/* Stats Cards - Responsive Grid */}
+        <Grid container spacing={3}>
+          {loading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <Grid key={index} size={{ xs: 12, sm: 6, md: 3 }}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Typography>Loading...</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          ) : (
+            stats.map((stat) => (
+              <Grid key={stat.title} size={{ xs: 12, sm: 6, md: 3 }}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: { xs: 'row', sm: 'column', md: 'row' },
+                      alignItems: { xs: 'center', sm: 'flex-start', md: 'center' },
+                      mb: 2 
+                    }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: { xs: 40, sm: 48 },
+                          height: { xs: 40, sm: 48 },
+                          borderRadius: '12px',
+                          backgroundColor: `${stat.color}20`,
+                          mr: { xs: 2, sm: 0, md: 2 },
+                          mb: { xs: 0, sm: 2, md: 0 },
+                          flexShrink: 0,
+                        }}
+                      >
+                        {React.createElement(stat.icon, { 
+                          sx: { 
+                            color: stat.color,
+                            fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                          } 
+                        })}
+                      </Box>
+                      <Box sx={{ flexGrow: 1, textAlign: { xs: 'left', sm: 'center', md: 'left' } }}>
+                        <Typography 
+                          color="text.secondary" 
+                          variant="caption"
+                          sx={{ 
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                            display: 'block',
+                            mb: 0.5
                           }}
                         >
-                          {React.createElement(stat.icon, { sx: { color: stat.color } })}
-                        </Box>
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography color="text.secondary" variant="caption">
-                            {stat.title}
-                          </Typography>
-                          <Typography variant="h5">{stat.value}</Typography>
-                        </Box>
+                          {stat.title}
+                        </Typography>
+                        <Typography 
+                          variant="h5" 
+                          sx={{ 
+                            fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.875rem' },
+                            fontWeight: 600,
+                            lineHeight: 1.2
+                          }}
+                        >
+                          {stat.value}
+                        </Typography>
                       </Box>
-                      {stat.change && (
-                        <Typography variant="caption" color="success.main">
-                          {stat.change}
-                        </Typography>
-                      )}
-                      {stat.subtitle && (
-                        <Typography variant="caption" color="text.secondary">
-                          {stat.subtitle}
-                        </Typography>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Box>
-              ))
-            )}
-          </Box>
+                    </Box>
+                    {stat.change && (
+                      <Typography 
+                        variant="caption" 
+                        color="success.main"
+                        sx={{ 
+                          fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                          display: 'block',
+                          mb: stat.subtitle ? 0.5 : 0
+                        }}
+                      >
+                        {stat.change}
+                      </Typography>
+                    )}
+                    {stat.subtitle && (
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary"
+                        sx={{ 
+                          fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                          display: 'block'
+                        }}
+                      >
+                        {stat.subtitle}
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          )}
+        </Grid>
 
-        {/* Recent Jobs and Phases - Side by Side on Desktop, Stacked on Mobile */}
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 2 }}>
-          <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
+        {/* Recent Jobs and Phases - Responsive Layout */}
+        <Grid container spacing={3} sx={{ mt: 2 }}>
+          <Grid size={{ xs: 12, lg: 6 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -279,18 +324,47 @@ export default function DashboardPage() {
                     recentJobs.map((job) => (
                       <ListItem
                         key={job.id}
-                        secondaryAction={
-                          <Chip
-                            label={job.status.replace('_', ' ')}
-                            color={job.status === 'completed' ? 'success' : 
-                                   job.status === 'in_progress' ? 'warning' : 'default'}
-                            size="small"
-                          />
-                        }
+                        sx={{
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          alignItems: { xs: 'stretch', sm: 'center' },
+                          py: { xs: 2, sm: 1 }
+                        }}
                       >
                         <ListItemText
-                          primary={job.title}
-                          secondary={job.customer}
+                          primary={
+                            <Typography
+                              variant="subtitle2"
+                              sx={{
+                                fontSize: { xs: '0.875rem', sm: '1rem' },
+                                fontWeight: 500,
+                                mb: { xs: 0.5, sm: 0 }
+                              }}
+                            >
+                              {job.title}
+                            </Typography>
+                          }
+                          secondary={
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{
+                                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                              }}
+                            >
+                              {job.customer}
+                            </Typography>
+                          }
+                          sx={{ mb: { xs: 1, sm: 0 } }}
+                        />
+                        <Chip
+                          label={job.status.replace('_', ' ')}
+                          color={job.status === 'completed' ? 'success' : 
+                                 job.status === 'in_progress' ? 'warning' : 'default'}
+                          size="small"
+                          sx={{
+                            alignSelf: { xs: 'flex-start', sm: 'center' },
+                            fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                          }}
                         />
                       </ListItem>
                     ))
@@ -298,9 +372,9 @@ export default function DashboardPage() {
                 </List>
               </CardContent>
             </Card>
-          </Box>
+          </Grid>
 
-          <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
+          <Grid size={{ xs: 12, lg: 6 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -310,74 +384,81 @@ export default function DashboardPage() {
                   <Typography>Loading phases...</Typography>
                 ) : phaseData ? (
                   <Box>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-                      <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
-                        <Typography variant="caption" color="text.secondary">
-                          Underground
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                          <Chip 
-                            label={phaseData.summary?.UG?.COMPLETED || 0} 
-                            color="success" 
-                            size="small" 
-                          />
-                          <Chip 
-                            label={phaseData.summary?.UG?.IN_PROGRESS || 0} 
-                            color="warning" 
-                            size="small" 
-                          />
-                          <Chip 
-                            label={phaseData.summary?.UG?.NOT_STARTED || 0} 
-                            color="default" 
-                            size="small" 
-                          />
-                        </Stack>
-                      </Box>
-                      <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
-                        <Typography variant="caption" color="text.secondary">
-                          Rough-in
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                          <Chip 
-                            label={phaseData.summary?.RI?.COMPLETED || 0} 
-                            color="success" 
-                            size="small" 
-                          />
-                          <Chip 
-                            label={phaseData.summary?.RI?.IN_PROGRESS || 0} 
-                            color="warning" 
-                            size="small" 
-                          />
-                          <Chip 
-                            label={phaseData.summary?.RI?.NOT_STARTED || 0} 
-                            color="default" 
-                            size="small" 
-                          />
-                        </Stack>
-                      </Box>
-                      <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
-                        <Typography variant="caption" color="text.secondary">
-                          Finish
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                          <Chip 
-                            label={phaseData.summary?.FN?.COMPLETED || 0} 
-                            color="success" 
-                            size="small" 
-                          />
-                          <Chip 
-                            label={phaseData.summary?.FN?.IN_PROGRESS || 0} 
-                            color="warning" 
-                            size="small" 
-                          />
-                          <Chip 
-                            label={phaseData.summary?.FN?.NOT_STARTED || 0} 
-                            color="default" 
-                            size="small" 
-                          />
-                        </Stack>
-                      </Box>
-                    </Box>
+                    {/* Phase Summary - Responsive Grid */}
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
+                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                            Underground
+                          </Typography>
+                          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
+                            <Chip 
+                              label={phaseData.summary?.UG?.COMPLETED || 0} 
+                              color="success" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary?.UG?.IN_PROGRESS || 0} 
+                              color="warning" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary?.UG?.NOT_STARTED || 0} 
+                              color="default" 
+                              size="small" 
+                            />
+                          </Stack>
+                        </Paper>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 4 }}>
+                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                            Rough-in
+                          </Typography>
+                          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
+                            <Chip 
+                              label={phaseData.summary?.RI?.COMPLETED || 0} 
+                              color="success" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary?.RI?.IN_PROGRESS || 0} 
+                              color="warning" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary?.RI?.NOT_STARTED || 0} 
+                              color="default" 
+                              size="small" 
+                            />
+                          </Stack>
+                        </Paper>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 4 }}>
+                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                            Finish
+                          </Typography>
+                          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
+                            <Chip 
+                              label={phaseData.summary?.FN?.COMPLETED || 0} 
+                              color="success" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary?.FN?.IN_PROGRESS || 0} 
+                              color="warning" 
+                              size="small" 
+                            />
+                            <Chip 
+                              label={phaseData.summary?.FN?.NOT_STARTED || 0} 
+                              color="default" 
+                              size="small" 
+                            />
+                          </Stack>
+                        </Paper>
+                      </Grid>
+                    </Grid>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                       Overall completion: {phaseData.completionRate || 0}% ({phaseData.completedPhases || 0}/{phaseData.totalPhases || 0} phases)
                     </Typography>
@@ -418,8 +499,8 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-          </Box>
-        </Box>
+          </Grid>
+        </Grid>
       </ResponsiveContainer>
     </ResponsiveLayout>
   )

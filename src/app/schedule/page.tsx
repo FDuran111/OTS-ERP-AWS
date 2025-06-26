@@ -407,36 +407,73 @@ export default function SchedulePage() {
                 </Box>
                 <Grid container spacing={2}>
                   {upcomingReminders.map((reminder) => (
-                    <Grid key={reminder.id} size={{ xs: 12, md: 6 }}>
-                      <Card sx={{ backgroundColor: 'background.default' }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                            <Box sx={{ color: getReminderPriorityColor(reminder.priority) }}>
+                    <Grid key={reminder.id} size={{ xs: 12, sm: 12, md: 6, lg: 4 }}>
+                      <Card sx={{ backgroundColor: 'background.default', height: '100%' }}>
+                        <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            flexDirection: { xs: 'row', sm: 'row' },
+                            alignItems: 'flex-start', 
+                            gap: 2,
+                            mb: 2
+                          }}>
+                            <Box sx={{ 
+                              color: getReminderPriorityColor(reminder.priority),
+                              flexShrink: 0
+                            }}>
                               {getReminderIcon(reminder.type)}
                             </Box>
-                            <Box sx={{ flexGrow: 1 }}>
-                              <Typography variant="subtitle1" fontWeight="medium">
+                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                              <Typography 
+                                variant="subtitle1" 
+                                fontWeight="medium"
+                                sx={{
+                                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                                  lineHeight: 1.3,
+                                  mb: 0.5
+                                }}
+                              >
                                 {reminder.jobNumber} - {reminder.title}
                               </Typography>
-                              <Typography variant="body2" color="text.secondary">
+                              <Typography 
+                                variant="body2" 
+                                color="text.secondary"
+                                sx={{
+                                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                  mb: 1
+                                }}
+                              >
                                 {reminder.customer}
                               </Typography>
-                              <Typography variant="body2" sx={{ mt: 1 }}>
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                  mb: 2
+                                }}
+                              >
                                 Scheduled: {new Date(reminder.scheduledDate).toLocaleDateString()}
                               </Typography>
-                              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                                <Chip
-                                  label={`${reminder.daysUntil} days`}
-                                  size="small"
-                                  color={getReminderPriorityColor(reminder.priority) as any}
-                                />
-                                <Chip
-                                  label={reminder.type.replace('_', ' ')}
-                                  size="small"
-                                  variant="outlined"
-                                />
-                              </Box>
                             </Box>
+                          </Box>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            flexWrap: 'wrap',
+                            gap: 1, 
+                            mt: 'auto'
+                          }}>
+                            <Chip
+                              label={`${reminder.daysUntil} days`}
+                              size="small"
+                              color={getReminderPriorityColor(reminder.priority) as any}
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                            />
+                            <Chip
+                              label={reminder.type.replace('_', ' ')}
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                            />
                           </Box>
                         </CardContent>
                       </Card>

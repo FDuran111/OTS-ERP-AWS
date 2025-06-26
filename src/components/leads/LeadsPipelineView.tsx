@@ -14,6 +14,9 @@ import {
   MenuItem,
   ListItemIcon,
   Divider,
+  useTheme,
+  useMediaQuery,
+  Grid,
 } from '@mui/material'
 import {
   Phone as PhoneIcon,
@@ -435,6 +438,8 @@ export default function LeadsPipelineView({
   onDeleteLead, 
   onUpdateLeadStatus 
 }: LeadsPipelineViewProps) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [cardMenuAnchor, setCardMenuAnchor] = useState<{ [key: string]: HTMLElement | null }>({})
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -538,27 +543,164 @@ export default function LeadsPipelineView({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', minHeight: '70vh', p: 1 }}>
-        {leadStages.map((stage) => {
-          const stageLeads = getLeadsForStage(stage.key)
-          const isOver = overId === stage.key
-          const isDragging = Boolean(activeId)
-          
-          return (
-            <DroppableStageColumn
-              key={stage.key}
-              stage={stage}
-              leads={stageLeads}
-              isOver={isOver}
-              onMenuClick={handleCardMenuClick}
-              menuAnchors={cardMenuAnchor}
-              onMenuClose={handleCardMenuClose}
-              onEdit={handleEditClick}
-              onDelete={handleDeleteClick}
-            />
-          )
-        })}
-      </Box>
+      {isMobile ? (
+        // Mobile: Vertical layout with accordions
+        <Box sx={{ p: 1 }}>
+          {leadStages.map((stage) => {
+            const stageLeads = getLeadsForStage(stage.key)
+            
+            return (
+              <Paper 
+                key={stage.key}
+                sx={{ 
+                  mb: 2, 
+                  p: 2,
+                  border: 1,
+                  borderColor: 'divider'
+                }}
+              >
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  mb: 2
+                }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      color: stage.color,
+                      fontSize: '1rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    {stage.label}
+                  </Typography>
+                  <Chip 
+                    label={stageLeads.length} 
+                    size="small"
+                    sx={{ 
+                      bgcolor: `${stage.color}20`,
+                      color: stage.color
+                    }}
+                  />
+                </Box>
+                
+                <Grid container spacing={2}>
+                  {stageLeads.map((lead) => (
+                    <Grid key={lead.id} size={{ xs: 12 }}>
+                      <Card sx={{ 
+                        border: 1,
+                        borderColor: 'divider',
+                        '&:hover': {
+                          borderColor: stage.color,
+                          boxShadow: 2
+                        }
+                      }}>
+                        <CardContent sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                            <Avatar 
+                              sx={{ 
+                                width: 40, 
+                                height: 40, 
+                                bgcolor: stage.color,
+                                fontSize: '0.875rem'
+                              }}
+                            >
+                              {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
+                            </Avatar>
+                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                              <Typography 
+                                variant="subtitle1" 
+                                sx={{ 
+                                  fontWeight: 600,
+                                  fontSize: '0.875rem',
+                                  mb: 0.5,
+                                  wordBreak: 'break-word'
+                                }}
+                              >
+                                {lead.companyName || `${lead.firstName} ${lead.lastName}`}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ 
+                                  display: 'block',
+                                  fontSize: '0.75rem',
+                                  mb: 1,
+                                  wordBreak: 'break-word'
+                                }}
+                              >
+                                {lead.email}
+                              </Typography>
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                <Chip
+                                  label={lead.source}
+                                  size="small"
+                                  sx={{ 
+                                    fontSize: '0.7rem',
+                                    height: 24
+                                  }}
+                                />
+                                {lead.estimatedValue && (
+                                  <Chip
+                                    label={`$${lead.estimatedValue.toLocaleString()}`}
+                                    size="small"
+                                    color="success"
+                                    sx={{ 
+                                      fontSize: '0.7rem',
+                                      height: 24
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            </Box>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleCardMenuClick(e, lead)}
+                              sx={{ p: 0.5 }}
+                            >
+                              <MoreVertIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Paper>
+            )
+          })}
+        </Box>
+      ) : (
+        // Desktop: Horizontal pipeline layout
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 2, 
+          overflowX: 'auto', 
+          minHeight: '70vh', 
+          p: 1 
+        }}>
+          {leadStages.map((stage) => {
+            const stageLeads = getLeadsForStage(stage.key)
+            const isOver = overId === stage.key
+            const isDragging = Boolean(activeId)
+            
+            return (
+              <DroppableStageColumn
+                key={stage.key}
+                stage={stage}
+                leads={stageLeads}
+                isOver={isOver}
+                onMenuClick={handleCardMenuClick}
+                menuAnchors={cardMenuAnchor}
+                onMenuClose={handleCardMenuClose}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
+              />
+            )
+          })}
+        </Box>
+      )}
 
       {/* Drag Overlay */}
       <DragOverlay>
