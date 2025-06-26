@@ -31,6 +31,8 @@ import {
 import JobMaterialReservations from '@/components/jobs/JobMaterialReservations'
 import JobPhasesManager from '@/components/jobs/JobPhasesManager'
 import MaterialUsageTracker from '@/components/jobs/MaterialUsageTracker'
+import RealTimeJobCosts from '@/components/job-costing/RealTimeJobCosts'
+import JobLaborRateOverrides from '@/components/jobs/JobLaborRateOverrides'
 
 interface Job {
   id: string
@@ -306,7 +308,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             />
             <Tab 
               icon={<ScheduleIcon />} 
-              label="Time Tracking" 
+              label="Real-Time Costs" 
               iconPosition="start"
             />
             <Tab 
@@ -337,21 +339,16 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
-          <Typography variant="h6" gutterBottom>
-            Time Tracking
-          </Typography>
-          <Typography color="text.secondary">
-            Time tracking functionality will be implemented here.
-          </Typography>
+          <RealTimeJobCosts 
+            jobId={job.id}
+            jobNumber={job.jobNumber}
+            autoRefresh={true}
+            refreshInterval={30000}
+          />
         </TabPanel>
 
         <TabPanel value={activeTab} index={4}>
-          <Typography variant="h6" gutterBottom>
-            Billing Information
-          </Typography>
-          <Typography color="text.secondary">
-            Billing and invoicing functionality will be implemented here.
-          </Typography>
+          <JobLaborRateOverrides jobId={job.id} />
         </TabPanel>
       </Container>
     </Box>
