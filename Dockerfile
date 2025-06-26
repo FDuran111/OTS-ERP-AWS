@@ -15,6 +15,8 @@ RUN npm ci
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+# Cache bust for RBAC fixes
+ARG CACHE_BUST=1
 COPY . .
 
 # Environment variables for build
