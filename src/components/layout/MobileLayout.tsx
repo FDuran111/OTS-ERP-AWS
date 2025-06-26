@@ -77,9 +77,9 @@ const navigationItems: NavItem[] = [
     path: '/jobs',
     roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'],
     children: [
-      { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] },
-      { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
-      { title: 'Photos', icon: <PhotoIcon />, path: '/job-photos', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] }
+      { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] },
+      { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories', roles: ['OWNER_ADMIN', 'FOREMAN'] },
+      { title: 'Photos', icon: <PhotoIcon />, path: '/job-photos', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] }
     ]
   },
   {
@@ -113,28 +113,23 @@ const navigationItems: NavItem[] = [
     roles: ['OWNER_ADMIN', 'FOREMAN'], // Only staff can view reports
     children: [
       { title: 'P&L by Job', icon: <ReportsIcon />, path: '/reports/pnl', roles: ['OWNER_ADMIN'] },
-      { title: 'Cost Analysis', icon: <ReportsIcon />, path: '/reports/cost-analysis', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
-      { title: 'Equipment Billing', icon: <ReportsIcon />, path: '/reports/equipment', roles: ['OWNER', 'ADMIN', 'OFFICE'] }
+      { title: 'Cost Analysis', icon: <ReportsIcon />, path: '/reports/cost-analysis', roles: ['OWNER_ADMIN'] },
+      { title: 'Equipment Billing', icon: <ReportsIcon />, path: '/reports/equipment', roles: ['OWNER_ADMIN'] }
     ]
   },
   {
     title: 'Settings',
     icon: <SettingsIcon />,
     path: '/settings',
-    roles: ['OWNER_ADMIN', 'FOREMAN'], // Basic settings for staff
-    children: [
-      { title: 'General', icon: <SettingsIcon />, path: '/settings', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
-      { title: 'QuickBooks', icon: <QuickBooksIcon />, path: '/settings/quickbooks', roles: ['OWNER_ADMIN'] },
-      { title: 'Integrations', icon: <SettingsIcon />, path: '/settings/integrations', roles: ['OWNER_ADMIN'] }
-    ]
+    roles: ['OWNER_ADMIN', 'FOREMAN'] // Basic settings for staff
   }
 ]
 
 const quickActions = [
-  { title: 'Add Job', icon: <JobsIcon />, path: '/jobs/new', color: 'primary' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
-  { title: 'Add Customer', icon: <CustomersIcon />, path: '/customers/new', color: 'secondary' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
-  { title: 'Add Lead', icon: <LeadsIcon />, path: '/leads/new', color: 'success' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
-  { title: 'Optimize Routes', icon: <OptimizeIcon />, path: '/route-optimization', color: 'warning' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] }
+  { title: 'Add Job', icon: <JobsIcon />, path: '/jobs/new', color: 'primary' as const, roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
+  { title: 'Add Customer', icon: <CustomersIcon />, path: '/customers/new', color: 'secondary' as const, roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
+  { title: 'Add Lead', icon: <LeadsIcon />, path: '/leads/new', color: 'success' as const, roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
+  { title: 'Optimize Routes', icon: <OptimizeIcon />, path: '/route-optimization', color: 'warning' as const, roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] }
 ]
 
 export default function MobileLayout({ children }: MobileLayoutProps) {

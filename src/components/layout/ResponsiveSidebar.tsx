@@ -74,9 +74,9 @@ const navigationItems: NavItem[] = [
     path: '/jobs',
     roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'],
     children: [
-      { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] },
-      { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
-      { title: 'Photos', icon: <PhotoIcon />, path: '/photo-gallery', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] }
+      { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] },
+      { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories', roles: ['OWNER_ADMIN', 'FOREMAN'] },
+      { title: 'Photos', icon: <PhotoIcon />, path: '/photo-gallery', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] }
     ]
   },
   {
@@ -121,20 +121,16 @@ const navigationItems: NavItem[] = [
     path: '/reports',
     roles: ['OWNER_ADMIN', 'FOREMAN'],
     children: [
-      { title: 'Overview', icon: <ReportsIcon />, path: '/reports', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
+      { title: 'Overview', icon: <ReportsIcon />, path: '/reports', roles: ['OWNER_ADMIN', 'FOREMAN'] },
       { title: 'Revenue', icon: <ReportsIcon />, path: '/reports/revenue', roles: ['OWNER_ADMIN'] },
-      { title: 'Cost Analysis', icon: <ReportsIcon />, path: '/cost-management', roles: ['OWNER', 'ADMIN', 'OFFICE'] }
+      { title: 'Cost Analysis', icon: <ReportsIcon />, path: '/cost-management', roles: ['OWNER_ADMIN'] }
     ]
   },
   {
     title: 'Settings',
     icon: <SettingsIcon />,
     path: '/settings',
-    roles: ['OWNER_ADMIN', 'FOREMAN'],
-    children: [
-      { title: 'General', icon: <SettingsIcon />, path: '/settings', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
-      { title: 'QuickBooks', icon: <QuickBooksIcon />, path: '/settings/quickbooks', roles: ['OWNER_ADMIN'] }
-    ]
+    roles: ['OWNER_ADMIN', 'FOREMAN']
   }
 ]
 

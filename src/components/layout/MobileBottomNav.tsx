@@ -152,7 +152,7 @@ export default function MobileBottomNav({
       </Paper>
 
       {/* Floating Action Button for Quick Actions */}
-      {hasRole(['OWNER', 'ADMIN', 'OFFICE']) && (
+      {hasRole(['OWNER_ADMIN', 'FOREMAN']) && (
         <Fab
           color="primary"
           className="fixed bottom-20 right-4 z-50"
