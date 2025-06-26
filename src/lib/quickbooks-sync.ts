@@ -104,9 +104,12 @@ export class QuickBooksSync {
     let qbCustomer
     if (customer.quickbooksId) {
       // Update existing customer
-      customerData.Id = customer.quickbooksId
-      customerData.SyncToken = customer.syncVersion
-      qbCustomer = await quickbooksClient.updateCustomer(connection, customerData)
+      const updateData = {
+        ...customerData,
+        Id: customer.quickbooksId,
+        SyncToken: customer.syncVersion
+      }
+      qbCustomer = await quickbooksClient.updateCustomer(connection, updateData)
     } else {
       // Create new customer
       qbCustomer = await quickbooksClient.createCustomer(connection, customerData)
