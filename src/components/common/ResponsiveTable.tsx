@@ -235,8 +235,10 @@ export default function ResponsiveTable({
                     <TableCell
                       key={column.id}
                       align={column.align}
-                      style={{ minWidth: column.minWidth }}
-                      className="font-semibold"
+                      className="font-semibold whitespace-nowrap"
+                      sx={{
+                        minWidth: column.minWidth ? { xs: 'auto', sm: column.minWidth } : 'auto',
+                      }}
                     >
                       {column.label}
                     </TableCell>
@@ -277,11 +279,12 @@ export default function ResponsiveTable({
   return (
     <TableContainer
       component={Paper}
-      className="w-full"
+      className="w-full overflow-x-auto"
       sx={{
         boxShadow: theme.shadows[2],
         border: 1,
         borderColor: 'divider',
+        maxWidth: '100%',
       }}
     >
       <Table stickyHeader={stickyHeader}>
@@ -291,12 +294,12 @@ export default function ResponsiveTable({
               <TableCell
                 key={column.id}
                 align={column.align}
-                style={{ minWidth: column.minWidth }}
-                className="font-semibold bg-gray-50 dark:bg-gray-800"
+                className="font-semibold bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
                 sx={{
                   backgroundColor: 'grey.50',
                   fontWeight: 600,
                   fontSize: '0.875rem',
+                  minWidth: column.minWidth ? { xs: 'auto', sm: column.minWidth } : 'auto',
                 }}
               >
                 {column.label}

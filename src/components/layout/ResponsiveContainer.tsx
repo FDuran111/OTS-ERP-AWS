@@ -53,19 +53,16 @@ export default function ResponsiveContainer({
   return (
     <Box
       className={`
-        w-full h-full flex flex-col
-        ${isMobile ? 'px-2 py-2' : ''}
+        w-full flex flex-col container mx-auto
         ${className}
       `}
       sx={{
         maxWidth: maxWidth === false ? '100%' : 
-                 maxWidth === 'xs' ? '444px' :
-                 maxWidth === 'sm' ? '600px' :
-                 maxWidth === 'md' ? '900px' :
-                 maxWidth === 'lg' ? '1200px' :
-                 maxWidth === 'xl' ? '100%' : '100%',
-        mx: maxWidth === 'xl' || maxWidth === false ? 0 : 'auto',
-        height: '100%',
+                 maxWidth === 'xs' ? '100%' :
+                 maxWidth === 'sm' ? { xs: '100%', sm: '640px' } :
+                 maxWidth === 'md' ? { xs: '100%', md: '768px' } :
+                 maxWidth === 'lg' ? { xs: '100%', lg: '1024px' } :
+                 maxWidth === 'xl' ? { xs: '100%', xl: '1280px' } : '100%',
       }}
     >
       {/* Header Section */}

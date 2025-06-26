@@ -399,7 +399,7 @@ export default function MaterialsPage() {
             backgroundColor: '#d236b8',
           },
           flex: { xs: 1, sm: 'none' },
-          minWidth: { xs: 'auto', sm: '140px' }
+          minWidth: 0
         }}
         size="medium"
       >
@@ -443,7 +443,7 @@ export default function MaterialsPage() {
                 disabled={loading}
                 size={isMobile ? 'small' : 'medium'}
                 sx={{ 
-                  minWidth: { xs: 'auto', sm: '120px' },
+                  minWidth: 0,
                   flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
                   maxWidth: { xs: 'none', sm: '160px' }
                 }}
@@ -456,7 +456,7 @@ export default function MaterialsPage() {
                 onClick={() => setStorageLocationDialogOpen(true)}
                 size={isMobile ? 'small' : 'medium'}
                 sx={{ 
-                  minWidth: { xs: 'auto', sm: '120px' },
+                  minWidth: 0,
                   flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
                   maxWidth: { xs: 'none', sm: '160px' }
                 }}
@@ -469,7 +469,7 @@ export default function MaterialsPage() {
                 onClick={() => setStockHistoryDialogOpen(true)}
                 size={isMobile ? 'small' : 'medium'}
                 sx={{ 
-                  minWidth: { xs: 'auto', sm: '120px' },
+                  minWidth: 0,
                   flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
                   maxWidth: { xs: 'none', sm: '160px' }
                 }}
@@ -482,7 +482,7 @@ export default function MaterialsPage() {
                 onClick={() => setAnalyticsDialogOpen(true)}
                 size={isMobile ? 'small' : 'medium'}
                 sx={{ 
-                  minWidth: { xs: 'auto', sm: '120px' },
+                  minWidth: 0,
                   flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
                   maxWidth: { xs: 'none', sm: '160px' }
                 }}
@@ -495,7 +495,7 @@ export default function MaterialsPage() {
                 onClick={() => setReorderDialogOpen(true)}
                 size={isMobile ? 'small' : 'medium'}
                 sx={{ 
-                  minWidth: { xs: 'auto', sm: '120px' },
+                  minWidth: 0,
                   flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
                   maxWidth: { xs: 'none', sm: '160px' }
                 }}
@@ -508,7 +508,7 @@ export default function MaterialsPage() {
                 onClick={() => setReservationDialogOpen(true)}
                 size={isMobile ? 'small' : 'medium'}
                 sx={{ 
-                  minWidth: { xs: 'auto', sm: '120px' },
+                  minWidth: 0,
                   flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
                   maxWidth: { xs: 'none', sm: '160px' }
                 }}
@@ -778,7 +778,7 @@ export default function MaterialsPage() {
               <CircularProgress />
             </Box>
           ) : (
-            <TableContainer component={Paper}>
+            <TableContainer component={Paper} className="w-full overflow-x-auto">
               <Table>
                 <TableHead>
                   <TableRow>

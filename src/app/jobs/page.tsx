@@ -477,8 +477,8 @@ export default function JobsPage() {
               </Box>
 
               <Collapse in={filtersExpanded}>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                  <Box sx={{ flex: '1 1 calc(25% - 12px)', minWidth: '200px' }}>
+                <Box className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
+                  <Box className="flex-1 min-w-0">
                     <FormControl fullWidth size="small">
                       <InputLabel>Status</InputLabel>
                       <Select
@@ -498,7 +498,7 @@ export default function JobsPage() {
                     </FormControl>
                   </Box>
 
-                  <Box sx={{ flex: '1 1 calc(25% - 12px)', minWidth: '200px' }}>
+                  <Box className="flex-1 min-w-0">
                     <FormControl fullWidth size="small">
                       <InputLabel>Type</InputLabel>
                       <Select
@@ -513,7 +513,7 @@ export default function JobsPage() {
                     </FormControl>
                   </Box>
 
-                  <Box sx={{ flex: '1 1 calc(25% - 12px)', minWidth: '200px' }}>
+                  <Box className="flex-1 min-w-0">
                     <FormControl fullWidth size="small">
                       <InputLabel>Priority</InputLabel>
                       <Select
@@ -529,7 +529,7 @@ export default function JobsPage() {
                     </FormControl>
                   </Box>
 
-                  <Box sx={{ flex: '1 1 calc(25% - 12px)', minWidth: '200px' }}>
+                  <Box className="flex-1 min-w-0">
                     <FormControl fullWidth size="small">
                       <InputLabel>Phase</InputLabel>
                       <Select

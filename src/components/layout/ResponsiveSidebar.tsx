@@ -331,10 +331,11 @@ export default function ResponsiveSidebar({
       }}
       className="transition-all duration-300"
       sx={{
-        width: 256,
+        width: { xs: '80%', sm: 280, md: 256 },
         flexShrink: 0,
         '& .MuiDrawer-paper': {
-          width: 256,
+          width: { xs: '80%', sm: 280, md: 256 },
+          maxWidth: '100vw',
           boxSizing: 'border-box',
           border: 'none',
           boxShadow: isMobile ? theme.shadows[8] : theme.shadows[2],

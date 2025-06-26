@@ -47,7 +47,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   }
 
   return (
-    <Box className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+    <Box className="flex min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden">
       {/* Responsive App Bar - Only shows on mobile */}
       {isMobile && (
         <ResponsiveAppBar
@@ -67,28 +67,17 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
       {/* Main Content Area */}
       <Box
         component="main"
-        className="flex-1 flex flex-col transition-all duration-300 ease-in-out"
+        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out w-full ${
+          isMobile ? 'pt-16 pb-16' : ''
+        } ${!isMobile && sidebarOpen ? 'lg:ml-64' : ''}`}
         sx={{
           minHeight: '100vh',
           backgroundColor: 'background.default',
-          ...(isMobile && {
-            paddingTop: '64px', // Account for mobile app bar
-            paddingBottom: '64px', // Account for bottom navigation
-          }),
-          ...(!isMobile && sidebarOpen && {
-            marginLeft: '256px', // Account for desktop sidebar
-          }),
         }}
       >
         {/* Scrollable Content Container */}
         <Box
-          className="flex-1 overflow-auto"
-          sx={{
-            width: '100%',
-            height: '100%',
-            px: { xs: 1, sm: 2, md: 2, lg: 3 },
-            py: { xs: 1, sm: 2 },
-          }}
+          className="flex-1 w-full overflow-y-auto overflow-x-hidden px-2 sm:px-4 md:px-6 lg:px-8 py-2 sm:py-4"
         >
           {children}
         </Box>
