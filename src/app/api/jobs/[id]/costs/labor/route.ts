@@ -14,14 +14,15 @@ const laborCostSchema = z.object({
 // POST add labor cost entry
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     const data = laborCostSchema.parse(body)
 
     // Verify job exists
-    const jobCheck = await query('SELECT id FROM "Job" WHERE id = $1', [params.id])
+    const jobCheck = await query('SELECT id FROM "Job" WHERE id = $1', [resolvedParams.id])
     if (jobCheck.rows.length === 0) {
       return NextResponse.json(
         { error: 'Job not found' },
@@ -67,7 +68,7 @@ export async function POST(
       // First check for job-specific rate override
       const effectiveRateResult = await query(`
         SELECT get_effective_labor_rate($1, $2) as effective_rate
-      `, [params.id, data.userId])
+      `, [resolvedParams.id, data.userId])
 
       if (effectiveRateResult.rows.length > 0 && effectiveRateResult.rows[0].effective_rate) {
         hourlyRate = parseFloat(effectiveRateResult.rows[0].effective_rate)
@@ -116,7 +117,7 @@ export async function POST(
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `, [
-      params.id,
+      resolvedParams.id,
       data.userId,
       laborRateId,
       skillLevel,
@@ -164,9 +165,10 @@ export async function POST(
 // GET labor costs for job
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const result = await query(`
       SELECT 
         jlc.*,
@@ -177,7 +179,7 @@ export async function GET(
       LEFT JOIN "LaborRate" lr ON jlc."laborRateId" = lr.id
       WHERE jlc."jobId" = $1
       ORDER BY jlc."workDate" DESC, jlc."createdAt" DESC
-    `, [params.id])
+    `, [resolvedParams.id])
 
     const laborCosts = result.rows.map(row => ({
       id: row.id,
