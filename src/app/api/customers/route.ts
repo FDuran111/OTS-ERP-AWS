@@ -5,6 +5,8 @@ import { customerSchema } from '@/lib/validation'
 import { searchCustomers } from '@/lib/search'
 import { withRBAC } from '@/lib/rbac-middleware'
 
+// Fixed RBAC configuration to use requiredRoles instead of roles
+
 // GET all customers with search and pagination
 export const GET = withRBAC({
   requiredRoles: ['OWNER', 'ADMIN', 'OFFICE']
