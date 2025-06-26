@@ -90,10 +90,10 @@ export function withRBAC(config: RBACConfig = {}) {
           )
         }
 
-        // Owner bypass (enabled by default)
+        // Owner/Admin bypass (enabled by default)
         const allowOwner = config.allowOwner !== false
-        if (allowOwner && user.role === 'OWNER') {
-          // Owner can access everything, skip other checks
+        if (allowOwner && user.role === 'OWNER_ADMIN') {
+          // Owner/Admin can access everything, skip other checks
         }
 
         // Add user to request and call handler
@@ -124,10 +124,10 @@ export const requireResourceAccess = (resource: string, action: string) =>
   withRBAC({ resource, action })
 
 // Pre-defined middleware for common access patterns
-export const requireOwnerOrAdmin = withRBAC({ requiredRoles: ['OWNER', 'ADMIN'] })
-export const requireAdminOrOffice = withRBAC({ requiredRoles: ['ADMIN', 'OFFICE'] })
-export const requireStaffAccess = withRBAC({ requiredRoles: ['OWNER', 'ADMIN', 'OFFICE'] })
-export const requireAnyRole = withRBAC({ requiredRoles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] })
+export const requireOwnerOrAdmin = withRBAC({ requiredRoles: ['OWNER_ADMIN'] })
+export const requireAdminOrOffice = withRBAC({ requiredRoles: ['OWNER_ADMIN', 'FOREMAN'] })
+export const requireStaffAccess = withRBAC({ requiredRoles: ['OWNER_ADMIN', 'FOREMAN'] })
+export const requireAnyRole = withRBAC({ requiredRoles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] })
 
 // Specific resource access middleware
 export const requireJobAccess = withRBAC({ resource: 'jobs', action: 'read' })

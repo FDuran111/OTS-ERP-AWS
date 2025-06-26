@@ -285,7 +285,7 @@ const EditPurchaseOrderDialog: React.FC<EditPurchaseOrderDialogProps> = ({
   
   const canApprove = purchaseOrder.status === 'PENDING_APPROVAL' && 
                     purchaseOrder.createdBy !== currentUser.id &&
-                    ['MANAGER', 'ADMIN', 'OWNER'].includes(currentUser.role)
+                    ['FOREMAN', 'OWNER_ADMIN'].includes(currentUser.role)
   
   const canSubmitForApproval = purchaseOrder.status === 'DRAFT' && 
                               purchaseOrder.createdBy === currentUser.id

@@ -9,7 +9,7 @@ import { withRBAC } from '@/lib/rbac-middleware'
 
 // GET all customers with search and pagination
 export const GET = withRBAC({
-  requiredRoles: ['OWNER', 'ADMIN', 'OFFICE']
+  requiredRoles: ['OWNER_ADMIN', 'FOREMAN']
 })(withErrorHandler(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url)
   
@@ -65,7 +65,7 @@ export const GET = withRBAC({
 
 // POST create a new customer
 export const POST = withRBAC({
-  requiredRoles: ['OWNER', 'ADMIN', 'OFFICE']
+  requiredRoles: ['OWNER_ADMIN', 'FOREMAN']
 })(withErrorHandler(async (request: NextRequest) => {
   const body = await request.json()
   const data = customerSchema.parse(body)

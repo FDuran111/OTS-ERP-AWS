@@ -47,28 +47,28 @@ const quickActions: QuickAction[] = [
     icon: <JobsIcon />,
     path: '/jobs/new',
     color: 'primary',
-    roles: ['OWNER', 'ADMIN', 'OFFICE']
+    roles: ['OWNER_ADMIN', 'FOREMAN']
   },
   {
     title: 'New Customer',
     icon: <CustomersIcon />,
     path: '/customers/new',
     color: 'secondary',
-    roles: ['OWNER', 'ADMIN', 'OFFICE']
+    roles: ['OWNER_ADMIN', 'FOREMAN']
   },
   {
     title: 'New Lead',
     icon: <LeadsIcon />,
     path: '/leads/new',
     color: 'success',
-    roles: ['OWNER', 'ADMIN', 'OFFICE']
+    roles: ['OWNER_ADMIN', 'FOREMAN']
   },
   {
     title: 'Material Order',
     icon: <MaterialsIcon />,
     path: '/purchase-orders/new',
     color: 'warning',
-    roles: ['OWNER', 'ADMIN', 'OFFICE']
+    roles: ['OWNER_ADMIN', 'FOREMAN']
   }
 ]
 

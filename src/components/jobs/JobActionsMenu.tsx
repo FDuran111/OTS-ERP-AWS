@@ -107,7 +107,7 @@ export default function JobActionsMenu({ job, onEdit, onDelete, onView }: JobAct
           </ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        {hasRole(['OWNER', 'ADMIN', 'OFFICE']) && (
+        {hasRole(['OWNER_ADMIN', 'FOREMAN']) && (
           <MenuItem onClick={handleEdit}>
             <ListItemIcon>
               <EditIcon fontSize="small" />
@@ -115,7 +115,7 @@ export default function JobActionsMenu({ job, onEdit, onDelete, onView }: JobAct
             <ListItemText>Edit Job</ListItemText>
           </MenuItem>
         )}
-        {hasRole(['OWNER', 'ADMIN']) && (
+        {hasRole(['OWNER_ADMIN']) && (
           <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
             <ListItemIcon>
               <DeleteIcon fontSize="small" color="error" />

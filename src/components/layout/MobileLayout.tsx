@@ -69,13 +69,13 @@ const navigationItems: NavItem[] = [
     title: 'Dashboard',
     icon: <DashboardIcon />,
     path: '/dashboard',
-    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER']
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
   },
   {
     title: 'Jobs',
     icon: <JobsIcon />,
     path: '/jobs',
-    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'],
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'],
     children: [
       { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] },
       { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
@@ -86,33 +86,33 @@ const navigationItems: NavItem[] = [
     title: 'Customers',
     icon: <CustomersIcon />,
     path: '/customers',
-    roles: ['OWNER', 'ADMIN', 'OFFICE'] // Only staff can manage customers
+    roles: ['OWNER_ADMIN', 'FOREMAN'] // Only staff can manage customers
   },
   {
     title: 'Leads',
     icon: <LeadsIcon />,
     path: '/leads',
-    roles: ['OWNER', 'ADMIN', 'OFFICE'] // Only staff can manage leads
+    roles: ['OWNER_ADMIN', 'FOREMAN'] // Only staff can manage leads
   },
   {
     title: 'Materials',
     icon: <MaterialsIcon />,
     path: '/materials',
-    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] // Technicians can view for logging usage
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] // Technicians can view for logging usage
   },
   {
     title: 'Routes',
     icon: <RouteIcon />,
     path: '/route-optimization',
-    roles: ['OWNER', 'ADMIN', 'OFFICE'] // Only staff can access route optimization
+    roles: ['OWNER_ADMIN', 'FOREMAN'] // Only staff can access route optimization
   },
   {
     title: 'Reports',
     icon: <ReportsIcon />,
     path: '/reports',
-    roles: ['OWNER', 'ADMIN', 'OFFICE'], // Only staff can view reports
+    roles: ['OWNER_ADMIN', 'FOREMAN'], // Only staff can view reports
     children: [
-      { title: 'P&L by Job', icon: <ReportsIcon />, path: '/reports/pnl', roles: ['OWNER', 'ADMIN'] },
+      { title: 'P&L by Job', icon: <ReportsIcon />, path: '/reports/pnl', roles: ['OWNER_ADMIN'] },
       { title: 'Cost Analysis', icon: <ReportsIcon />, path: '/reports/cost-analysis', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
       { title: 'Equipment Billing', icon: <ReportsIcon />, path: '/reports/equipment', roles: ['OWNER', 'ADMIN', 'OFFICE'] }
     ]
@@ -121,11 +121,11 @@ const navigationItems: NavItem[] = [
     title: 'Settings',
     icon: <SettingsIcon />,
     path: '/settings',
-    roles: ['OWNER', 'ADMIN', 'OFFICE'], // Basic settings for staff
+    roles: ['OWNER_ADMIN', 'FOREMAN'], // Basic settings for staff
     children: [
       { title: 'General', icon: <SettingsIcon />, path: '/settings', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
-      { title: 'QuickBooks', icon: <QuickBooksIcon />, path: '/settings/quickbooks', roles: ['OWNER', 'ADMIN'] },
-      { title: 'Integrations', icon: <SettingsIcon />, path: '/settings/integrations', roles: ['OWNER', 'ADMIN'] }
+      { title: 'QuickBooks', icon: <QuickBooksIcon />, path: '/settings/quickbooks', roles: ['OWNER_ADMIN'] },
+      { title: 'Integrations', icon: <SettingsIcon />, path: '/settings/integrations', roles: ['OWNER_ADMIN'] }
     ]
   }
 ]

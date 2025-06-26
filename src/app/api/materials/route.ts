@@ -21,7 +21,7 @@ const createMaterialSchema = z.object({
 
 // GET all materials
 export const GET = withRBAC({
-  requiredRoles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN']
+  requiredRoles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
 })(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
@@ -127,7 +127,7 @@ export const GET = withRBAC({
 
 // POST create a new material
 export const POST = withRBAC({
-  requiredRoles: ['OWNER', 'ADMIN', 'OFFICE']
+  requiredRoles: ['OWNER_ADMIN', 'FOREMAN']
 })(async (request: NextRequest) => {
   try {
     const body = await request.json()

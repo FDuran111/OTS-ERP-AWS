@@ -49,15 +49,15 @@ interface DashboardShellProps {
 }
 
 const menuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] as UserRole[] },
-  { text: 'Jobs', icon: WorkIcon, path: '/jobs', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] as UserRole[] },
-  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] as UserRole[] },
-  { text: 'Time Tracking', icon: TimeIcon, path: '/time', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] as UserRole[] },
-  { text: 'Customers', icon: PeopleIcon, path: '/customers', roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
-  { text: 'Materials', icon: InventoryIcon, path: '/materials', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] as UserRole[] },
-  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing', roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
-  { text: 'Reports', icon: AssessmentIcon, path: '/reports', roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
-  { text: 'Settings', icon: SettingsIcon, path: '/settings', roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
+  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
+  { text: 'Jobs', icon: WorkIcon, path: '/jobs', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
+  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
+  { text: 'Time Tracking', icon: TimeIcon, path: '/time', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
+  { text: 'Customers', icon: PeopleIcon, path: '/customers', roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
+  { text: 'Materials', icon: InventoryIcon, path: '/materials', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
+  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing', roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
+  { text: 'Reports', icon: AssessmentIcon, path: '/reports', roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
+  { text: 'Settings', icon: SettingsIcon, path: '/settings', roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
 ]
 
 export function DashboardShell({ children, title = 'Dashboard' }: DashboardShellProps) {

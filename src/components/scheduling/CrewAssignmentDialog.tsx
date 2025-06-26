@@ -171,9 +171,9 @@ export default function CrewAssignmentDialog({
 
   const getRoleColor = (role: string) => {
     switch (role.toUpperCase()) {
-      case 'ADMIN': return 'primary'
-      case 'FIELD_CREW': return 'info'
-      case 'OFFICE': return 'warning'
+      case 'OWNER_ADMIN': return 'primary'
+      case 'EMPLOYEE': return 'info'
+      case 'FOREMAN': return 'warning'
       default: return 'default'
     }
   }

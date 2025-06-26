@@ -95,7 +95,7 @@ export default function CustomerActionsMenu({ customer, onEdit, onDelete, onView
           </ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        {hasRole(['OWNER', 'ADMIN', 'OFFICE']) && (
+        {hasRole(['OWNER_ADMIN', 'FOREMAN']) && (
           <MenuItem onClick={handleEdit}>
             <ListItemIcon>
               <EditIcon fontSize="small" />
@@ -103,7 +103,7 @@ export default function CustomerActionsMenu({ customer, onEdit, onDelete, onView
             <ListItemText>Edit Customer</ListItemText>
           </MenuItem>
         )}
-        {hasRole(['OWNER', 'ADMIN']) && (
+        {hasRole(['OWNER_ADMIN']) && (
           <MenuItem 
             onClick={handleDelete} 
             sx={{ color: 'error.main' }}

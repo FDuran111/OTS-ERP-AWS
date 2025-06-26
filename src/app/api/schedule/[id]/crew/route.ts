@@ -92,7 +92,7 @@ export async function PUT(
             status = 'ASSIGNED',
             "assignedAt" = NOW(),
             "updatedAt" = NOW()
-        `, [id, userId, jobId, 'TECHNICIAN', 'ASSIGNED'])
+        `, [id, userId, jobId, 'EMPLOYEE', 'ASSIGNED'])
       }
 
       await query('COMMIT')

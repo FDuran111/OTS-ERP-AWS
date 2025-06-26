@@ -92,7 +92,7 @@ export function ProtectedPage({
 // Convenience wrappers for common access patterns
 export function OwnerOnlyPage({ children, ...props }: Omit<ProtectedPageProps, 'requiredRoles'>) {
   return (
-    <ProtectedPage requiredRoles="OWNER" {...props}>
+    <ProtectedPage requiredRoles="OWNER_ADMIN" {...props}>
       {children}
     </ProtectedPage>
   )
@@ -100,7 +100,7 @@ export function OwnerOnlyPage({ children, ...props }: Omit<ProtectedPageProps, '
 
 export function AdminPage({ children, ...props }: Omit<ProtectedPageProps, 'requiredRoles'>) {
   return (
-    <ProtectedPage requiredRoles={['OWNER', 'ADMIN']} {...props}>
+    <ProtectedPage requiredRoles={['OWNER_ADMIN']} {...props}>
       {children}
     </ProtectedPage>
   )
@@ -108,7 +108,7 @@ export function AdminPage({ children, ...props }: Omit<ProtectedPageProps, 'requ
 
 export function StaffPage({ children, ...props }: Omit<ProtectedPageProps, 'requiredRoles'>) {
   return (
-    <ProtectedPage requiredRoles={['OWNER', 'ADMIN', 'OFFICE']} {...props}>
+    <ProtectedPage requiredRoles={['OWNER_ADMIN', 'FOREMAN']} {...props}>
       {children}
     </ProtectedPage>
   )
@@ -116,7 +116,7 @@ export function StaffPage({ children, ...props }: Omit<ProtectedPageProps, 'requ
 
 export function AuthenticatedPage({ children, ...props }: Omit<ProtectedPageProps, 'requiredRoles'>) {
   return (
-    <ProtectedPage requiredRoles={['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER']} {...props}>
+    <ProtectedPage requiredRoles={['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']} {...props}>
       {children}
     </ProtectedPage>
   )

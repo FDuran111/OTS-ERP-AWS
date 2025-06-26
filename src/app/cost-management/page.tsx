@@ -300,9 +300,9 @@ export default function CostManagementPage() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'ADMIN': return 'error'
-      case 'FIELD_CREW': return 'primary'
-      case 'OFFICE': return 'secondary'
+      case 'OWNER_ADMIN': return 'error'
+      case 'EMPLOYEE': return 'primary'
+      case 'FOREMAN': return 'secondary'
       default: return 'default'
     }
   }

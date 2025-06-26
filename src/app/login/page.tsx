@@ -243,13 +243,7 @@ export default function LoginPage() {
 
           <Box sx={{ mt: 4, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary">
-              Test Accounts:
-            </Typography>
-            <Typography variant="caption" display="block" color="text.secondary">
-              Admin: tim@ortmeier.com / admin123
-            </Typography>
-            <Typography variant="caption" display="block" color="text.secondary">
-              Office: rachel@ortmeier.com / office123
+              Contact your administrator for login credentials
             </Typography>
           </Box>
         </CardContent>

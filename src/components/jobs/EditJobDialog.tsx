@@ -172,7 +172,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
       if (response.ok) {
         const data = await response.json()
         const fieldUsers = data.filter((user: User) => 
-          user.role === 'FIELD_CREW' || user.role === 'ADMIN'
+          user.role === 'EMPLOYEE' || user.role === 'OWNER_ADMIN' || user.role === 'FOREMAN'
         )
         setUsers(fieldUsers)
       }

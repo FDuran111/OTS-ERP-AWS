@@ -47,25 +47,25 @@ const bottomNavItems: BottomNavItem[] = [
     label: 'Dashboard',
     icon: <DashboardIcon />,
     path: '/dashboard',
-    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER']
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
   },
   {
     label: 'Jobs',
     icon: <JobsIcon />,
     path: '/jobs',
-    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER']
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
   },
   {
     label: 'Schedule',
     icon: <ScheduleIcon />,
     path: '/schedule',
-    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN']
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
   },
   {
     label: 'Customers',
     icon: <CustomersIcon />,
     path: '/customers',
-    roles: ['OWNER', 'ADMIN', 'OFFICE']
+    roles: ['OWNER_ADMIN', 'FOREMAN']
   }
 ]
 

@@ -258,7 +258,7 @@ export default function EquipmentBillingPage() {
       if (!response.ok) throw new Error('Failed to fetch users')
       
       const data = await response.json()
-      setUsers(data.filter((u: User) => u.role === 'FIELD_CREW' || u.role === 'ADMIN'))
+      setUsers(data.filter((u: User) => u.role === 'EMPLOYEE' || u.role === 'OWNER_ADMIN'))
     } catch (error) {
       console.error('Error fetching users:', error)
     }

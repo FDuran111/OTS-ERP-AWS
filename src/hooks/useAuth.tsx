@@ -38,12 +38,12 @@ export function useRole() {
     hasRole: contextHasRole,
     hasPermission: contextHasPermission,
     canAccess,
-    isOwner: user?.role === 'OWNER',
-    isAdmin: user?.role === 'ADMIN',
-    isOffice: user?.role === 'OFFICE',
-    isTechnician: user?.role === 'TECHNICIAN',
-    isViewer: user?.role === 'VIEWER',
-    isStaff: user ? hasRole(user.role, ['OWNER', 'ADMIN', 'OFFICE']) : false,
+    isOwner: user?.role === 'OWNER_ADMIN',
+    isAdmin: user?.role === 'OWNER_ADMIN',
+    isOffice: user?.role === 'FOREMAN',
+    isTechnician: user?.role === 'EMPLOYEE',
+    isViewer: user?.role === 'EMPLOYEE',
+    isStaff: user ? hasRole(user.role, ['OWNER_ADMIN', 'FOREMAN']) : false,
     canManageUsers: user ? hasPermission(user.role, 'users.manage') : false,
     canManageJobs: user ? canAccessResource(user.role, 'jobs', 'manage') : false,
     canManageInvoices: user ? canAccessResource(user.role, 'invoices', 'manage') : false,
@@ -288,7 +288,7 @@ export function usePermissions() {
   }
 
   return {
-    canViewDashboard: hasRole(user.role, ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER']),
+    canViewDashboard: hasRole(user.role, ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']),
     canManageJobs: canAccessResource(user.role, 'jobs', 'manage'),
     canManageInvoices: canAccessResource(user.role, 'invoices', 'manage'),
     canManageCustomers: canAccessResource(user.role, 'customers', 'manage'),

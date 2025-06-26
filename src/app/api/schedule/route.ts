@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
             INSERT INTO "CrewAssignment" (
               "scheduleId", "userId", "jobId", role
             ) VALUES ($1, $2, $3, $4)
-          `, [schedule.id, userId, data.jobId, 'TECHNICIAN'])
+          `, [schedule.id, userId, data.jobId, 'EMPLOYEE'])
         }
       }
 

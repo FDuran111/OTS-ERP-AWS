@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
-export type UserRole = 'OWNER' | 'ADMIN' | 'OFFICE' | 'TECHNICIAN' | 'VIEWER'
+export type UserRole = 'OWNER_ADMIN' | 'FOREMAN' | 'EMPLOYEE'
 
 export interface UserPayload {
   id: string
@@ -14,36 +14,26 @@ export interface UserPayload {
 
 // Role hierarchy for permission checking (higher roles inherit lower role permissions)
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
-  'OWNER': 100,    // Full control, system settings, impersonation, audit logs
-  'ADMIN': 80,     // Full operational control (jobs, invoices, rates, scheduling, materials)
-  'OFFICE': 60,    // Customer mgmt, billing, scheduling, job creation/editing, document uploads
-  'TECHNICIAN': 40, // View assigned jobs, submit time, add jobsite notes/materials
-  'VIEWER': 20     // Read-only access to jobs, notes, documents
+  'OWNER_ADMIN': 100,  // Full control of everything - complete system access
+  'FOREMAN': 60,       // Manage jobs, crews, schedules, materials, time tracking
+  'EMPLOYEE': 40       // View assigned work, log time, add notes, basic access
 }
 
 // Resource permissions mapping
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
-  'OWNER': [
-    'system_settings.manage', 'users.manage', 'audit_logs.read',
-    'impersonation.use', '*'  // Owner can do everything
+  'OWNER_ADMIN': [
+    '*'  // Owner/Admin has complete control of everything
   ],
-  'ADMIN': [
-    'jobs.manage', 'invoices.manage', 'customers.manage', 'materials.manage',
-    'scheduling.manage', 'labor_rates.manage', 'equipment.manage', 'reports.read',
-    'purchase_orders.manage', 'time_tracking.manage', 'documents.manage'
+  'FOREMAN': [
+    'jobs.manage', 'scheduling.manage', 'time_tracking.manage', 
+    'materials.manage', 'equipment.manage', 'documents.manage',
+    'reports.read', 'customers.read', 'invoices.read',
+    'job_notes.create', 'job_notes.read', 'crew.manage'
   ],
-  'OFFICE': [
-    'customers.manage', 'jobs.create', 'jobs.edit', 'jobs.read',
-    'invoices.create', 'invoices.edit', 'invoices.read',
-    'scheduling.manage', 'documents.upload', 'documents.read',
-    'materials.read', 'labor_rates.read', 'reports.read'
-  ],
-  'TECHNICIAN': [
+  'EMPLOYEE': [
     'jobs.read_assigned', 'time_tracking.manage_own', 'materials.log_usage',
-    'job_notes.create', 'job_notes.read', 'documents.upload', 'documents.read'
-  ],
-  'VIEWER': [
-    'jobs.read', 'documents.read', 'job_notes.read', 'materials.read'
+    'job_notes.create', 'job_notes.read', 'documents.upload', 'documents.read',
+    'schedule.view_own'
   ]
 }
 
@@ -99,22 +89,18 @@ export function canAccessResource(userRole: UserRole, resource: string, action: 
 
 export function getRoleDisplayName(role: UserRole): string {
   switch (role) {
-    case 'OWNER': return 'Owner'
-    case 'ADMIN': return 'Administrator'
-    case 'OFFICE': return 'Office Staff'
-    case 'TECHNICIAN': return 'Technician'
-    case 'VIEWER': return 'Viewer'
+    case 'OWNER_ADMIN': return 'Owner/Admin'
+    case 'FOREMAN': return 'Foreman'
+    case 'EMPLOYEE': return 'Employee'
     default: return role
   }
 }
 
 export function getRoleDescription(role: UserRole): string {
   switch (role) {
-    case 'OWNER': return 'Full control, including system settings, impersonation, and audit logs'
-    case 'ADMIN': return 'Full operational control (jobs, invoices, rates, scheduling, materials)'
-    case 'OFFICE': return 'Customer management, billing, scheduling, job creation/editing, document uploads'
-    case 'TECHNICIAN': return 'View assigned jobs, submit time, add jobsite notes/materials'
-    case 'VIEWER': return 'Read-only access to jobs, notes, documents'
+    case 'OWNER_ADMIN': return 'Complete control of the entire system - all features and settings'
+    case 'FOREMAN': return 'Manage jobs, crews, schedules, materials, and time tracking'
+    case 'EMPLOYEE': return 'View assigned work, log time, add notes, and basic access'
     default: return 'Unknown role'
   }
 }
@@ -127,8 +113,8 @@ export function checkResourceAccess(
   resourceOwnerId?: string, 
   currentUserId?: string
 ): boolean {
-  // Owner can do everything
-  if (userRole === 'OWNER') {
+  // Owner/Admin can do everything
+  if (userRole === 'OWNER_ADMIN') {
     return true
   }
   
@@ -144,8 +130,8 @@ export function checkResourceAccess(
       return true
     }
     
-    // Technicians can only access their own time entries and assigned jobs
-    if (userRole === 'TECHNICIAN' && action !== 'read') {
+    // Employees can only access their own time entries and assigned jobs
+    if (userRole === 'EMPLOYEE' && action !== 'read') {
       return resourceOwnerId === currentUserId
     }
   }

@@ -16,7 +16,7 @@ export function OwnerOnly({
   fallback?: React.ReactNode
 }) {
   return (
-    <RoleGuard roles="OWNER" fallback={fallback}>
+    <RoleGuard roles="OWNER_ADMIN" fallback={fallback}>
       {children}
     </RoleGuard>
   )
@@ -31,7 +31,7 @@ export function AdminOrOwner({
   fallback?: React.ReactNode
 }) {
   return (
-    <RoleGuard roles={['OWNER', 'ADMIN']} fallback={fallback}>
+    <RoleGuard roles={['OWNER_ADMIN']} fallback={fallback}>
       {children}
     </RoleGuard>
   )
@@ -46,7 +46,7 @@ export function StaffOnly({
   fallback?: React.ReactNode
 }) {
   return (
-    <RoleGuard roles={['OWNER', 'ADMIN', 'OFFICE']} fallback={fallback}>
+    <RoleGuard roles={['OWNER_ADMIN', 'FOREMAN']} fallback={fallback}>
       {children}
     </RoleGuard>
   )
@@ -61,7 +61,7 @@ export function AuthenticatedOnly({
   fallback?: React.ReactNode
 }) {
   return (
-    <RoleGuard roles={['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER']} fallback={fallback}>
+    <RoleGuard roles={['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']} fallback={fallback}>
       {children}
     </RoleGuard>
   )
@@ -222,22 +222,18 @@ export function AuthLoadingWrapper({ children }: { children: React.ReactNode }) 
 export function RoleBadge({ role, className = '' }: { role: UserRole; className?: string }) {
   const getRoleColor = (role: UserRole) => {
     switch (role) {
-      case 'OWNER': return 'bg-red-100 text-red-800 border-red-200'
-      case 'ADMIN': return 'bg-purple-100 text-purple-800 border-purple-200'
-      case 'OFFICE': return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'TECHNICIAN': return 'bg-green-100 text-green-800 border-green-200'
-      case 'VIEWER': return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'OWNER_ADMIN': return 'bg-red-100 text-red-800 border-red-200'
+      case 'FOREMAN': return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'EMPLOYEE': return 'bg-green-100 text-green-800 border-green-200'
       default: return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
 
   const getRoleDisplayName = (role: UserRole) => {
     switch (role) {
-      case 'OWNER': return 'Owner'
-      case 'ADMIN': return 'Admin'
-      case 'OFFICE': return 'Office'
-      case 'TECHNICIAN': return 'Tech'
-      case 'VIEWER': return 'Viewer'
+      case 'OWNER_ADMIN': return 'Owner/Admin'
+      case 'FOREMAN': return 'Foreman'
+      case 'EMPLOYEE': return 'Employee'
       default: return role
     }
   }

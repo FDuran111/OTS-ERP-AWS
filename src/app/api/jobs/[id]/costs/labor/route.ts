@@ -50,9 +50,11 @@ export async function POST(
           skillLevel = 'APPRENTICE'
           break
         case 'FIELD_CREW':
+        case 'EMPLOYEE':
           skillLevel = 'JOURNEYMAN'
           break
-        case 'ADMIN':
+        case 'OWNER_ADMIN':
+        case 'FOREMAN':
           skillLevel = 'FOREMAN'
           break
         default:

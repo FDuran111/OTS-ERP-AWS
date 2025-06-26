@@ -17,17 +17,20 @@ export async function GET(request: NextRequest) {
         // Map common role names to actual enum values
         switch (role) {
           case 'TECHNICIAN':
-          case 'FOREMAN':
           case 'APPRENTICE':
           case 'HELPER':
           case 'FIELD':
-            return 'FIELD_CREW'
+          case 'FIELD_CREW':
+          case 'VIEWER':
+            return 'EMPLOYEE'
           case 'ADMIN':
           case 'MANAGER':
-            return 'ADMIN'
+          case 'OWNER':
+            return 'OWNER_ADMIN'
           case 'OFFICE':
           case 'DISPATCH':
-            return 'OFFICE'
+          case 'FOREMAN':
+            return 'FOREMAN'
           default:
             return role
         }

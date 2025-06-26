@@ -30,35 +30,35 @@ const navigationItems = [
     icon: <HomeIcon />,
     value: '/dashboard',
     paths: ['/dashboard', '/'],
-    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] as UserRole[]
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[]
   },
   {
     label: 'Jobs',
     icon: <JobsIcon />,
     value: '/jobs',
     paths: ['/jobs'],
-    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] as UserRole[]
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[]
   },
   {
     label: 'Customers',
     icon: <CustomersIcon />,
     value: '/customers',
     paths: ['/customers'],
-    roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] // Only staff can manage customers
+    roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] // Only staff can manage customers
   },
   {
     label: 'Routes',
     icon: <RouteIcon />,
     value: '/route-optimization',
     paths: ['/route-optimization'],
-    roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] // Only staff can access route optimization
+    roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] // Only staff can access route optimization
   },
   {
     label: 'Menu',
     icon: <MenuIcon />,
     value: 'menu',
     paths: [],
-    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] as UserRole[] // Everyone can access menu
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] // Everyone can access menu
   }
 ]
 
