@@ -55,9 +55,11 @@ export async function POST(request: NextRequest) {
 
     // Determine if we should use secure cookies
     // Only use secure if we're actually serving over HTTPS
-    const isSecure = request.headers.get('x-forwarded-proto') === 'https' || 
+    const isProduction = process.env.NODE_ENV === 'production'
+    const isLocalhost = request.headers.get('host')?.includes('localhost') || request.headers.get('host')?.includes('127.0.0.1')
+    const isSecure = !isLocalhost && (request.headers.get('x-forwarded-proto') === 'https' || 
                      request.url.startsWith('https://') ||
-                     (process.env.NODE_ENV === 'production' && process.env.FORCE_HTTPS === 'true')
+                     (isProduction && process.env.FORCE_HTTPS === 'true'))
 
     // Set HTTP-only cookie
     response.cookies.set('auth-token', token, {
@@ -69,10 +71,12 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('Login successful for:', user.email)
-    console.log('Cookie secure setting:', isSecure)
-    console.log('Request protocol headers:', {
-      'x-forwarded-proto': request.headers.get('x-forwarded-proto'),
-      'x-forwarded-for': request.headers.get('x-forwarded-for'),
+    console.log('Cookie settings:', {
+      secure: isSecure,
+      isProduction,
+      isLocalhost,
+      host: request.headers.get('host'),
+      proto: request.headers.get('x-forwarded-proto'),
       url: request.url
     })
 

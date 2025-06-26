@@ -108,13 +108,37 @@ export default function DashboardPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (!storedUser) {
-      router.push('/login')
-      return
+    const verifyAuth = async () => {
+      // First check localStorage
+      const storedUser = localStorage.getItem('user')
+      if (!storedUser) {
+        console.log('No user in localStorage, redirecting to login')
+        router.push('/login')
+        return
+      }
+      
+      // Verify authentication with server
+      try {
+        const response = await fetch('/api/auth/me')
+        if (!response.ok) {
+          console.log('Auth verification failed, redirecting to login')
+          localStorage.removeItem('user')
+          router.push('/login')
+          return
+        }
+        
+        const userData = await response.json()
+        setUser(userData)
+        localStorage.setItem('user', JSON.stringify(userData))
+        fetchDashboardData()
+      } catch (error) {
+        console.error('Auth check error:', error)
+        localStorage.removeItem('user')
+        router.push('/login')
+      }
     }
-    setUser(JSON.parse(storedUser))
-    fetchDashboardData()
+    
+    verifyAuth()
   }, [router])
 
   const fetchDashboardData = async () => {

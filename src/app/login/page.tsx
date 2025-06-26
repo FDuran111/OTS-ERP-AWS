@@ -58,29 +58,13 @@ export default function LoginPage() {
       console.log('Response headers:', response.headers)
       
       // Wait briefly for cookie to be set
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, 100))
       
-      // Check if auth debug endpoint works after login
-      try {
-        const debugResponse = await fetch('/api/auth/debug')
-        const debugData = await debugResponse.json()
-        console.log('Auth debug after login:', debugData)
-        
-        if (!debugData.authenticated) {
-          console.error('Cookie not set properly! Auth debug shows:', debugData)
-          setError('Login succeeded but authentication cookie not set. Please try again.')
-          return
-        }
-        
-        console.log('Cookie verified, redirecting to dashboard...')
-      } catch (err) {
-        console.log('Debug check failed:', err)
-        setError('Login succeeded but unable to verify authentication. Please try again.')
-        return
-      }
+      // Force page reload to ensure middleware picks up the new cookie
+      console.log('Login successful, forcing navigation to dashboard...')
       
-      // Use window.location.replace for immediate navigation
-      window.location.replace('/dashboard')
+      // Use window.location.href for a full page reload
+      window.location.href = '/dashboard'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
