@@ -53,8 +53,8 @@ export default function ResponsiveContainer({
   return (
     <Box
       className={`
-        w-full min-h-full
-        ${isMobile ? 'px-2 py-2' : 'px-0 py-0'}
+        w-full h-full flex flex-col
+        ${isMobile ? 'px-2 py-2' : ''}
         ${className}
       `}
       sx={{
@@ -65,6 +65,7 @@ export default function ResponsiveContainer({
                  maxWidth === 'lg' ? '1200px' :
                  maxWidth === 'xl' ? '100%' : '100%',
         mx: maxWidth === 'xl' || maxWidth === false ? 0 : 'auto',
+        height: '100%',
       }}
     >
       {/* Header Section */}
@@ -195,7 +196,7 @@ export default function ResponsiveContainer({
 
       {/* Content */}
       <Box
-        className="w-full"
+        className="flex-1 w-full overflow-auto"
         sx={{
           '& > *': {
             maxWidth: '100%',

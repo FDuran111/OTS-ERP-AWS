@@ -84,10 +84,10 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         <Box
           className="flex-1 overflow-auto"
           sx={{
-            maxWidth: '100%',
-            px: { xs: 1, sm: 2, md: 3 },
-            py: { xs: 1, sm: 2 },
             width: '100%',
+            height: '100%',
+            px: { xs: 1, sm: 2, md: 2, lg: 3 },
+            py: { xs: 1, sm: 2 },
           }}
         >
           {children}

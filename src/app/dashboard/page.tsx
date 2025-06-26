@@ -109,21 +109,27 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const verifyAuth = async () => {
-      // First check localStorage
-      const storedUser = localStorage.getItem('user')
-      if (!storedUser) {
-        console.log('No user in localStorage, redirecting to login')
-        router.push('/login')
-        return
-      }
+      // Add a small delay to ensure cookie is set after redirect
+      await new Promise(resolve => setTimeout(resolve, 100))
       
       // Verify authentication with server
       try {
         const response = await fetch('/api/auth/me')
         if (!response.ok) {
-          console.log('Auth verification failed, redirecting to login')
-          localStorage.removeItem('user')
-          router.push('/login')
+          console.log('Auth verification failed, checking localStorage')
+          
+          // Check localStorage as fallback
+          const storedUser = localStorage.getItem('user')
+          if (!storedUser) {
+            console.log('No user in localStorage, redirecting to login')
+            router.push('/login')
+            return
+          }
+          
+          // Try to use stored user data
+          const parsedUser = JSON.parse(storedUser)
+          setUser(parsedUser)
+          fetchDashboardData()
           return
         }
         
@@ -133,8 +139,18 @@ export default function DashboardPage() {
         fetchDashboardData()
       } catch (error) {
         console.error('Auth check error:', error)
-        localStorage.removeItem('user')
-        router.push('/login')
+        
+        // Check localStorage as fallback
+        const storedUser = localStorage.getItem('user')
+        if (!storedUser) {
+          router.push('/login')
+          return
+        }
+        
+        // Try to use stored user data if API fails
+        const parsedUser = JSON.parse(storedUser)
+        setUser(parsedUser)
+        fetchDashboardData()
       }
     }
     
