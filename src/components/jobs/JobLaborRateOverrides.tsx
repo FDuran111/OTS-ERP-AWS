@@ -25,7 +25,6 @@ import {
   Alert,
   Chip,
   CircularProgress,
-  Grid,
   Card,
   CardContent,
   Tooltip,
@@ -292,8 +291,8 @@ export default function JobLaborRateOverrides({ jobId }: JobLaborRateOverridesPr
       </Box>
 
       {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
+        <Box sx={{ flex: '1 1 calc(33.33% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <PersonIcon sx={{ fontSize: 40, color: '#e14eca', mb: 1 }} />
@@ -305,8 +304,8 @@ export default function JobLaborRateOverrides({ jobId }: JobLaborRateOverridesPr
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
+        </Box>
+        <Box sx={{ flex: '1 1 calc(33.33% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <MoneyIcon sx={{ fontSize: 40, color: '#4caf50', mb: 1 }} />
@@ -320,8 +319,8 @@ export default function JobLaborRateOverrides({ jobId }: JobLaborRateOverridesPr
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
+        </Box>
+        <Box sx={{ flex: '1 1 calc(33.33% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <ScheduleIcon sx={{ fontSize: 40, color: '#ff9800', mb: 1 }} />
@@ -333,8 +332,8 @@ export default function JobLaborRateOverrides({ jobId }: JobLaborRateOverridesPr
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Overrides Table */}
       <Paper elevation={3}>

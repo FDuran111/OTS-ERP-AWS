@@ -234,8 +234,8 @@ export default function StockAnalyticsDashboard() {
       </Box>
 
       {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -264,9 +264,9 @@ export default function StockAnalyticsDashboard() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -295,9 +295,9 @@ export default function StockAnalyticsDashboard() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -326,9 +326,9 @@ export default function StockAnalyticsDashboard() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
         
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -357,12 +357,12 @@ export default function StockAnalyticsDashboard() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
-      <Grid container spacing={3}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
         {/* Stock Level Distribution */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -387,10 +387,10 @@ export default function StockAnalyticsDashboard() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Category Breakdown */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -406,10 +406,10 @@ export default function StockAnalyticsDashboard() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Top Materials by Value */}
-        <Grid size={{ xs: 12, lg: 6 }}>
+        <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -458,10 +458,10 @@ export default function StockAnalyticsDashboard() {
               </TableContainer>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Most Used Materials */}
-        <Grid size={{ xs: 12, lg: 6 }}>
+        <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -504,10 +504,10 @@ export default function StockAnalyticsDashboard() {
               </TableContainer>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Stock Turnover Analysis */}
-        <Grid size={{ xs: 12 }}>
+        <Box sx={{ flex: '1 1 100%' }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -567,11 +567,11 @@ export default function StockAnalyticsDashboard() {
               </TableContainer>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Recent Stock Alerts */}
         {analytics.recentAlerts.length > 0 && (
-          <Grid size={{ xs: 12 }}>
+          <Box sx={{ flex: '1 1 100%' }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -621,9 +621,9 @@ export default function StockAnalyticsDashboard() {
                 </TableContainer>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
         )}
-      </Grid>
+      </Box>
     </Box>
   )
 }

@@ -162,7 +162,7 @@ export default function RealTimeJobCosts({
       case 'GOOD': return 'success'
       case 'WARNING': return 'warning'
       case 'DANGER': return 'error'
-      default: return 'default'
+      default: return 'primary'
     }
   }
 
