@@ -450,7 +450,7 @@ export default function ServiceCallsPage() {
                     </Typography>
                     
                     <Typography variant="body2" color="text.secondary" noWrap>
-                      {call.companyName || `${call.firstName} ${call.lastName}`}
+                      {call.contactName || 'No contact name'}
                     </Typography>
                   </Box>
                   
@@ -502,11 +502,11 @@ export default function ServiceCallsPage() {
                   </Typography>
                 </Box>
                 
-                {call.techFirstName && (
+                {call.assignedTechnicianId && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                     <PersonIcon fontSize="small" color="action" />
                     <Typography variant="body2" color="text.secondary">
-                      {call.techFirstName} {call.techLastName}
+                      Assigned to technician
                     </Typography>
                   </Box>
                 )}
