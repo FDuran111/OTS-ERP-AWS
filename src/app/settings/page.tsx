@@ -154,7 +154,7 @@ export default function SettingsPage() {
   const companyForm = useForm<CompanySettings>({
     resolver: zodResolver(CompanySettingsSchema),
     defaultValues: {
-      company_name: 'Ortmeier Technicians',
+      company_name: 'Ortmeier Technical Service',
       business_address: '123 Electric Ave, Anytown, ST 12345',
       phone_number: '(555) 123-4567',
       email: 'info@ortmeiertech.com',
@@ -186,7 +186,7 @@ export default function SettingsPage() {
       // Update company form
       if (settings.company) {
         companyForm.reset({
-          company_name: settings.company.company_name || 'Ortmeier Technicians',
+          company_name: settings.company.company_name || 'Ortmeier Technical Service',
           business_address: settings.company.business_address || '',
           phone_number: settings.company.phone_number || '',
           email: settings.company.email || '',
@@ -351,7 +351,7 @@ export default function SettingsPage() {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Toolbar sx={{ px: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 300 }}>
-          Ortmeier Tech
+          Ortmeier Technical Service
         </Typography>
       </Toolbar>
       <Divider />

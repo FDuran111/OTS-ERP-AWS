@@ -118,7 +118,7 @@ export function DashboardShell({ children, title = 'Dashboard' }: DashboardShell
           >
             <img
               src="https://neneca.com/wp-content/uploads/2021/06/ortmeier_good.jpg.webp"
-              alt="Ortmeier Technical"
+              alt="Ortmeier Technical Service"
               style={{
                 maxWidth: '100%',
                 maxHeight: '100%',

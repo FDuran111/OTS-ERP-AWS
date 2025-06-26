@@ -206,7 +206,7 @@ export default function OfficeDisplayPage() {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Box>
             <Typography variant="h3" fontWeight="bold" sx={{ color: 'primary.main' }}>
-              Ortmeier Technical Services
+              Ortmeier Technical Service
             </Typography>
             <Typography variant="h5" color="text.secondary">
               Office Dashboard

@@ -254,7 +254,7 @@ export default function BillingPage() {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Toolbar sx={{ px: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 300 }}>
-          Ortmeier Tech
+          Ortmeier Technical Service
         </Typography>
       </Toolbar>
       <Divider />

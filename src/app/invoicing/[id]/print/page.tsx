@@ -150,7 +150,7 @@ export default function InvoicePrintPage() {
           console.warn('Could not load company settings:', settingsError)
           // Use fallback company data
           setCompanySettings({
-            company_name: 'Ortmeier Technical Services',
+            company_name: 'Ortmeier Technical Service',
             business_address: '123 Electric Ave, Anytown, ST 12345',
             phone_number: '(555) 123-4567',
             email: 'info@ortmeiertech.com',

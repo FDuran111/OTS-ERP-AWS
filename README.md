@@ -1,4 +1,4 @@
-# Ortmeier Technical Services - Job Management Platform
+# Ortmeier Technical Service - Job Management Platform
 
 A comprehensive job management and scheduling platform designed for electrical subcontractors.
 

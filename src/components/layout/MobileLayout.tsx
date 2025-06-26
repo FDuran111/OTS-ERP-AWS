@@ -256,7 +256,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
       {/* Header */}
       <Box sx={{ p: 2, backgroundColor: 'primary.main', color: 'white' }}>
         <Typography variant="h6" fontWeight="bold">
-          Ortmeier Electric
+          Ortmeier Technical Service
         </Typography>
         <Typography variant="caption" sx={{ opacity: 0.8 }}>
           Job Management System
@@ -322,7 +322,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
           </IconButton>
           
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Ortmeier Electric
+            Ortmeier Technical Service
           </Typography>
 
           <IconButton color="inherit" onClick={() => router.push('/notifications')}>

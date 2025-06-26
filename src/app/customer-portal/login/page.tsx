@@ -192,7 +192,7 @@ export default function CustomerLoginPage() {
               mb: 1,
             }}
           >
-            Ortmeier Tech
+            Ortmeier Technical Service
           </Typography>
           <Typography
             variant="h6"
@@ -483,7 +483,7 @@ export default function CustomerLoginPage() {
             color: 'rgba(255,255,255,0.8)',
           }}
         >
-          © 2024 Ortmeier Tech. All rights reserved.
+          © 2024 Ortmeier Technical Service. All rights reserved.
         </Typography>
       </Container>
     </Box>

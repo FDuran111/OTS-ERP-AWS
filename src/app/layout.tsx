@@ -4,13 +4,13 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ortmeier Technical Services - Job Management",
+  title: "Ortmeier Technical Service - Job Management",
   description: "Job management and scheduling platform for electrical contractors",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Ortmeier Electric",
+    title: "Ortmeier Technical Service",
   },
   formatDetection: {
     telephone: false,

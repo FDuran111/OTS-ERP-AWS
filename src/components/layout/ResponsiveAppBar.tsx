@@ -104,7 +104,7 @@ export default function ResponsiveAppBar({
             component="div"
             className="flex-1 font-semibold text-gray-900 dark:text-gray-100"
           >
-            Ortmeier Electric
+            Ortmeier Technical Service
           </Typography>
 
           {/* Notifications */}

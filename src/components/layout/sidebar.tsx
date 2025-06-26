@@ -96,7 +96,7 @@ export function Sidebar({ userRole }: SidebarProps) {
   return (
     <div className="flex h-full w-64 flex-col bg-gray-900">
       <div className="flex h-16 items-center px-4">
-        <h2 className="text-lg font-semibold text-white">Ortmeier Tech</h2>
+        <h2 className="text-lg font-semibold text-white">Ortmeier Technical Service</h2>
       </div>
       <nav className="flex-1 space-y-1 px-2 py-4">
         {filteredNavigation.map((item) => {

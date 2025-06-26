@@ -144,7 +144,7 @@ export default function LoginPage() {
               >
                 <img
                   src="https://neneca.com/wp-content/uploads/2021/06/ortmeier_good.jpg.webp"
-                  alt="Ortmeier Technical Services"
+                  alt="Ortmeier Technical Service"
                   style={{
                     maxWidth: '100%',
                     maxHeight: '100%',

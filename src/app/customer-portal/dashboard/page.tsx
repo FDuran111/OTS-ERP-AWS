@@ -124,7 +124,7 @@ export default function CustomerDashboard() {
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
             <ConstructionIcon sx={{ mr: 2 }} />
             <Typography variant="h6" component="div">
-              Ortmeier Tech - Customer Portal
+              Ortmeier Technical Service - Customer Portal
             </Typography>
           </Box>
           

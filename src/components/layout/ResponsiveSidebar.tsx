@@ -266,7 +266,7 @@ export default function ResponsiveSidebar({
         }}
       >
         <Typography variant="h6" className="font-bold text-white">
-          Ortmeier Electric
+          Ortmeier Technical Service
         </Typography>
         <Typography variant="caption" className="text-blue-100 opacity-90">
           Job Management System
