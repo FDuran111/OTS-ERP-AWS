@@ -498,8 +498,8 @@ export default function SettingsPage() {
 
               <TabPanel value={tabValue} index={0}>
                 <form onSubmit={companyForm.handleSubmit(onCompanySubmit)}>
-                  <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, md: 6 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                    <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px' }}>
                       <Controller
                         name="company_name"
                         control={companyForm.control}
@@ -554,8 +554,8 @@ export default function SettingsPage() {
                           />
                         )}
                       />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
+                    </Box>
+                    <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px' }}>
                       <Controller
                         name="license_number"
                         control={companyForm.control}
@@ -604,8 +604,8 @@ export default function SettingsPage() {
                           />
                         )}
                       />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
+                    </Box>
+                    <Box sx={{ flex: '1 1 100%' }}>
                       <Button
                         type="submit"
                         variant="contained"
@@ -621,8 +621,8 @@ export default function SettingsPage() {
                       >
                         Save Company Settings
                       </Button>
-                    </Grid>
-                  </Grid>
+                    </Box>
+                  </Box>
                 </form>
               </TabPanel>
 
@@ -661,8 +661,8 @@ export default function SettingsPage() {
                 <Typography variant="h6" gutterBottom>
                   Notification Types
                 </Typography>
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  <Box sx={{ flex: '1 1 calc(50% - 8px)', minWidth: '300px' }}>
                     <FormControlLabel 
                       control={
                         <Switch 
@@ -690,8 +690,8 @@ export default function SettingsPage() {
                       } 
                       label="Invoice Reminders" 
                     />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  </Box>
+                  <Box sx={{ flex: '1 1 calc(50% - 8px)', minWidth: '300px' }}>
                     <FormControlLabel 
                       control={
                         <Switch 
@@ -719,8 +719,8 @@ export default function SettingsPage() {
                       } 
                       label="Daily Summary" 
                     />
-                  </Grid>
-                </Grid>
+                  </Box>
+                </Box>
 
                 <Button
                   variant="contained"
@@ -762,8 +762,8 @@ export default function SettingsPage() {
                   Change Password
                 </Typography>
                 <form onSubmit={securityForm.handleSubmit(onSecuritySubmit)}>
-                  <Grid container spacing={2} sx={{ maxWidth: 600 }}>
-                    <Grid size={{ xs: 12 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, maxWidth: 600 }}>
+                    <Box sx={{ flex: '1 1 100%' }}>
                       <Controller
                         name="current_password"
                         control={securityForm.control}
@@ -779,8 +779,8 @@ export default function SettingsPage() {
                           />
                         )}
                       />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
+                    </Box>
+                    <Box sx={{ flex: '1 1 100%' }}>
                       <Controller
                         name="new_password"
                         control={securityForm.control}
@@ -796,8 +796,8 @@ export default function SettingsPage() {
                           />
                         )}
                       />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
+                    </Box>
+                    <Box sx={{ flex: '1 1 100%' }}>
                       <Controller
                         name="confirm_password"
                         control={securityForm.control}
@@ -813,8 +813,8 @@ export default function SettingsPage() {
                           />
                         )}
                       />
-                    </Grid>
-                  </Grid>
+                    </Box>
+                  </Box>
 
                   <Button
                     type="submit"

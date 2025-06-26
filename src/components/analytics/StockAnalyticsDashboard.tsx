@@ -143,7 +143,7 @@ export default function StockAnalyticsDashboard() {
       const response = await fetch('/api/materials')
       if (response.ok) {
         const materials = await response.json()
-        const categories = [...new Set(materials.map((m: any) => m.category).filter(Boolean))]
+        const categories = [...new Set(materials.map((m: any) => m.category).filter(Boolean))] as string[]
         setAvailableCategories(categories.sort())
       }
     } catch (err) {

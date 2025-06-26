@@ -6,7 +6,6 @@ import {
   CardContent,
   Box,
   Typography,
-  Grid,
   Avatar,
   Chip,
   Alert,
@@ -247,8 +246,8 @@ export default function RealTimeJobCosts({
       </Box>
 
       {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -266,9 +265,9 @@ export default function RealTimeJobCosts({
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -286,9 +285,9 @@ export default function RealTimeJobCosts({
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -306,9 +305,9 @@ export default function RealTimeJobCosts({
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -336,8 +335,8 @@ export default function RealTimeJobCosts({
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Budget Progress */}
       {data.budgetAnalysis && (
@@ -362,20 +361,20 @@ export default function RealTimeJobCosts({
                 sx={{ height: 8, borderRadius: 4 }}
               />
             </Box>
-            <Grid container spacing={2}>
-              <Grid item xs={6} sm={3}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+              <Box sx={{ flex: '1 1 calc(25% - 16px)', minWidth: '120px' }}>
                 <Typography variant="body2" color="text.secondary">Labor</Typography>
                 <Typography variant="body1">{formatCurrency(data.budgetAnalysis.laborCosts)}</Typography>
-              </Grid>
-              <Grid item xs={6} sm={3}>
+              </Box>
+              <Box sx={{ flex: '1 1 calc(25% - 16px)', minWidth: '120px' }}>
                 <Typography variant="body2" color="text.secondary">Materials</Typography>
                 <Typography variant="body1">{formatCurrency(data.budgetAnalysis.materialCosts)}</Typography>
-              </Grid>
-              <Grid item xs={6} sm={3}>
+              </Box>
+              <Box sx={{ flex: '1 1 calc(25% - 16px)', minWidth: '120px' }}>
                 <Typography variant="body2" color="text.secondary">Equipment</Typography>
                 <Typography variant="body1">{formatCurrency(data.budgetAnalysis.equipmentCosts)}</Typography>
-              </Grid>
-              <Grid item xs={6} sm={3}>
+              </Box>
+              <Box sx={{ flex: '1 1 calc(25% - 16px)', minWidth: '120px' }}>
                 <Typography variant="body2" color="text.secondary">Remaining</Typography>
                 <Typography 
                   variant="body1" 
@@ -383,15 +382,15 @@ export default function RealTimeJobCosts({
                 >
                   {formatCurrency(data.budgetAnalysis.remainingBudget)}
                 </Typography>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
       )}
 
-      <Grid container spacing={3}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
         {/* Active Workers */}
-        <Grid item xs={12} md={6}>
+        <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px' }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -443,10 +442,10 @@ export default function RealTimeJobCosts({
               )}
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Recent Activity */}
-        <Grid item xs={12} md={6}>
+        <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px' }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -499,8 +498,8 @@ export default function RealTimeJobCosts({
               )}
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   )
 }
