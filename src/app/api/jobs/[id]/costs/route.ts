@@ -4,7 +4,7 @@ import { query } from '@/lib/db'
 // GET job cost details and P&L
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get comprehensive job cost data
@@ -194,7 +194,7 @@ export async function GET(
 // PUT update job cost settings (overhead, misc costs, etc.)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
@@ -300,7 +300,7 @@ export async function PUT(
 // POST recalculate job costs
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Recalculate all costs for the job

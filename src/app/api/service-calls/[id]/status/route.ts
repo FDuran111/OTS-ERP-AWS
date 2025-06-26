@@ -3,9 +3,10 @@ import { updateServiceCallStatus } from '@/lib/service-calls'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     
     if (!body.status) {
@@ -24,7 +25,7 @@ export async function PUT(
     }
     
     const serviceCall = await updateServiceCallStatus(
-      params.id,
+      resolvedParams.id,
       body.status,
       body.changedBy,
       body.notes

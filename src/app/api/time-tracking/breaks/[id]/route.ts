@@ -15,7 +15,7 @@ const endBreakSchema = z.object({
 // PUT - End a break
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
@@ -117,7 +117,7 @@ export async function PUT(
 // GET - Get specific break details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const client = await pool.connect()
@@ -193,7 +193,7 @@ export async function GET(
 // DELETE - Cancel/delete a break (only if not ended)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const client = await pool.connect()

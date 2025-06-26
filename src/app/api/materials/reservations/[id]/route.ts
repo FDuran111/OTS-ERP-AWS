@@ -4,7 +4,7 @@ import { query } from '@/lib/db'
 // GET specific material reservation
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const reservationResult = await query(`
@@ -81,7 +81,7 @@ export async function GET(
 // PUT update material reservation
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
@@ -270,7 +270,7 @@ export async function PUT(
 // DELETE material reservation
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const deleteResult = await query(

@@ -3,10 +3,11 @@ import { getServiceCallById, updateServiceCall, deleteServiceCall } from '@/lib/
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const serviceCall = await getServiceCallById(params.id)
+    const resolvedParams = await params
+    const serviceCall = await getServiceCallById(resolvedParams.id)
     
     if (!serviceCall) {
       return NextResponse.json(
@@ -31,12 +32,13 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     
-    const serviceCall = await updateServiceCall(params.id, body)
+    const serviceCall = await updateServiceCall(resolvedParams.id, body)
     
     return NextResponse.json({
       success: true,
@@ -54,10 +56,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const success = await deleteServiceCall(params.id)
+    const resolvedParams = await params
+    const success = await deleteServiceCall(resolvedParams.id)
     
     if (!success) {
       return NextResponse.json(

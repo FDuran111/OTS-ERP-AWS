@@ -36,7 +36,7 @@ const approvalSchema = z.object({
 // GET - Get specific purchase order
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const po = await getPurchaseOrderById(params.id)
@@ -65,7 +65,7 @@ export async function GET(
 // PUT - Update purchase order
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
@@ -145,7 +145,7 @@ export async function PUT(
 // DELETE - Cancel purchase order (set status to CANCELLED)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const updatedPO = await updatePurchaseOrder(params.id, { 

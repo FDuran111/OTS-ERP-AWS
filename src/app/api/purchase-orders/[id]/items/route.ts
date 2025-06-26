@@ -19,7 +19,7 @@ const createItemSchema = z.object({
 // POST - Add item to purchase order
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
@@ -56,7 +56,7 @@ export async function POST(
 // DELETE - Remove item from purchase order
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url)

@@ -16,7 +16,7 @@ const updateLaborRateSchema = z.object({
 // GET specific labor rate
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const result = await query(
@@ -44,7 +44,7 @@ export async function GET(
 // PUT update labor rate
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
@@ -136,7 +136,7 @@ export async function PUT(
 // DELETE labor rate (soft delete)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check if rate exists
