@@ -7,6 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const reservationResult = await query(`
       SELECT 
         mr.*,
@@ -26,7 +27,7 @@ export async function GET(
       LEFT JOIN "Customer" c ON j."customerId" = c.id
       LEFT JOIN "User" u ON mr."userId" = u.id
       WHERE mr.id = $1
-    `, [params.id])
+    `, [resolvedParams.id])
 
     if (reservationResult.rows.length === 0) {
       return NextResponse.json(
@@ -84,6 +85,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     const {
       quantityReserved,
@@ -98,7 +100,7 @@ export async function PUT(
     // Get current reservation to validate changes
     const currentResult = await query(
       'SELECT * FROM "MaterialReservation" WHERE id = $1',
-      [params.id]
+      [resolvedParams.id]
     )
 
     if (currentResult.rows.length === 0) {
@@ -114,7 +116,7 @@ export async function PUT(
     if (quantityReserved && quantityReserved !== currentReservation.quantityReserved) {
       const materialResult = await query(
         'SELECT "inStock", (SELECT COALESCE(SUM("quantityReserved" - COALESCE("fulfilledQuantity", 0)), 0) FROM "MaterialReservation" WHERE "materialId" = $1 AND status = \'ACTIVE\' AND id != $2) as "otherReserved" FROM "Material" WHERE id = $1',
-        [currentReservation.materialId, params.id]
+        [currentReservation.materialId, resolvedParams.id]
       )
 
       if (materialResult.rows.length === 0) {
@@ -191,7 +193,7 @@ export async function PUT(
 
     // Add updatedAt and id parameters
     updateFields.push(`"updatedAt" = NOW()`)
-    updateParams.push(params.id)
+    updateParams.push(resolvedParams.id)
 
     const updateQuery = `
       UPDATE "MaterialReservation" 
@@ -222,7 +224,7 @@ export async function PUT(
       LEFT JOIN "Customer" c ON j."customerId" = c.id
       LEFT JOIN "User" u ON mr."userId" = u.id
       WHERE mr.id = $1
-    `, [params.id])
+    `, [resolvedParams.id])
 
     const row = fullReservationResult.rows[0]
     const updatedReservation = {
@@ -273,9 +275,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const deleteResult = await query(
       'DELETE FROM "MaterialReservation" WHERE id = $1 RETURNING *',
-      [params.id]
+      [resolvedParams.id]
     )
 
     if (deleteResult.rows.length === 0) {

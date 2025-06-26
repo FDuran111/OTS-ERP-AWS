@@ -138,7 +138,7 @@ export const requireCustomerManagement = withRBAC({ resource: 'customers', actio
 export const requireSystemSettings = withRBAC({ requiredPermissions: 'system_settings.manage' })
 
 // Helper to extract user from authenticated request
-export function getAuthenticatedUser(request: NextRequest): UserPayload | null {
+export async function getAuthenticatedUser(request: NextRequest): Promise<UserPayload | null> {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value

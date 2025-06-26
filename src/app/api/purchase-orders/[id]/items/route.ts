@@ -22,11 +22,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     const data = createItemSchema.parse(body)
     
     const item = await createPurchaseOrderItem({
-      purchaseOrderId: params.id,
+      purchaseOrderId: resolvedParams.id,
       lineNumber: 0, // Will be auto-generated
       ...data,
       taxRate: data.taxRate || 0
@@ -59,6 +60,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const { searchParams } = new URL(request.url)
     const itemId = searchParams.get('itemId')
     

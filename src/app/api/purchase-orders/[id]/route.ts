@@ -39,7 +39,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const po = await getPurchaseOrderById(params.id)
+    const resolvedParams = await params
+    const po = await getPurchaseOrderById(resolvedParams.id)
     
     if (!po) {
       return NextResponse.json(
@@ -68,6 +69,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     
     // Check if this is an approval action
@@ -77,13 +79,13 @@ export async function PUT(
       let updatedPO
       if (approvalData.action === 'APPROVE') {
         updatedPO = await approvePurchaseOrder(
-          params.id, 
+          resolvedParams.id, 
           approvalData.approverId, 
           approvalData.comments
         )
       } else {
         updatedPO = await rejectPurchaseOrder(
-          params.id, 
+          resolvedParams.id, 
           approvalData.approverId, 
           approvalData.reason || 'No reason provided'
         )
@@ -112,7 +114,7 @@ export async function PUT(
       requiredDate: data.requiredDate ? new Date(data.requiredDate) : undefined
     }
     
-    const updatedPO = await updatePurchaseOrder(params.id, updates)
+    const updatedPO = await updatePurchaseOrder(resolvedParams.id, updates)
     
     if (!updatedPO) {
       return NextResponse.json(
@@ -148,7 +150,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const updatedPO = await updatePurchaseOrder(params.id, { 
+    const resolvedParams = await params
+    const updatedPO = await updatePurchaseOrder(resolvedParams.id, { 
       status: 'CANCELLED' 
     })
     
