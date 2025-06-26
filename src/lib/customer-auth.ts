@@ -5,6 +5,9 @@ import { v4 as uuidv4 } from 'uuid'
 import crypto from 'crypto'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-development'
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required')
+}
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 // Types for Customer Portal
@@ -66,14 +69,14 @@ export function generateCustomerToken(payload: any): string {
       type: 'customer',
       iat: Math.floor(Date.now() / 1000)
     },
-    JWT_SECRET,
+    JWT_SECRET as string,
     { expiresIn: JWT_EXPIRES_IN }
   )
 }
 
 export function verifyCustomerToken(token: string): any {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any
+    const decoded = jwt.verify(token, JWT_SECRET as string) as any
     if (decoded.type !== 'customer') {
       throw new Error('Invalid token type')
     }
