@@ -119,6 +119,7 @@ export const toastMessages = {
   created: (entity: string) => `${entity} created successfully`,
   updated: (entity: string) => `${entity} updated successfully`,
   deleted: (entity: string) => `${entity} deleted successfully`,
+  loaded: (entity: string) => `${entity} loaded successfully`,
   saved: (entity: string) => `${entity} saved successfully`,
   sent: (entity: string) => `${entity} sent successfully`,
   
