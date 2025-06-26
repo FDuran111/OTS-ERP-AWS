@@ -17,7 +17,6 @@ import {
   Select,
   MenuItem,
   Chip,
-  Grid,
   Paper,
   IconButton,
   Tooltip,
@@ -32,6 +31,27 @@ import {
   Schedule as ScheduleIcon,
   Group as GroupIcon,
 } from '@mui/icons-material'
+
+// Temporary Grid component for compatibility
+const Grid = ({ children, container, spacing, xs, md, size, alignItems, justifyContent, ...props }: any) => (
+  <Box 
+    sx={{ 
+      display: container ? 'flex' : 'block',
+      flexWrap: container ? 'wrap' : undefined,
+      gap: container && spacing ? spacing : undefined,
+      flex: xs === true ? '1 1 auto' : xs ? `1 1 calc(${(xs/12)*100}% - ${spacing || 0}px)` : undefined,
+      width: xs === 12 || xs === true ? '100%' : undefined,
+      alignItems,
+      justifyContent,
+      textAlign: props.sx?.textAlign,
+      ...props.sx
+    }}
+    {...props}
+  >
+    {children}
+  </Box>
+)
+
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
