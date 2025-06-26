@@ -366,13 +366,15 @@ export default function SchedulePage() {
       >
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="h4">
-              Schedule
+            <Typography variant="h3" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              Schedule Management
             </Typography>
             <Button
               startIcon={<TvIcon />}
               variant="outlined"
+              size="large"
               onClick={() => window.open('/office-display', '_blank')}
+              sx={{ fontWeight: 600 }}
             >
               Office Display
             </Button>
@@ -446,12 +448,14 @@ export default function SchedulePage() {
           )}
 
           {/* Job Scheduling Calendar */}
-          <Box sx={{ mb: 3 }}>
+          <Box sx={{ mb: 6 }}>
             <JobSchedulingCalendar onJobScheduled={handleJobScheduled} />
           </Box>
 
           {/* Crew Availability Widget */}
-          <CrewAvailabilityWidget />
+          <Box sx={{ mb: 4 }}>
+            <CrewAvailabilityWidget />
+          </Box>
         </Container>
       </Box>
 

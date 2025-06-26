@@ -22,6 +22,7 @@ import {
   Tooltip,
   Alert,
   Autocomplete,
+  CircularProgress,
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -70,6 +71,8 @@ import {
 } from 'date-fns'
 import CrewAssignmentDialog from './CrewAssignmentDialog'
 import MaterialReservationDialog from '../materials/MaterialReservationDialog'
+import { CalendarGrid } from './CalendarGrid'
+import { UnscheduledJobsSection } from './UnscheduledJobsSection'
 
 interface Job {
   id: string
@@ -265,236 +268,123 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
     }
   }
 
-  const renderCalendarDays = () => {
+  const getCalendarDays = () => {
     const monthStart = startOfMonth(currentDate)
     const monthEnd = endOfMonth(currentDate)
     const calendarStart = startOfWeek(monthStart)
     const calendarEnd = endOfWeek(monthEnd)
     
-    const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
-
-    return days.map((day) => {
-      const jobsOnDay = getJobsForDate(day)
-      const isCurrentMonth = isSameMonth(day, currentDate)
-      const isToday = isSameDay(day, new Date())
-
-      return (
-        <Paper
-          key={day.toISOString()}
-          sx={{
-            minHeight: 120,
-            p: 1,
-            cursor: 'pointer',
-            backgroundColor: isCurrentMonth ? 'background.paper' : 'grey.50',
-            border: isToday ? '2px solid' : '1px solid',
-            borderColor: isToday ? 'primary.main' : 'divider',
-            '&:hover': {
-              backgroundColor: 'action.hover',
-            },
-          }}
-          onClick={() => handleDateClick(day)}
-        >
-          <Typography
-            variant="body2"
-            sx={{
-              fontWeight: isToday ? 'bold' : 'normal',
-              color: isCurrentMonth ? 'text.primary' : 'text.secondary',
-              mb: 1,
-            }}
-          >
-            {format(day, 'd')}
-          </Typography>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            {jobsOnDay.slice(0, 2).map((entry) => (
-              <Box key={entry.id} sx={{ position: 'relative' }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                  <Chip
-                    label={`${entry.job.jobNumber} - ${entry.job.customer}`}
-                    size="small"
-                    color={getPriorityColor(entry.job.priority) as any}
-                    onClick={() => handleCrewAssignment(entry)}
-                    sx={{ 
-                      fontSize: '0.6rem',
-                      height: 18,
-                      cursor: 'pointer',
-                      '& .MuiChip-label': {
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        maxWidth: 120,
-                      },
-                      '&:hover': {
-                        opacity: 0.8
-                      }
-                    }}
-                  />
-                  <Chip
-                    label="Materials"
-                    size="small"
-                    variant="outlined"
-                    onClick={() => handleMaterialReservation(entry)}
-                    sx={{ 
-                      fontSize: '0.5rem',
-                      height: 16,
-                      cursor: 'pointer',
-                      '& .MuiChip-label': {
-                        padding: '0 4px',
-                      },
-                      '&:hover': {
-                        backgroundColor: 'action.hover'
-                      }
-                    }}
-                  />
-                </Box>
-                {/* Show crew count if assigned */}
-                {entry.assignedCrew && entry.assignedCrew.length > 0 && (
-                  <Box 
-                    sx={{ 
-                      position: 'absolute', 
-                      top: -4, 
-                      right: -4, 
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      borderRadius: '50%',
-                      width: 16,
-                      height: 16,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.5rem',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    {entry.assignedCrew.length}
-                  </Box>
-                )}
-              </Box>
-            ))}
-            {jobsOnDay.length > 2 && (
-              <Typography variant="caption" color="text.secondary">
-                +{jobsOnDay.length - 2} more
-              </Typography>
-            )}
-          </Box>
-        </Paper>
-      )
-    })
+    return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
   }
 
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-        <Typography>Loading schedule...</Typography>
-      </Box>
+      <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
+          <CircularProgress size={24} />
+          <Typography variant="h6" color="text.secondary">
+            Loading schedule data...
+          </Typography>
+        </Box>
+      </Paper>
     )
   }
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box>
+      <Box sx={{ pt: 2 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          <Alert 
+            severity="error" 
+            sx={{ mb: 4, borderRadius: 2 }} 
+            onClose={() => setError(null)}
+          >
             {error}
           </Alert>
         )}
 
         {/* Calendar Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5">
-            Job Scheduling Calendar
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant={view === 'month' ? 'contained' : 'outlined'}
-              onClick={() => setView('month')}
-              size="small"
-            >
-              Month
-            </Button>
-            <Button
-              variant={view === 'week' ? 'contained' : 'outlined'}
-              onClick={() => setView('week')}
-              size="small"
-            >
-              Week
-            </Button>
-          </Box>
-        </Box>
-
-        {/* Date Navigation */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Button onClick={() => setCurrentDate(subDays(currentDate, view === 'month' ? 30 : 7))}>
-              Previous
-            </Button>
-            <Typography variant="h6">
-              {format(currentDate, 'MMMM yyyy')}
+        <Paper 
+          elevation={1} 
+          sx={{ 
+            p: 3, 
+            mb: 4, 
+            borderRadius: 2,
+            bgcolor: 'primary.50'
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              Job Scheduling Calendar
             </Typography>
-            <Button onClick={() => setCurrentDate(addDays(currentDate, view === 'month' ? 30 : 7))}>
-              Next
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant={view === 'month' ? 'contained' : 'outlined'}
+                onClick={() => setView('month')}
+                size="medium"
+                sx={{ fontWeight: 600 }}
+              >
+                Month
+              </Button>
+              <Button
+                variant={view === 'week' ? 'contained' : 'outlined'}
+                onClick={() => setView('week')}
+                size="medium"
+                sx={{ fontWeight: 600 }}
+              >
+                Week
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Date Navigation */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Button 
+                variant="outlined"
+                onClick={() => setCurrentDate(subDays(currentDate, view === 'month' ? 30 : 7))}
+                sx={{ fontWeight: 500 }}
+              >
+                ← Previous
+              </Button>
+              <Typography variant="h5" sx={{ fontWeight: 600, minWidth: 200, textAlign: 'center' }}>
+                {format(currentDate, 'MMMM yyyy')}
+              </Typography>
+              <Button 
+                variant="outlined"
+                onClick={() => setCurrentDate(addDays(currentDate, view === 'month' ? 30 : 7))}
+                sx={{ fontWeight: 500 }}
+              >
+                Next →
+              </Button>
+            </Box>
+            <Button 
+              variant="contained" 
+              onClick={() => setCurrentDate(new Date())}
+              sx={{ fontWeight: 600 }}
+            >
+              Today
             </Button>
           </Box>
-          <Button onClick={() => setCurrentDate(new Date())}>
-            Today
-          </Button>
-        </Box>
+        </Paper>
 
-        {/* Unscheduled Jobs Panel */}
-        {unscheduledJobs.length > 0 && (
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                📋 Unscheduled Jobs ({unscheduledJobs.length})
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {unscheduledJobs.slice(0, 10).map((job) => (
-                  <Chip
-                    key={job.id}
-                    label={`${job.jobNumber} - ${job.customer}`}
-                    color={getPriorityColor(job.priority) as any}
-                    variant="outlined"
-                    onClick={() => {
-                      handleJobSelect(job)
-                      setDialogOpen(true)
-                    }}
-                    sx={{ cursor: 'pointer' }}
-                  />
-                ))}
-                {unscheduledJobs.length > 10 && (
-                  <Typography variant="caption" color="text.secondary">
-                    +{unscheduledJobs.length - 10} more
-                  </Typography>
-                )}
-              </Box>
-            </CardContent>
-          </Card>
-        )}
+        {/* Unscheduled Jobs Section */}
+        <UnscheduledJobsSection
+          jobs={unscheduledJobs}
+          onJobSelect={handleJobSelect}
+          onDialogOpen={() => setDialogOpen(true)}
+        />
 
         {/* Calendar Grid */}
-        <Paper sx={{ p: 2 }}>
-          {/* Day Headers */}
-          <Grid container sx={{ mb: 1 }}>
-            {weekDays.map((day) => (
-              <Grid key={day} size={{ xs: true }} sx={{ textAlign: 'center' }}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  {day}
-                </Typography>
-              </Grid>
-            ))}
-          </Grid>
-
-          {/* Calendar Days */}
-          <Grid container spacing={1}>
-            {renderCalendarDays().map((dayComponent, index) => (
-              <Grid key={index} size={{ xs: true }}>
-                {dayComponent}
-              </Grid>
-            ))}
-          </Grid>
-        </Paper>
+        <CalendarGrid
+          days={getCalendarDays()}
+          currentDate={currentDate}
+          getJobsForDate={getJobsForDate}
+          onDateClick={handleDateClick}
+          onCrewAssignment={handleCrewAssignment}
+          onMaterialReservation={handleMaterialReservation}
+        />
 
         {/* Schedule Job Dialog */}
         <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
