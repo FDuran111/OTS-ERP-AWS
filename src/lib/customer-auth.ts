@@ -1,6 +1,6 @@
 import { query } from './db'
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
+import jwt, { SignOptions } from 'jsonwebtoken'
 import { v4 as uuidv4 } from 'uuid'
 import crypto from 'crypto'
 
@@ -63,15 +63,13 @@ export async function comparePassword(password: string, hashedPassword: string):
 
 // JWT utilities for customer portal
 export function generateCustomerToken(payload: any): string {
-  return jwt.sign(
-    { 
-      ...payload, 
-      type: 'customer',
-      iat: Math.floor(Date.now() / 1000)
-    },
-    JWT_SECRET as string,
-    { expiresIn: JWT_EXPIRES_IN as string }
-  )
+  const tokenPayload = { 
+    ...payload, 
+    type: 'customer',
+    iat: Math.floor(Date.now() / 1000)
+  }
+  const options: SignOptions = { expiresIn: '7d' }
+  return jwt.sign(tokenPayload, JWT_SECRET as string, options)
 }
 
 export function verifyCustomerToken(token: string): any {
