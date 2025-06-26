@@ -25,7 +25,6 @@ import {
   Paper,
   Chip,
   IconButton,
-  Grid,
   Alert,
   Autocomplete,
   Tooltip,
@@ -279,8 +278,8 @@ export default function JobMaterialReservations({ jobId, jobTitle }: JobMaterial
       </Box>
 
       {/* Summary Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 16px)', minWidth: '200px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -296,8 +295,8 @@ export default function JobMaterialReservations({ jobId, jobTitle }: JobMaterial
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        </Box>
+        <Box sx={{ flex: '1 1 calc(25% - 16px)', minWidth: '200px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -313,8 +312,8 @@ export default function JobMaterialReservations({ jobId, jobTitle }: JobMaterial
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        </Box>
+        <Box sx={{ flex: '1 1 calc(25% - 16px)', minWidth: '200px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -330,8 +329,8 @@ export default function JobMaterialReservations({ jobId, jobTitle }: JobMaterial
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        </Box>
+        <Box sx={{ flex: '1 1 calc(25% - 16px)', minWidth: '200px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -352,8 +351,8 @@ export default function JobMaterialReservations({ jobId, jobTitle }: JobMaterial
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Reservations Table */}
       <TableContainer component={Paper}>
