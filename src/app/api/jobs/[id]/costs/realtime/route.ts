@@ -8,9 +8,10 @@ const pool = new Pool({
 // GET real-time job cost information
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const client = await pool.connect()
     
     try {
@@ -45,7 +46,7 @@ export async function GET(
           LEFT JOIN "Job" j ON te."jobId" = j.id
           WHERE te."jobId" = $1 AND te.status = 'ACTIVE'
           ORDER BY te."clockInTime" ASC
-        `, [params.id]),
+        `, [resolvedParams.id]),
         
         // Today's completed costs
         client.query(`
@@ -58,7 +59,7 @@ export async function GET(
           WHERE "jobId" = $1 
             AND status = 'COMPLETED'
             AND DATE("clockInTime") = CURRENT_DATE
-        `, [params.id]),
+        `, [resolvedParams.id]),
         
         // Budget comparison
         client.query(`
@@ -72,7 +73,7 @@ export async function GET(
           FROM "Job" j
           LEFT JOIN "JobCost" jc ON j.id = jc."jobId"
           WHERE j.id = $1
-        `, [params.id]),
+        `, [resolvedParams.id]),
         
         // Recent cost activity (last 24 hours)
         client.query(`
@@ -93,7 +94,7 @@ export async function GET(
             AND te."clockOutTime" >= NOW() - INTERVAL '24 hours'
           ORDER BY te."clockOutTime" DESC
           LIMIT 10
-        `, [params.id])
+        `, [resolvedParams.id])
       ])
 
       // Calculate active costs
@@ -166,7 +167,7 @@ export async function GET(
         WHERE "jobId" = $1 
           AND status = 'COMPLETED'
           AND "clockOutTime" >= NOW() - INTERVAL '7 days'
-      `, [params.id])
+      `, [resolvedParams.id])
 
       const burnRate = burnRateResult.rows[0]
       const burnRateData = {

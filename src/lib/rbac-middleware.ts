@@ -23,7 +23,7 @@ export function withRBAC(config: RBACConfig = {}) {
     return async function(request: NextRequest): Promise<Response> {
       try {
         // Get auth token from cookies
-        const cookieStore = cookies()
+        const cookieStore = await cookies()
         const token = cookieStore.get('auth-token')?.value
 
         if (!token) {
@@ -140,7 +140,7 @@ export const requireSystemSettings = withRBAC({ requiredPermissions: 'system_set
 // Helper to extract user from authenticated request
 export function getAuthenticatedUser(request: NextRequest): UserPayload | null {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
     
     if (!token) return null
