@@ -67,12 +67,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
       {/* Main Content Area */}
       <Box
         component="main"
-        className={`
-          flex-1 flex flex-col
-          ${isMobile ? 'pt-16 pb-16' : ''}
-          ${!isMobile && sidebarOpen ? 'md:ml-64' : ''}
-          transition-all duration-300 ease-in-out
-        `}
+        className="flex-1 flex flex-col transition-all duration-300 ease-in-out"
         sx={{
           minHeight: '100vh',
           backgroundColor: 'background.default',
@@ -90,9 +85,8 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           className="flex-1 overflow-auto"
           sx={{
             maxWidth: '100%',
-            px: { xs: 2, sm: 3, md: 4 },
-            py: { xs: 2, sm: 3 },
-            mx: 'auto',
+            px: { xs: 1, sm: 2, md: 3 },
+            py: { xs: 1, sm: 2 },
             width: '100%',
           }}
         >

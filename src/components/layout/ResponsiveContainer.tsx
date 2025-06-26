@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  Container,
   Box,
   Typography,
   Breadcrumbs,
@@ -29,7 +28,6 @@ interface ResponsiveContainerProps {
   breadcrumbs?: BreadcrumbItem[]
   actions?: ReactNode
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
-  disableGutters?: boolean
   className?: string
 }
 
@@ -40,7 +38,6 @@ export default function ResponsiveContainer({
   breadcrumbs,
   actions,
   maxWidth = 'xl',
-  disableGutters = false,
   className = ''
 }: ResponsiveContainerProps) {
   const theme = useTheme()
@@ -54,14 +51,21 @@ export default function ResponsiveContainer({
   }
 
   return (
-    <Container
-      maxWidth={maxWidth}
-      disableGutters={disableGutters}
+    <Box
       className={`
         w-full min-h-full
-        ${isMobile ? 'px-4 py-4' : 'px-6 py-6'}
+        ${isMobile ? 'px-2 py-2' : 'px-0 py-0'}
         ${className}
       `}
+      sx={{
+        maxWidth: maxWidth === false ? '100%' : 
+                 maxWidth === 'xs' ? '444px' :
+                 maxWidth === 'sm' ? '600px' :
+                 maxWidth === 'md' ? '900px' :
+                 maxWidth === 'lg' ? '1200px' :
+                 maxWidth === 'xl' ? '100%' : '100%',
+        mx: maxWidth === 'xl' || maxWidth === false ? 0 : 'auto',
+      }}
     >
       {/* Header Section */}
       {(title || breadcrumbs) && (
@@ -200,7 +204,7 @@ export default function ResponsiveContainer({
       >
         {children}
       </Box>
-    </Container>
+    </Box>
   )
 }
 
