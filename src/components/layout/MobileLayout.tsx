@@ -45,9 +45,11 @@ import {
   Photo as PhotoIcon,
   AccountBalance as QuickBooksIcon,
   Person as CustomerPortalIcon,
-  Speed as OptimizeIcon,
+  Tune as OptimizeIcon,
 } from '@mui/icons-material'
 import { useRouter, usePathname } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
+import { UserRole } from '@/lib/auth'
 
 interface MobileLayoutProps {
   children: React.ReactNode
@@ -59,71 +61,80 @@ interface NavItem {
   path: string
   badge?: number
   children?: NavItem[]
+  roles?: UserRole[]
 }
 
 const navigationItems: NavItem[] = [
   {
     title: 'Dashboard',
     icon: <DashboardIcon />,
-    path: '/dashboard'
+    path: '/dashboard',
+    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER']
   },
   {
     title: 'Jobs',
     icon: <JobsIcon />,
     path: '/jobs',
+    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'],
     children: [
-      { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs' },
-      { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories' },
-      { title: 'Photos', icon: <PhotoIcon />, path: '/job-photos' }
+      { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] },
+      { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
+      { title: 'Photos', icon: <PhotoIcon />, path: '/job-photos', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] }
     ]
   },
   {
     title: 'Customers',
     icon: <CustomersIcon />,
-    path: '/customers'
+    path: '/customers',
+    roles: ['OWNER', 'ADMIN', 'OFFICE'] // Only staff can manage customers
   },
   {
     title: 'Leads',
     icon: <LeadsIcon />,
-    path: '/leads'
+    path: '/leads',
+    roles: ['OWNER', 'ADMIN', 'OFFICE'] // Only staff can manage leads
   },
   {
     title: 'Materials',
     icon: <MaterialsIcon />,
-    path: '/materials'
+    path: '/materials',
+    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] // Technicians can view for logging usage
   },
   {
     title: 'Routes',
     icon: <RouteIcon />,
-    path: '/route-optimization'
+    path: '/route-optimization',
+    roles: ['OWNER', 'ADMIN', 'OFFICE'] // Only staff can access route optimization
   },
   {
     title: 'Reports',
     icon: <ReportsIcon />,
     path: '/reports',
+    roles: ['OWNER', 'ADMIN', 'OFFICE'], // Only staff can view reports
     children: [
-      { title: 'P&L by Job', icon: <ReportsIcon />, path: '/reports/pnl' },
-      { title: 'Cost Analysis', icon: <ReportsIcon />, path: '/reports/cost-analysis' },
-      { title: 'Equipment Billing', icon: <ReportsIcon />, path: '/reports/equipment' }
+      { title: 'P&L by Job', icon: <ReportsIcon />, path: '/reports/pnl', roles: ['OWNER', 'ADMIN'] },
+      { title: 'Cost Analysis', icon: <ReportsIcon />, path: '/reports/cost-analysis', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
+      { title: 'Equipment Billing', icon: <ReportsIcon />, path: '/reports/equipment', roles: ['OWNER', 'ADMIN', 'OFFICE'] }
     ]
   },
   {
     title: 'Settings',
     icon: <SettingsIcon />,
     path: '/settings',
+    roles: ['OWNER', 'ADMIN', 'OFFICE'], // Basic settings for staff
     children: [
-      { title: 'General', icon: <SettingsIcon />, path: '/settings' },
-      { title: 'QuickBooks', icon: <QuickBooksIcon />, path: '/settings/quickbooks' },
-      { title: 'Integrations', icon: <SettingsIcon />, path: '/settings/integrations' }
+      { title: 'General', icon: <SettingsIcon />, path: '/settings', roles: ['OWNER', 'ADMIN', 'OFFICE'] },
+      { title: 'QuickBooks', icon: <QuickBooksIcon />, path: '/settings/quickbooks', roles: ['OWNER', 'ADMIN'] },
+      { title: 'Integrations', icon: <SettingsIcon />, path: '/settings/integrations', roles: ['OWNER', 'ADMIN'] }
     ]
   }
 ]
 
 const quickActions = [
-  { title: 'Add Job', icon: <JobsIcon />, path: '/jobs/new', color: 'primary' as const },
-  { title: 'Add Customer', icon: <CustomersIcon />, path: '/customers/new', color: 'secondary' as const },
-  { title: 'Add Lead', icon: <LeadsIcon />, path: '/leads/new', color: 'success' as const },
-  { title: 'Optimize Routes', icon: <OptimizeIcon />, path: '/route-optimization', color: 'warning' as const }
+  { title: 'Add Job', icon: <JobsIcon />, path: '/jobs/new', color: 'primary' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] },
+  { title: 'Add Customer', icon: <CustomersIcon />, path: '/customers/new', color: 'secondary' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] },
+  { title: 'Add Lead', icon: <LeadsIcon />, path: '/leads/new', color: 'success' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] },
+  { title: 'Optimize Routes', icon: <OptimizeIcon />, path: '/route-optimization', color: 'warning' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] }
 ]
 
 export default function MobileLayout({ children }: MobileLayoutProps) {
@@ -137,6 +148,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const router = useRouter()
   const pathname = usePathname()
+  const { user, hasRole } = useAuth()
 
   // Auto-close drawer on route change for mobile
   useEffect(() => {
@@ -177,9 +189,19 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   }
 
   const renderNavItem = (item: NavItem, depth = 0) => {
+    // Check if user has access to this nav item
+    if (!user || !hasRole(item.roles || [])) {
+      return null
+    }
+
     const hasChildren = item.children && item.children.length > 0
     const isExpanded = expandedItems.includes(item.title)
     const isActive = isActiveRoute(item.path)
+
+    // Filter children based on user roles
+    const visibleChildren = item.children?.filter(child => 
+      user && hasRole(child.roles || [])
+    )
 
     return (
       <Box key={item.title}>
@@ -218,10 +240,10 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
           {hasChildren && (isExpanded ? <ExpandLess /> : <ExpandMore />)}
         </ListItemButton>
         
-        {hasChildren && (
+        {visibleChildren && visibleChildren.length > 0 && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
-              {item.children?.map(child => renderNavItem(child, depth + 1))}
+              {visibleChildren.map(child => renderNavItem(child, depth + 1))}
             </List>
           </Collapse>
         )}
@@ -244,7 +266,10 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
       {/* Navigation */}
       <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
         <List disablePadding>
-          {navigationItems.map(item => renderNavItem(item))}
+          {navigationItems
+            .filter(item => user && hasRole(item.roles || []))
+            .map(item => renderNavItem(item))
+          }
         </List>
       </Box>
 
@@ -379,32 +404,34 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
             gap: 1
           }}
         >
-          {quickActions.map((action, index) => (
-            <Fab
-              key={action.title}
-              size="small"
-              color={action.color}
-              onClick={() => {
-                handleNavigation(action.path)
-                setQuickActionMenuOpen(false)
-              }}
-              sx={{
-                animation: `fadeInUp 0.3s ease-out ${index * 0.1}s both`,
-                '@keyframes fadeInUp': {
-                  '0%': {
-                    opacity: 0,
-                    transform: 'translateY(20px)'
-                  },
-                  '100%': {
-                    opacity: 1,
-                    transform: 'translateY(0)'
+          {quickActions
+            .filter(action => user && hasRole(action.roles || []))
+            .map((action, index) => (
+              <Fab
+                key={action.title}
+                size="small"
+                color={action.color}
+                onClick={() => {
+                  handleNavigation(action.path)
+                  setQuickActionMenuOpen(false)
+                }}
+                sx={{
+                  animation: `fadeInUp 0.3s ease-out ${index * 0.1}s both`,
+                  '@keyframes fadeInUp': {
+                    '0%': {
+                      opacity: 0,
+                      transform: 'translateY(20px)'
+                    },
+                    '100%': {
+                      opacity: 1,
+                      transform: 'translateY(0)'
+                    }
                   }
-                }
-              }}
-            >
-              {action.icon}
-            </Fab>
-          ))}
+                }}
+              >
+                {action.icon}
+              </Fab>
+            ))}
           <Fab
             size="small"
             color="default"

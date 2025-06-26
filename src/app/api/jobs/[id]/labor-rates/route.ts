@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
-import { connectToDatabase } from '@/lib/db'
+import { query } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 
 // Validation schemas

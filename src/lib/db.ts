@@ -1,4 +1,5 @@
 import { Pool } from 'pg'
+import type { UserRole } from './auth'
 
 // Simple PostgreSQL connection pool with retry logic
 const pool = new Pool({
@@ -67,6 +68,12 @@ export async function testConnection() {
   }
 }
 
+// Get database client connection
+export async function connectToDatabase() {
+  const client = await pool.connect()
+  return { client }
+}
+
 // Close all connections (for cleanup)
 export async function closePool() {
   await pool.end()
@@ -77,9 +84,10 @@ export interface User {
   id: string
   email: string
   name: string
-  role: string
-  created_at: Date
-  updated_at: Date
+  role: UserRole
+  active: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface Job {

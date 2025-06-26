@@ -3,9 +3,12 @@ import { query } from '@/lib/db'
 import { withErrorHandler, validateExists } from '@/lib/error-handler'
 import { customerSchema } from '@/lib/validation'
 import { searchCustomers } from '@/lib/search'
+import { withRBAC } from '@/lib/rbac-middleware'
 
 // GET all customers with search and pagination
-export const GET = withErrorHandler(async (request: NextRequest) => {
+export const GET = withRBAC({
+  roles: ['OWNER', 'ADMIN', 'OFFICE']
+})(withErrorHandler(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url)
   
   const options = {
@@ -56,10 +59,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     customers: transformedCustomers,
     pagination: result.pagination
   })
-})
+}))
 
 // POST create a new customer
-export const POST = withErrorHandler(async (request: NextRequest) => {
+export const POST = withRBAC({
+  roles: ['OWNER', 'ADMIN', 'OFFICE']
+})(withErrorHandler(async (request: NextRequest) => {
   const body = await request.json()
   const data = customerSchema.parse(body)
 
@@ -103,4 +108,4 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   validateExists(customer, 'Customer')
 
   return NextResponse.json(customer, { status: 201 })
-})
+}))

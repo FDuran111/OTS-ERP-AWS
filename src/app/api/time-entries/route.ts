@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { withRBAC } from '@/lib/rbac-middleware'
 
 const createTimeEntrySchema = z.object({
   jobId: z.string().min(1, 'Job ID is required'),
@@ -10,7 +11,9 @@ const createTimeEntrySchema = z.object({
 })
 
 // GET all time entries
-export async function GET(request: NextRequest) {
+export const GET = withRBAC({
+  roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN']
+})(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
@@ -91,10 +94,12 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 // POST create a new time entry (start timer)
-export async function POST(request: NextRequest) {
+export const POST = withRBAC({
+  roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN']
+})(async (request: NextRequest) => {
   try {
     const body = await request.json()
     console.log('POST /api/time-entries - Request body:', body)
@@ -170,4 +175,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

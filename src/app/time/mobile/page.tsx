@@ -11,7 +11,7 @@ import {
   IconButton,
   Container
 } from '@mui/material'
-import { ArrowBack as BackIcon, Desktop as DesktopIcon } from '@mui/icons-material'
+import { ArrowBack as BackIcon, Computer as DesktopIcon } from '@mui/icons-material'
 
 interface User {
   id: string

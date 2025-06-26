@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { withRBAC } from '@/lib/rbac-middleware'
 
 const createMaterialSchema = z.object({
   code: z.string().min(1, 'Code is required'),
@@ -19,7 +20,9 @@ const createMaterialSchema = z.object({
 })
 
 // GET all materials
-export async function GET(request: NextRequest) {
+export const GET = withRBAC({
+  roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN']
+})(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
@@ -120,10 +123,12 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 // POST create a new material
-export async function POST(request: NextRequest) {
+export const POST = withRBAC({
+  roles: ['OWNER', 'ADMIN', 'OFFICE']
+})(async (request: NextRequest) => {
   try {
     const body = await request.json()
     const data = createMaterialSchema.parse(body)
@@ -197,4 +202,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

@@ -1,0 +1,29 @@
+# Docker Compose for Ortmeier Job Management
+# This file is for local testing - Coolify will use the Dockerfile directly
+
+version: '3.8'
+
+services:
+  ortmeier-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - QB_CLIENT_ID=${QB_CLIENT_ID}
+      - QB_CLIENT_SECRET=${QB_CLIENT_SECRET}
+      - QB_REDIRECT_URI=${QB_REDIRECT_URI}
+      - QB_SANDBOX_MODE=${QB_SANDBOX_MODE}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

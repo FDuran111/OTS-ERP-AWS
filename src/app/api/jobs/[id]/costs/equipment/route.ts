@@ -15,14 +15,15 @@ const equipmentCostSchema = z.object({
 // POST add equipment cost entry
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     const data = equipmentCostSchema.parse(body)
 
     // Verify job exists
-    const jobCheck = await query('SELECT id FROM "Job" WHERE id = $1', [params.id])
+    const jobCheck = await query('SELECT id FROM "Job" WHERE id = $1', [resolvedParams.id])
     if (jobCheck.rows.length === 0) {
       return NextResponse.json(
         { error: 'Job not found' },
@@ -51,7 +52,7 @@ export async function POST(
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `, [
-      params.id,
+      resolvedParams.id,
       data.equipmentName,
       data.equipmentType,
       data.hourlyRate,
@@ -104,9 +105,10 @@ export async function POST(
 // GET equipment costs for job
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const result = await query(`
       SELECT 
         jec.*,
@@ -115,7 +117,7 @@ export async function GET(
       LEFT JOIN "User" u ON jec."operatorId" = u.id
       WHERE jec."jobId" = $1
       ORDER BY jec."usageDate" DESC, jec."createdAt" DESC
-    `, [params.id])
+    `, [resolvedParams.id])
 
     const equipmentCosts = result.rows.map(row => ({
       id: row.id,
@@ -145,9 +147,10 @@ export async function GET(
 // DELETE equipment cost entry
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const { searchParams } = new URL(request.url)
     const costId = searchParams.get('costId')
 
@@ -162,7 +165,7 @@ export async function DELETE(
     const verifyResult = await query(`
       SELECT id FROM "JobEquipmentCost" 
       WHERE id = $1 AND "jobId" = $2
-    `, [costId, params.id])
+    `, [costId, resolvedParams.id])
 
     if (verifyResult.rows.length === 0) {
       return NextResponse.json(

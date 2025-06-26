@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import {
   IconButton,
   Menu,
@@ -46,6 +47,7 @@ interface JobActionsMenuProps {
 
 export default function JobActionsMenu({ job, onEdit, onDelete, onView }: JobActionsMenuProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const { hasRole } = useAuth()
   const open = Boolean(anchorEl)
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -96,18 +98,22 @@ export default function JobActionsMenu({ job, onEdit, onDelete, onView }: JobAct
           </ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleEdit}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Edit Job</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Delete Job</ListItemText>
-        </MenuItem>
+        {hasRole(['OWNER', 'ADMIN', 'OFFICE']) && (
+          <MenuItem onClick={handleEdit}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit Job</ListItemText>
+          </MenuItem>
+        )}
+        {hasRole(['OWNER', 'ADMIN']) && (
+          <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText>Delete Job</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
     </>
   )

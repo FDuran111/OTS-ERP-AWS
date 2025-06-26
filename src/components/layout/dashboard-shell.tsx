@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
+import { UserRole } from '@/lib/auth'
 import {
   Box,
   AppBar,
@@ -47,32 +49,29 @@ interface DashboardShellProps {
 }
 
 const menuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { text: 'Jobs', icon: WorkIcon, path: '/jobs' },
-  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
-  { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
-  { text: 'Customers', icon: PeopleIcon, path: '/customers' },
-  { text: 'Materials', icon: InventoryIcon, path: '/materials' },
-  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
-  { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
-  { text: 'Settings', icon: SettingsIcon, path: '/settings' },
+  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] as UserRole[] },
+  { text: 'Jobs', icon: WorkIcon, path: '/jobs', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] as UserRole[] },
+  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] as UserRole[] },
+  { text: 'Time Tracking', icon: TimeIcon, path: '/time', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] as UserRole[] },
+  { text: 'Customers', icon: PeopleIcon, path: '/customers', roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
+  { text: 'Materials', icon: InventoryIcon, path: '/materials', roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN'] as UserRole[] },
+  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing', roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
+  { text: 'Reports', icon: AssessmentIcon, path: '/reports', roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
+  { text: 'Settings', icon: SettingsIcon, path: '/settings', roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
 ]
 
 export function DashboardShell({ children, title = 'Dashboard' }: DashboardShellProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const [user, setUser] = useState<User | null>(null)
+  const { user, hasRole } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (!storedUser) {
+    if (!user) {
       router.push('/login')
-      return
     }
-    setUser(JSON.parse(storedUser))
-  }, [router])
+  }, [user, router])
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -80,7 +79,6 @@ export function DashboardShell({ children, title = 'Dashboard' }: DashboardShell
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
-    localStorage.removeItem('user')
     router.push('/login')
   }
 
@@ -132,29 +130,31 @@ export function DashboardShell({ children, title = 'Dashboard' }: DashboardShell
       </Toolbar>
       <Divider />
       <List sx={{ flexGrow: 1 }}>
-        {menuItems.map((item) => {
-          const isActive = pathname === item.path
-          return (
-            <ListItemButton
-              key={item.text}
-              onClick={() => router.push(item.path)}
-              selected={isActive}
-              sx={{
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(229, 62, 62, 0.12)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(229, 62, 62, 0.16)',
+        {menuItems
+          .filter(item => user && hasRole(item.roles))
+          .map((item) => {
+            const isActive = pathname === item.path
+            return (
+              <ListItemButton
+                key={item.text}
+                onClick={() => router.push(item.path)}
+                selected={isActive}
+                sx={{
+                  '&.Mui-selected': {
+                    backgroundColor: 'rgba(229, 62, 62, 0.12)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(229, 62, 62, 0.16)',
+                    },
                   },
-                },
-              }}
-            >
-              <ListItemIcon>
-                <item.icon sx={{ color: isActive ? 'primary.main' : 'text.secondary' }} />
-              </ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          )
-        })}
+                }}
+              >
+                <ListItemIcon>
+                  <item.icon sx={{ color: isActive ? 'primary.main' : 'text.secondary' }} />
+                </ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItemButton>
+            )
+          })}
       </List>
       <Divider />
       <List>
@@ -191,7 +191,7 @@ export function DashboardShell({ children, title = 'Dashboard' }: DashboardShell
           </Typography>
           <IconButton onClick={handleMenuClick}>
             <Avatar sx={{ bgcolor: 'primary.main' }}>
-              {user.name.charAt(0)}
+              {user?.name?.charAt(0) || 'U'}
             </Avatar>
           </IconButton>
           <Menu
@@ -200,11 +200,11 @@ export function DashboardShell({ children, title = 'Dashboard' }: DashboardShell
             onClose={handleMenuClose}
           >
             <MenuItem>
-              <Typography variant="body2">{user.name}</Typography>
+              <Typography variant="body2">{user?.name}</Typography>
             </MenuItem>
             <MenuItem>
               <Typography variant="caption" color="text.secondary">
-                {user.role}
+                {user?.role}
               </Typography>
             </MenuItem>
             <Divider />

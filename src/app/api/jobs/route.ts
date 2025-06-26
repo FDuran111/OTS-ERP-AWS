@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { withRBAC } from '@/lib/rbac-middleware'
 
 // GET all jobs
-export async function GET(request: NextRequest) {
+export const GET = withRBAC({
+  roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER']
+})(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const statusFilter = searchParams.get('status')
@@ -107,7 +110,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 // Schema for creating a job
 const createJobSchema = z.object({
@@ -125,7 +128,9 @@ const createJobSchema = z.object({
 })
 
 // POST create a new job
-export async function POST(request: NextRequest) {
+export const POST = withRBAC({
+  roles: ['OWNER', 'ADMIN', 'OFFICE']
+})(async (request: NextRequest) => {
   try {
     const body = await request.json()
     const data = createJobSchema.parse(body)
@@ -224,4 +229,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

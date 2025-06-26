@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import {
   IconButton,
   Menu,
@@ -39,6 +40,7 @@ interface CustomerActionsMenuProps {
 
 export default function CustomerActionsMenu({ customer, onEdit, onDelete, onView }: CustomerActionsMenuProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const { hasRole } = useAuth()
   const open = Boolean(anchorEl)
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -93,24 +95,28 @@ export default function CustomerActionsMenu({ customer, onEdit, onDelete, onView
           </ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleEdit}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Edit Customer</ListItemText>
-        </MenuItem>
-        <MenuItem 
-          onClick={handleDelete} 
-          sx={{ color: 'error.main' }}
-          disabled={customer.totalJobs > 0}
-        >
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color={customer.totalJobs > 0 ? 'disabled' : 'error'} />
-          </ListItemIcon>
-          <ListItemText>
-            {customer.totalJobs > 0 ? 'Has Jobs' : 'Delete Customer'}
-          </ListItemText>
-        </MenuItem>
+        {hasRole(['OWNER', 'ADMIN', 'OFFICE']) && (
+          <MenuItem onClick={handleEdit}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit Customer</ListItemText>
+          </MenuItem>
+        )}
+        {hasRole(['OWNER', 'ADMIN']) && (
+          <MenuItem 
+            onClick={handleDelete} 
+            sx={{ color: 'error.main' }}
+            disabled={customer.totalJobs > 0}
+          >
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" color={customer.totalJobs > 0 ? 'disabled' : 'error'} />
+            </ListItemIcon>
+            <ListItemText>
+              {customer.totalJobs > 0 ? 'Has Jobs' : 'Delete Customer'}
+            </ListItemText>
+          </MenuItem>
+        )}
       </Menu>
     </>
   )

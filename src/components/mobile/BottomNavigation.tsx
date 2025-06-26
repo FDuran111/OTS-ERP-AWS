@@ -17,6 +17,8 @@ import {
   Menu as MenuIcon,
 } from '@mui/icons-material'
 import { useRouter, usePathname } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
+import { UserRole } from '@/lib/auth'
 
 interface BottomNavigationProps {
   onMenuOpen?: () => void
@@ -27,31 +29,36 @@ const navigationItems = [
     label: 'Dashboard',
     icon: <HomeIcon />,
     value: '/dashboard',
-    paths: ['/dashboard', '/']
+    paths: ['/dashboard', '/'],
+    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] as UserRole[]
   },
   {
     label: 'Jobs',
     icon: <JobsIcon />,
     value: '/jobs',
-    paths: ['/jobs']
+    paths: ['/jobs'],
+    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] as UserRole[]
   },
   {
     label: 'Customers',
     icon: <CustomersIcon />,
     value: '/customers',
-    paths: ['/customers']
+    paths: ['/customers'],
+    roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] // Only staff can manage customers
   },
   {
     label: 'Routes',
     icon: <RouteIcon />,
     value: '/route-optimization',
-    paths: ['/route-optimization']
+    paths: ['/route-optimization'],
+    roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] // Only staff can access route optimization
   },
   {
     label: 'Menu',
     icon: <MenuIcon />,
     value: 'menu',
-    paths: []
+    paths: [],
+    roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER'] as UserRole[] // Everyone can access menu
   }
 ]
 
@@ -59,15 +66,22 @@ export default function BottomNavigation({ onMenuOpen }: BottomNavigationProps) 
   const router = useRouter()
   const pathname = usePathname()
   const theme = useTheme()
+  const { user, hasRole } = useAuth()
+
+  // Filter navigation items based on user role
+  const visibleItems = navigationItems.filter(item => {
+    if (!user) return false
+    return hasRole(item.roles)
+  })
 
   // Determine current value based on pathname
   const getCurrentValue = () => {
-    for (const item of navigationItems) {
+    for (const item of visibleItems) {
       if (item.paths.some(path => pathname === path || pathname.startsWith(path + '/'))) {
         return item.value
       }
     }
-    return navigationItems[0].value // Default to dashboard
+    return visibleItems[0]?.value || '/dashboard' // Default to dashboard or first available item
   }
 
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
@@ -78,6 +92,11 @@ export default function BottomNavigation({ onMenuOpen }: BottomNavigationProps) 
     } else {
       router.push(newValue)
     }
+  }
+
+  // Don't render if user has no access to any navigation items
+  if (!user || visibleItems.length === 0) {
+    return null
   }
 
   return (
@@ -118,7 +137,7 @@ export default function BottomNavigation({ onMenuOpen }: BottomNavigationProps) 
           }
         }}
       >
-        {navigationItems.map((item) => (
+        {visibleItems.map((item) => (
           <BottomNavigationAction
             key={item.value}
             label={item.label}

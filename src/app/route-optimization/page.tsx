@@ -39,7 +39,7 @@ import {
 import {
   LocalShipping as TruckIcon,
   Route as RouteIcon,
-  Optimize as OptimizeIcon,
+  Tune as OptimizeIcon,
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
