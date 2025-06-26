@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   Button,
@@ -179,8 +178,8 @@ export default function CustomerPortalManagementPage() {
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -199,9 +198,9 @@ export default function CustomerPortalManagementPage() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -220,9 +219,9 @@ export default function CustomerPortalManagementPage() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -241,9 +240,9 @@ export default function CustomerPortalManagementPage() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -262,8 +261,8 @@ export default function CustomerPortalManagementPage() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Customer Portal Users Table */}
       <Card>
@@ -368,8 +367,8 @@ export default function CustomerPortalManagementPage() {
       </Card>
 
       {/* Feature Cards */}
-      <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12} md={4}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 2 }}>
+        <Box sx={{ flex: '1 1 calc(33.333% - 24px)', minWidth: '300px' }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -394,9 +393,9 @@ export default function CustomerPortalManagementPage() {
               </Stack>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid item xs={12} md={4}>
+        <Box sx={{ flex: '1 1 calc(33.333% - 24px)', minWidth: '300px' }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -421,9 +420,9 @@ export default function CustomerPortalManagementPage() {
               </Stack>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid item xs={12} md={4}>
+        <Box sx={{ flex: '1 1 calc(33.333% - 24px)', minWidth: '300px' }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -442,8 +441,8 @@ export default function CustomerPortalManagementPage() {
               </Stack>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Create User Dialog */}
       <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
