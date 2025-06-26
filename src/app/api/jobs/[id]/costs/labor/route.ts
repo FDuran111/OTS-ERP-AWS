@@ -61,7 +61,7 @@ export async function POST(
     }
 
     // Get labor rate (considering job-specific overrides)
-    let hourlyRate = data.hourlyRate
+    let hourlyRate: number | undefined = data.hourlyRate
     let laborRateId = null
 
     if (!hourlyRate) {
@@ -101,9 +101,14 @@ export async function POST(
             'CABLING': 55.00,
             'INSTALL': 70.00
           }
-          hourlyRate = defaultRates[skillLevel] || 65.00
+          hourlyRate = (defaultRates as any)[skillLevel] || 65.00
         }
       }
+    }
+
+    // Ensure hourlyRate is always defined
+    if (hourlyRate === undefined) {
+      hourlyRate = 65.00
     }
 
     const totalCost = data.hoursWorked * hourlyRate

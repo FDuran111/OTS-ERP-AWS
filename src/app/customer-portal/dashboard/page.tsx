@@ -186,8 +186,8 @@ export default function CustomerDashboard() {
         </Paper>
 
         {/* Feature Cards */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 3 }}>
+          <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
             <Card sx={{ height: '100%', cursor: 'pointer', '&:hover': { boxShadow: 4 } }}>
               <CardContent sx={{ textAlign: 'center', p: 3 }}>
                 <AssignmentIcon sx={{ fontSize: 48, color: '#e14eca', mb: 2 }} />
@@ -200,9 +200,9 @@ export default function CustomerDashboard() {
                 <Chip label="Coming Soon" size="small" variant="outlined" />
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
             <Card sx={{ height: '100%', cursor: 'pointer', '&:hover': { boxShadow: 4 } }}>
               <CardContent sx={{ textAlign: 'center', p: 3 }}>
                 <ScheduleIcon sx={{ fontSize: 48, color: '#e14eca', mb: 2 }} />
@@ -215,9 +215,9 @@ export default function CustomerDashboard() {
                 <Chip label="Coming Soon" size="small" variant="outlined" />
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
             <Card sx={{ height: '100%', cursor: 'pointer', '&:hover': { boxShadow: 4 } }}>
               <CardContent sx={{ textAlign: 'center', p: 3 }}>
                 <PhotoLibraryIcon sx={{ fontSize: 48, color: '#e14eca', mb: 2 }} />
@@ -230,9 +230,9 @@ export default function CustomerDashboard() {
                 <Chip label="Coming Soon" size="small" variant="outlined" />
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '250px' }}>
             <Card sx={{ height: '100%', cursor: 'pointer', '&:hover': { boxShadow: 4 } }}>
               <CardContent sx={{ textAlign: 'center', p: 3 }}>
                 <ReceiptIcon sx={{ fontSize: 48, color: '#e14eca', mb: 2 }} />
@@ -245,8 +245,8 @@ export default function CustomerDashboard() {
                 <Chip label="Coming Soon" size="small" variant="outlined" />
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
 
         {/* Placeholder Content */}
         <Paper sx={{ p: 3, mt: 4 }}>

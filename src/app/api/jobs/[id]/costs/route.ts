@@ -7,6 +7,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
+    
     // Get comprehensive job cost data
     const [
       jobCostResult,
@@ -19,7 +21,7 @@ export async function GET(
       query(`
         SELECT * FROM "JobCost" 
         WHERE "jobId" = $1
-      `, [params.id]),
+      `, [resolvedParams.id]),
       
       // Labor cost breakdown
       query(`
@@ -32,7 +34,7 @@ export async function GET(
         LEFT JOIN "LaborRate" lr ON jlc."laborRateId" = lr.id
         WHERE jlc."jobId" = $1
         ORDER BY jlc."workDate" DESC, jlc."createdAt" DESC
-      `, [params.id]),
+      `, [resolvedParams.id]),
       
       // Material cost breakdown
       query(`
@@ -45,7 +47,7 @@ export async function GET(
         LEFT JOIN "Material" m ON jmc."materialId" = m.id
         WHERE jmc."jobId" = $1
         ORDER BY jmc."usageDate" DESC, jmc."createdAt" DESC
-      `, [params.id]),
+      `, [resolvedParams.id]),
       
       // Equipment cost breakdown
       query(`
@@ -56,7 +58,7 @@ export async function GET(
         LEFT JOIN "User" u ON jec."operatorId" = u.id
         WHERE jec."jobId" = $1
         ORDER BY jec."usageDate" DESC, jec."createdAt" DESC
-      `, [params.id]),
+      `, [resolvedParams.id]),
       
       // Job basic details
       query(`
@@ -72,7 +74,7 @@ export async function GET(
         FROM "Job" j
         LEFT JOIN "Customer" c ON j."customerId" = c.id
         WHERE j.id = $1
-      `, [params.id])
+      `, [resolvedParams.id])
     ])
 
     const jobDetails = jobDetailsResult.rows[0]
@@ -86,8 +88,8 @@ export async function GET(
     // If no cost record exists, calculate it
     let jobCost = jobCostResult.rows[0]
     if (!jobCost) {
-      await query('SELECT calculate_job_costs($1)', [params.id])
-      const newCostResult = await query('SELECT * FROM "JobCost" WHERE "jobId" = $1', [params.id])
+      await query('SELECT calculate_job_costs($1)', [resolvedParams.id])
+      const newCostResult = await query('SELECT * FROM "JobCost" WHERE "jobId" = $1', [resolvedParams.id])
       jobCost = newCostResult.rows[0]
     }
 
@@ -197,6 +199,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     const {
       overheadPercentage,
@@ -257,14 +260,14 @@ export async function PUT(
     }
 
     updateFields.push(`"updatedAt" = NOW()`)
-    values.push(params.id)
+    values.push(resolvedParams.id)
 
     // Ensure JobCost record exists
     await query(`
       INSERT INTO "JobCost" ("jobId") 
       VALUES ($1) 
       ON CONFLICT ("jobId") DO NOTHING
-    `, [params.id])
+    `, [resolvedParams.id])
 
     // Update the record
     const updateQuery = `
@@ -277,10 +280,10 @@ export async function PUT(
     await query(updateQuery, values)
 
     // Recalculate costs with new settings
-    await query('SELECT calculate_job_costs($1)', [params.id])
+    await query('SELECT calculate_job_costs($1)', [resolvedParams.id])
 
     // Return updated costs
-    const updatedResult = await query('SELECT * FROM "JobCost" WHERE "jobId" = $1', [params.id])
+    const updatedResult = await query('SELECT * FROM "JobCost" WHERE "jobId" = $1', [resolvedParams.id])
     const updatedCosts = updatedResult.rows[0]
 
     return NextResponse.json({
@@ -303,11 +306,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
+    
     // Recalculate all costs for the job
-    await query('SELECT calculate_job_costs($1)', [params.id])
+    await query('SELECT calculate_job_costs($1)', [resolvedParams.id])
 
     // Get updated costs
-    const result = await query('SELECT * FROM "JobCost" WHERE "jobId" = $1', [params.id])
+    const result = await query('SELECT * FROM "JobCost" WHERE "jobId" = $1', [resolvedParams.id])
     const costs = result.rows[0]
 
     return NextResponse.json({

@@ -199,11 +199,11 @@ async function getScheduledJobs(
   serviceAreaIds?: string[]
 ): Promise<JobLocation[]> {
   let whereClause = `WHERE j."scheduledDate"::date = $1 AND j.status IN ('SCHEDULED', 'CONFIRMED')`
-  const params = [routeDate]
+  const params: any[] = [routeDate]
   let paramIndex = 2
 
   if (jobIds && jobIds.length > 0) {
-    whereClause += ` AND j.id = ANY($${paramIndex})`
+    whereClause += ` AND j.id = ANY($${paramIndex}::int[])`
     params.push(jobIds)
     paramIndex++
   }

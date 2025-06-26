@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
 
       // Add stops to routes
       routes.forEach(route => {
-        route.stops = stopsByRoute[route.routeId] || []
+        (route as any).stops = stopsByRoute[route.routeId] || []
       })
     }
 

@@ -160,16 +160,16 @@ async function generatePayrollSummary(client: any, data: any) {
   
   const summary = {
     totalEmployees: result.rows.length,
-    totalHours: result.rows.reduce((sum, row) => sum + parseFloat(row.totalHours), 0),
-    totalPay: result.rows.reduce((sum, row) => sum + parseFloat(row.totalPay), 0),
-    totalOvertimeHours: result.rows.reduce((sum, row) => sum + parseFloat(row.overtimeHours), 0),
+    totalHours: result.rows.reduce((sum: number, row: any) => sum + parseFloat(row.totalHours), 0),
+    totalPay: result.rows.reduce((sum: number, row: any) => sum + parseFloat(row.totalPay), 0),
+    totalOvertimeHours: result.rows.reduce((sum: number, row: any) => sum + parseFloat(row.overtimeHours), 0),
     averageHoursPerEmployee: result.rows.length > 0 ? 
-      result.rows.reduce((sum, row) => sum + parseFloat(row.totalHours), 0) / result.rows.length : 0
+      result.rows.reduce((sum: number, row: any) => sum + parseFloat(row.totalHours), 0) / result.rows.length : 0
   }
   
   return {
     summary,
-    employees: result.rows.map(row => ({
+    employees: result.rows.map((row: any) => ({
       userId: row.userId,
       employeeName: row.employeeName,
       employeeEmail: row.employeeEmail,
@@ -221,7 +221,7 @@ async function generateEmployeeDetail(client: any, data: any) {
   `, [data.startDate, data.endDate, data.userIds, data.jobIds])
   
   return {
-    entries: result.rows.map(row => ({
+    entries: result.rows.map((row: any) => ({
       id: row.id,
       userId: row.userId,
       employeeName: row.employeeName,
@@ -266,16 +266,16 @@ async function generateOvertimeAnalysis(client: any, data: any) {
   `, [data.startDate, data.endDate, data.userIds])
   
   const summary = {
-    totalOvertimeHours: result.rows.reduce((sum, row) => sum + parseFloat(row.totalOvertimeHours), 0),
-    totalOvertimePay: result.rows.reduce((sum, row) => sum + parseFloat(row.overtimePay), 0),
-    employeesWithOvertime: result.rows.filter(row => parseFloat(row.totalOvertimeHours) > 0).length,
+    totalOvertimeHours: result.rows.reduce((sum: number, row: any) => sum + parseFloat(row.totalOvertimeHours), 0),
+    totalOvertimePay: result.rows.reduce((sum: number, row: any) => sum + parseFloat(row.overtimePay), 0),
+    employeesWithOvertime: result.rows.filter((row: any) => parseFloat(row.totalOvertimeHours) > 0).length,
     averageOvertimePerEmployee: result.rows.length > 0 ? 
-      result.rows.reduce((sum, row) => sum + parseFloat(row.totalOvertimeHours), 0) / result.rows.length : 0
+      result.rows.reduce((sum: number, row: any) => sum + parseFloat(row.totalOvertimeHours), 0) / result.rows.length : 0
   }
   
   return {
     summary,
-    employees: result.rows.map(row => ({
+    employees: result.rows.map((row: any) => ({
       employeeName: row.employeeName,
       totalEntries: parseInt(row.totalEntries),
       overtimeEntries: parseInt(row.overtimeEntries),
@@ -315,7 +315,7 @@ async function generateBreakAnalysis(client: any, data: any) {
   `, [data.startDate, data.endDate, data.userIds])
   
   return {
-    breakAnalysis: result.rows.map(row => ({
+    breakAnalysis: result.rows.map((row: any) => ({
       employeeName: row.employeeName,
       breakType: row.breakType,
       breakCount: parseInt(row.breakCount),
@@ -353,7 +353,7 @@ async function generateJobCostAnalysis(client: any, data: any) {
   `, [data.startDate, data.endDate, data.jobIds])
   
   return {
-    jobs: result.rows.map(row => ({
+    jobs: result.rows.map((row: any) => ({
       jobId: row.jobId,
       jobNumber: row.jobNumber,
       jobTitle: row.jobTitle,
@@ -388,7 +388,7 @@ async function generateApprovalStatus(client: any, data: any) {
   `, [data.startDate, data.endDate, data.userIds])
   
   return {
-    statusBreakdown: result.rows.map(row => ({
+    statusBreakdown: result.rows.map((row: any) => ({
       status: row.status,
       entryCount: parseInt(row.entryCount),
       totalHours: parseFloat(row.totalHours),
@@ -420,7 +420,7 @@ async function generateProductivityMetrics(client: any, data: any) {
   `, [data.startDate, data.endDate, data.userIds])
   
   return {
-    metrics: result.rows.map(row => ({
+    metrics: result.rows.map((row: any) => ({
       employeeName: row.employeeName,
       totalEntries: parseInt(row.totalEntries),
       totalHours: parseFloat(row.totalHours),

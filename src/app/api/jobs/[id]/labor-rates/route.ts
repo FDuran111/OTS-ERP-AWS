@@ -19,7 +19,7 @@ export async function GET(
 ) {
   try {
     // Verify authentication
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
     
     if (!token) {
@@ -80,7 +80,7 @@ export async function POST(
 ) {
   try {
     // Verify authentication
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
     
     if (!token) {
@@ -167,7 +167,7 @@ export async function POST(
     }
 
     // Handle unique constraint violation (duplicate user/job combination)
-    if (error.code === '23505') {
+    if ((error as any).code === '23505') {
       return NextResponse.json(
         { error: 'Labor rate override already exists for this user on this job' },
         { status: 409 }

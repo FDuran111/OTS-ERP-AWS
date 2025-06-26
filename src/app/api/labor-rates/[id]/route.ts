@@ -19,9 +19,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const result = await query(
       'SELECT * FROM "LaborRate" WHERE id = $1',
-      [params.id]
+      [resolvedParams.id]
     )
 
     if (result.rows.length === 0) {
@@ -47,13 +48,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     const data = updateLaborRateSchema.parse(body)
 
     // Check if rate exists
     const existingRate = await query(
       'SELECT id FROM "LaborRate" WHERE id = $1',
-      [params.id]
+      [resolvedParams.id]
     )
 
     if (existingRate.rows.length === 0) {
@@ -67,7 +69,7 @@ export async function PUT(
     if (data.name) {
       const nameConflict = await query(
         'SELECT id FROM "LaborRate" WHERE name = $1 AND id != $2 AND active = true',
-        [data.name, params.id]
+        [data.name, resolvedParams.id]
       )
 
       if (nameConflict.rows.length > 0) {
@@ -87,7 +89,7 @@ export async function PUT(
       if (value !== undefined) {
         if (key === 'effectiveDate' || key === 'expiryDate') {
           updateFields.push(`"${key}" = $${paramIndex}`)
-          values.push(value ? new Date(value) : null)
+          values.push(value ? new Date(value as string | number) : null)
         } else if (key === 'hourlyRate') {
           updateFields.push(`"${key}" = $${paramIndex}`)
           values.push(value)
@@ -107,7 +109,7 @@ export async function PUT(
     }
 
     updateFields.push(`"updatedAt" = NOW()`)
-    values.push(params.id)
+    values.push(resolvedParams.id)
 
     const updateQuery = `
       UPDATE "LaborRate" 
@@ -139,10 +141,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
+    
     // Check if rate exists
     const existingRate = await query(
       'SELECT id FROM "LaborRate" WHERE id = $1',
-      [params.id]
+      [resolvedParams.id]
     )
 
     if (existingRate.rows.length === 0) {
@@ -155,7 +159,7 @@ export async function DELETE(
     // Soft delete by setting active = false
     await query(
       'UPDATE "LaborRate" SET active = false, "updatedAt" = NOW() WHERE id = $1',
-      [params.id]
+      [resolvedParams.id]
     )
 
     return NextResponse.json({ success: true })

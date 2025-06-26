@@ -307,7 +307,7 @@ async function processBulkApproval(data: z.infer<typeof bulkApprovalSchema>) {
         AND DATE("clockInTime") <= $2::date
     `
     
-    const params = [data.startDate, data.endDate]
+    const params: any[] = [data.startDate, data.endDate]
     
     if (data.userIds && data.userIds.length > 0) {
       query += ` AND "userId" = ANY($3::text[])`

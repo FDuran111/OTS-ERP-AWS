@@ -49,9 +49,10 @@ export async function query(text: string, params?: any[]) {
     // Re-throw with more context
     const enhancedError = new Error(`Database query failed: ${error.message}`)
     enhancedError.name = 'DatabaseQueryError'
-    ;(enhancedError as any).originalError = error
-    ;(enhancedError as any).query = text
-    ;(enhancedError as any).params = params
+    const errorWithContext = enhancedError as any
+    errorWithContext.originalError = error
+    errorWithContext.query = text
+    errorWithContext.params = params
     
     throw enhancedError
   }

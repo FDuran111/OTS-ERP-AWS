@@ -17,7 +17,7 @@ export async function PUT(
 ) {
   try {
     // Verify authentication
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
     
     if (!token) {
@@ -104,7 +104,7 @@ export async function DELETE(
 ) {
   try {
     // Verify authentication
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
     
     if (!token) {

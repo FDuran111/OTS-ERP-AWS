@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
       
       switch (data.groupBy) {
         case 'employee':
-          groupedData = timeEntries.reduce((acc, entry) => {
+          groupedData = timeEntries.reduce((acc: any, entry: any) => {
             const key = entry.userId
             if (!acc[key]) {
               acc[key] = {
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
           break
           
         case 'job':
-          groupedData = timeEntries.reduce((acc, entry) => {
+          groupedData = timeEntries.reduce((acc: any, entry: any) => {
             const key = entry.jobId || 'no-job'
             if (!acc[key]) {
               acc[key] = {
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
           break
           
         case 'date':
-          groupedData = timeEntries.reduce((acc, entry) => {
+          groupedData = timeEntries.reduce((acc: any, entry: any) => {
             const key = entry.workDate
             if (!acc[key]) {
               acc[key] = {

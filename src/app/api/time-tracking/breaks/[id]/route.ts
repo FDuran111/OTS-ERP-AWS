@@ -18,6 +18,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     const data = endBreakSchema.parse(body)
     
@@ -33,7 +34,7 @@ export async function PUT(
         JOIN "TimeEntry" te ON teb."timeEntryId" = te.id
         JOIN "User" u ON te."userId" = u.id
         WHERE teb.id = $1 AND teb."endTime" IS NULL
-      `, [params.id])
+      `, [resolvedParams.id])
       
       if (breakResult.rows.length === 0) {
         return NextResponse.json(
@@ -55,7 +56,7 @@ export async function PUT(
           "notes" = COALESCE($3, "notes")
         WHERE id = $4
         RETURNING *
-      `, [data.latitude, data.longitude, data.notes, params.id])
+      `, [data.latitude, data.longitude, data.notes, resolvedParams.id])
       
       const updatedBreak = updateResult.rows[0]
       
@@ -120,6 +121,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const client = await pool.connect()
     
     try {
@@ -140,7 +142,7 @@ export async function GET(
         JOIN "User" u ON te."userId" = u.id
         LEFT JOIN "Job" j ON te."jobId" = j.id
         WHERE teb.id = $1
-      `, [params.id])
+      `, [resolvedParams.id])
       
       if (result.rows.length === 0) {
         return NextResponse.json(
@@ -196,6 +198,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const client = await pool.connect()
     
     try {
@@ -205,7 +208,7 @@ export async function DELETE(
       const breakResult = await client.query(`
         SELECT * FROM "TimeEntryBreak" 
         WHERE id = $1 AND "endTime" IS NULL
-      `, [params.id])
+      `, [resolvedParams.id])
       
       if (breakResult.rows.length === 0) {
         return NextResponse.json(
@@ -217,7 +220,7 @@ export async function DELETE(
       // Delete the break record
       await client.query(`
         DELETE FROM "TimeEntryBreak" WHERE id = $1
-      `, [params.id])
+      `, [resolvedParams.id])
       
       await client.query('COMMIT')
       

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     if (activeEntry) {
       const now = new Date()
       const clockInTime = new Date(activeEntry.clockInTime)
-      const elapsedMinutes = Math.floor((now - clockInTime) / 60000)
+      const elapsedMinutes = Math.floor((now.getTime() - clockInTime.getTime()) / 60000)
       
       elapsedTime = {
         totalMinutes: elapsedMinutes,

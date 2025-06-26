@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       const updatedEntry = updateResult.rows[0]
       
       // Calculate hours and pay
-      const totalMinutes = Math.floor((new Date(updatedEntry.clockOutTime) - new Date(updatedEntry.clockInTime)) / 60000)
+      const totalMinutes = Math.floor((new Date(updatedEntry.clockOutTime).getTime() - new Date(updatedEntry.clockInTime).getTime()) / 60000)
       const totalHours = totalMinutes / 60.0
       
       // Simple overtime calculation (over 8 hours)
