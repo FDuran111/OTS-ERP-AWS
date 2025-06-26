@@ -558,7 +558,7 @@ const CreatePurchaseOrderDialog: React.FC<CreatePurchaseOrderDialogProps> = ({
                     size="small"
                     label="Price *"
                     type="number"
-                    step="0.01"
+                    inputProps={{ step: "0.01" }}
                     value={newItem.unitPrice}
                     onChange={(e) => setNewItem({ ...newItem, unitPrice: parseFloat(e.target.value) || 0 })}
                     required
