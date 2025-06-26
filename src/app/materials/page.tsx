@@ -524,65 +524,124 @@ export default function MaterialsPage() {
         }}
       >
         <Container maxWidth="xl">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="h4">
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', lg: 'row' },
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'stretch', lg: 'center' }, 
+            gap: { xs: 2, lg: 0 },
+            mb: 4 
+          }}>
+            <Typography 
+              variant="h4"
+              sx={{ 
+                fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' },
+                mb: { xs: 1, lg: 0 }
+              }}
+            >
               Materials & Inventory
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap',
+              gap: { xs: 1, sm: 1.5, md: 2 },
+              justifyContent: { xs: 'center', lg: 'flex-end' },
+              maxWidth: { xs: '100%', lg: 'none' }
+            }}>
               <Button
                 variant="outlined"
                 onClick={() => fetchCombinedData()}
                 disabled={loading}
+                size={isMobile ? 'small' : 'medium'}
+                sx={{ 
+                  minWidth: { xs: 'auto', sm: '120px' },
+                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
+                  maxWidth: { xs: 'none', sm: '160px' }
+                }}
               >
-                {loading ? 'Loading...' : 'Refresh'}
+                {loading ? 'Loading...' : isMobile ? 'Refresh' : 'Refresh'}
               </Button>
               <Button
                 variant="outlined"
-                startIcon={<InventoryIcon />}
+                startIcon={!isMobile ? <InventoryIcon /> : undefined}
                 onClick={() => setStorageLocationDialogOpen(true)}
+                size={isMobile ? 'small' : 'medium'}
+                sx={{ 
+                  minWidth: { xs: 'auto', sm: '120px' },
+                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
+                  maxWidth: { xs: 'none', sm: '160px' }
+                }}
               >
-                Manage Locations
+                {isMobile ? 'Locations' : 'Manage Locations'}
               </Button>
               <Button
                 variant="outlined"
-                startIcon={<HistoryIcon />}
+                startIcon={!isMobile ? <HistoryIcon /> : undefined}
                 onClick={() => setStockHistoryDialogOpen(true)}
+                size={isMobile ? 'small' : 'medium'}
+                sx={{ 
+                  minWidth: { xs: 'auto', sm: '120px' },
+                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
+                  maxWidth: { xs: 'none', sm: '160px' }
+                }}
               >
-                Stock History
+                {isMobile ? 'History' : 'Stock History'}
               </Button>
               <Button
                 variant="outlined"
-                startIcon={<AssessmentIcon />}
+                startIcon={!isMobile ? <AssessmentIcon /> : undefined}
                 onClick={() => setAnalyticsDialogOpen(true)}
+                size={isMobile ? 'small' : 'medium'}
+                sx={{ 
+                  minWidth: { xs: 'auto', sm: '120px' },
+                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
+                  maxWidth: { xs: 'none', sm: '160px' }
+                }}
               >
                 Analytics
               </Button>
               <Button
                 variant="outlined"
-                startIcon={<TrendingUp />}
+                startIcon={!isMobile ? <TrendingUp /> : undefined}
                 onClick={() => setReorderDialogOpen(true)}
+                size={isMobile ? 'small' : 'medium'}
+                sx={{ 
+                  minWidth: { xs: 'auto', sm: '120px' },
+                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
+                  maxWidth: { xs: 'none', sm: '160px' }
+                }}
               >
-                Reorder Suggestions
+                {isMobile ? 'Reorder' : 'Reorder Suggestions'}
               </Button>
               <Button
                 variant="outlined"
-                startIcon={<ScheduleIcon />}
+                startIcon={!isMobile ? <ScheduleIcon /> : undefined}
                 onClick={() => setReservationDialogOpen(true)}
+                size={isMobile ? 'small' : 'medium'}
+                sx={{ 
+                  minWidth: { xs: 'auto', sm: '120px' },
+                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
+                  maxWidth: { xs: 'none', sm: '160px' }
+                }}
               >
-                Reserve Materials
+                {isMobile ? 'Reserve' : 'Reserve Materials'}
               </Button>
               <Button
                 variant="contained"
-                startIcon={<AddIcon />}
+                startIcon={!isMobile ? <AddIcon /> : undefined}
                 onClick={handleAddMaterial}
+                size={isMobile ? 'small' : 'medium'}
                 sx={{
                   backgroundColor: '#e14eca',
                   '&:hover': {
                     backgroundColor: '#d236b8',
                   },
+                  minWidth: { xs: 'auto', sm: '120px' },
+                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
+                  maxWidth: { xs: 'none', sm: '160px' }
                 }}
               >
-                Add Material
+                {isMobile ? 'Add' : 'Add Material'}
               </Button>
             </Box>
           </Box>
@@ -753,11 +812,35 @@ export default function MaterialsPage() {
           {materials.length > 0 && (
             <Alert 
               severity={materials.filter(m => m.inStock <= m.minStock).length > 0 ? "warning" : "success"} 
-              sx={{ mb: 3 }}
+              sx={{ 
+                mb: 3,
+                '& .MuiAlert-message': {
+                  width: '100%',
+                  overflow: 'hidden'
+                }
+              }}
               icon={<Warning />}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="body2">
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'flex-start', sm: 'center' }, 
+                justifyContent: 'space-between',
+                gap: { xs: 1, sm: 2 },
+                width: '100%'
+              }}>
+                <Typography 
+                  variant="body2"
+                  sx={{
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                    lineHeight: 1.4,
+                    wordBreak: 'break-word',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    flex: 1,
+                    minWidth: 0
+                  }}
+                >
                   {materials.filter(m => m.inStock <= m.minStock).length > 0 
                     ? `${materials.filter(m => m.inStock <= m.minStock).length} item(s) need restocking`
                     : "All items are adequately stocked"
@@ -769,8 +852,15 @@ export default function MaterialsPage() {
                     variant="contained" 
                     color="warning"
                     onClick={() => setShowOnlyLowStock(true)}
+                    sx={{
+                      minWidth: 'auto',
+                      whiteSpace: 'nowrap',
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      px: { xs: 2, sm: 3 },
+                      flexShrink: 0
+                    }}
                   >
-                    View Low Stock Items
+                    {isMobile ? 'View' : 'View Low Stock Items'}
                   </Button>
                 )}
               </Box>
