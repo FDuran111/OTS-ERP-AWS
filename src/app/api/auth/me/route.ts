@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
-import { connectToDatabase } from '@/lib/db'
+import { query } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
     // Get auth token from cookies
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
 
     if (!token) {
@@ -28,9 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get fresh user data from database
-    const { client } = await connectToDatabase()
-    
-    const userResult = await client.query(
+    const userResult = await query(
       'SELECT id, email, name, role, active, "createdAt", "updatedAt" FROM "User" WHERE id = $1 AND active = true',
       [userPayload.id]
     )

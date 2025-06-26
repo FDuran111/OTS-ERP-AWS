@@ -95,9 +95,9 @@ export function useAuthState(): AuthContextType {
       })
 
       if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
-        localStorage.setItem('user', JSON.stringify(userData))
+        const data = await response.json()
+        setUser(data.user)
+        localStorage.setItem('user', JSON.stringify(data.user))
         return true
       } else {
         const error = await response.json()
