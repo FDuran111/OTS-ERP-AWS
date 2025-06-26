@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     // Get line items for all invoices
     const invoiceIds = invoicesResult.rows.map(inv => inv.id)
-    let lineItemsResult = { rows: [] }
+    let lineItemsResult: { rows: any[] } = { rows: [] }
     
     if (invoiceIds.length > 0) {
       const placeholders = invoiceIds.map((_, i) => `$${i + 1}`).join(',')
