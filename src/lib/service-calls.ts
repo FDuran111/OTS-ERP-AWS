@@ -322,7 +322,7 @@ export async function updateServiceCallStatus(
 export async function deleteServiceCall(id: string): Promise<boolean> {
   const query = `DELETE FROM "ServiceCall" WHERE id = $1`
   const result = await pool.query(query, [id])
-  return result.rowCount > 0
+  return (result.rowCount ?? 0) > 0
 }
 
 export async function getServiceCallHistory(serviceCallId: string) {
