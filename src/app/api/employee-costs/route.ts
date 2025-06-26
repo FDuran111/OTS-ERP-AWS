@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
         `, [userId])
       ])
 
-      employeeCosts[0].overheadBreakdown = overheadDetails.rows.map(row => ({
+      (employeeCosts[0] as any).overheadBreakdown = overheadDetails.rows.map(row => ({
         overheadType: row.overheadType,
         overheadCategory: row.overheadCategory,
         annualCost: parseFloat(row.annualCost),
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         description: row.description
       }))
 
-      employeeCosts[0].assetBreakdown = assetDetails.rows.map(row => ({
+      (employeeCosts[0] as any).assetBreakdown = assetDetails.rows.map(row => ({
         assetNumber: row.assetNumber,
         assetName: row.assetName,
         assetType: row.assetType,
