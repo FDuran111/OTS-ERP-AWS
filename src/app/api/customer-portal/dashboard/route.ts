@@ -4,8 +4,17 @@ import { verifyCustomerToken } from '@/lib/customer-auth'
 
 export async function GET(request: NextRequest) {
   try {
+    // Extract token from cookies
+    const token = request.cookies.get('customer-auth-token')?.value
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     // Verify customer authentication
-    const auth = await verifyCustomerToken(request)
+    const auth = verifyCustomerToken(token)
     if (!auth) {
       return NextResponse.json(
         { error: 'Unauthorized' },
