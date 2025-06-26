@@ -1,13 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { verifyToken } from '@/lib/auth'
 
-// GET all users (for crew assignment)
+// GET all users (for crew assignment and user management)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const roleFilter = searchParams.get('role')
+    const includeInactive = searchParams.get('includeInactive') === 'true'
+    
+    // Check if user is authenticated
+    const token = request.cookies.get('auth-token')?.value
+    let currentUser = null
+    
+    if (token) {
+      try {
+        currentUser = verifyToken(token)
+      } catch (e) {
+        // Token invalid, continue without auth
+      }
+    }
 
-    let whereClause = 'WHERE active = true'
+    // For user management (OWNER_ADMIN requesting all data)
+    if (currentUser?.role === 'OWNER_ADMIN' && !roleFilter) {
+      const result = await query(
+        `SELECT id, name, email, role, phone, active, "createdAt" 
+         FROM "User" 
+         ORDER BY active DESC, role, name`
+      )
+      return NextResponse.json({ users: result.rows })
+    }
+
+    // For crew assignment and other uses
+    let whereClause = includeInactive ? 'WHERE 1=1' : 'WHERE active = true'
     const params: any[] = []
     let paramIndex = 1
 

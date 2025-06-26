@@ -51,7 +51,10 @@ import {
   Palette,
   Save,
   TrendingUp,
+  Group as GroupIcon,
 } from '@mui/icons-material'
+import UserManagement from '@/components/settings/UserManagement'
+import { useAuth } from '@/hooks/useAuth'
 
 const drawerWidth = 240
 
@@ -128,6 +131,7 @@ const menuItems = [
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { user: authUser } = useAuth()
   const [user, setUser] = useState<User | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -494,6 +498,9 @@ export default function SettingsPage() {
                 <Tab icon={<Notifications />} label="Notifications" />
                 <Tab icon={<Security />} label="Security" />
                 <Tab icon={<Palette />} label="Appearance" />
+                {authUser?.role === 'OWNER_ADMIN' && (
+                  <Tab icon={<GroupIcon />} label="User Management" />
+                )}
               </Tabs>
 
               <TabPanel value={tabValue} index={0}>
@@ -900,6 +907,12 @@ export default function SettingsPage() {
                   Save Appearance Settings
                 </Button>
               </TabPanel>
+
+              {authUser?.role === 'OWNER_ADMIN' && (
+                <TabPanel value={tabValue} index={4}>
+                  <UserManagement />
+                </TabPanel>
+              )}
             </CardContent>
           </Card>
         </Container>
