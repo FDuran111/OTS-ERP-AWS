@@ -37,6 +37,8 @@ interface Material {
   unit: string
   inStock: number
   minStock: number
+  totalReserved: number
+  availableStock: number
   cost: number
   price: number
   location?: string

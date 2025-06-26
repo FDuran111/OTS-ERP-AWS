@@ -531,7 +531,7 @@ export default function PurchaseOrdersPage() {
                           mr: 2,
                         }}
                       >
-                        {React.cloneElement(stat.icon, { sx: { color: stat.color } })}
+                        {React.cloneElement(stat.icon as any, { sx: { color: stat.color } })}
                       </Box>
                       <Box>
                         <Typography color="text.secondary" variant="caption">
@@ -800,18 +800,11 @@ export default function PurchaseOrdersPage() {
           setSelectedPO(null)
         }}
         purchaseOrder={selectedPO}
-        currentUser={user}
-        onPurchaseOrderUpdated={handlePOUpdated}
       />
 
       <ApprovalQueueDialog
         open={approvalQueueOpen}
         onClose={() => setApprovalQueueOpen(false)}
-        currentUser={user}
-        onApprovalsProcessed={() => {
-          handlePOUpdated()
-          fetchPendingApprovalsCount()
-        }}
       />
     </Box>
   )

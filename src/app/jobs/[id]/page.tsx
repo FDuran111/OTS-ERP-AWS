@@ -333,7 +333,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         <TabPanel value={activeTab} index={2}>
           <MaterialUsageTracker 
             jobId={job.id}
-            jobTitle={job.title}
           />
         </TabPanel>
 
