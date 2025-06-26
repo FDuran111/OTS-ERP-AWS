@@ -5,25 +5,14 @@ import { useRouter } from 'next/navigation'
 import CreateJobDialog from '@/components/jobs/CreateJobDialog'
 import EditJobDialog from '@/components/jobs/EditJobDialog'
 import JobActionsMenu from '@/components/jobs/JobActionsMenu'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   Box,
-  Container,
   Typography,
   Card,
   CardContent,
   Chip,
-  IconButton,
-  AppBar,
-  Toolbar,
-  Drawer,
-  ListItemIcon,
-  ListItemButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
-  List,
-  ListItemText,
   Table,
   TableBody,
   TableCell,
@@ -42,6 +31,8 @@ import {
   Select,
   SelectChangeEvent,
   Collapse,
+  IconButton,
+  MenuItem,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -65,8 +56,6 @@ import {
   Download as DownloadIcon,
   TrendingUp,
 } from '@mui/icons-material'
-
-const drawerWidth = 240
 
 interface User {
   id: string
@@ -105,20 +94,7 @@ interface Job {
   jobPhases?: JobPhase[]
 }
 
-// Removed mockJobs - data now comes from API
-
-const menuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { text: 'Jobs', icon: WorkIcon, path: '/jobs' },
-  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
-  { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
-  { text: 'Customers', icon: PeopleIcon, path: '/customers' },
-  { text: 'Leads', icon: TrendingUp, path: '/leads' },
-  { text: 'Materials', icon: InventoryIcon, path: '/materials' },
-  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
-  { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
-  { text: 'Settings', icon: SettingsIcon, path: '/settings' },
-]
+// Job data now comes from API
 
 const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
   switch (status.toLowerCase()) {
@@ -150,13 +126,92 @@ const getPriorityColor = (priority: string): 'default' | 'primary' | 'secondary'
   }
 }
 
+// Mobile JobCard component
+function JobCard({ job, onEdit, onDelete, onView }: { 
+  job: Job, 
+  onEdit: (job: Job) => void,
+  onDelete: (job: Job) => void,
+  onView: (job: Job) => void
+}) {
+  return (
+    <Card sx={{ mb: 2 }}>
+      <CardContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {job.jobNumber}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {job.title}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+            <Chip
+              label={job.status.replace('_', ' ')}
+              color={getStatusColor(job.status)}
+              size="small"
+            />
+            <Chip
+              label={job.priority}
+              color={getPriorityColor(job.priority)}
+              size="small"
+              variant="outlined"
+            />
+          </Box>
+        </Box>
+        
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          <strong>Customer:</strong> {job.customer}
+        </Typography>
+        
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          <strong>Due Date:</strong> {job.dueDate ? new Date(job.dueDate).toLocaleDateString() : 'Not set'}
+        </Typography>
+        
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          <strong>Crew:</strong> {job.crew.join(', ') || 'Unassigned'}
+        </Typography>
+        
+        {job.jobPhases && job.jobPhases.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              <strong>Phases:</strong>
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+              {job.jobPhases.map((phase) => (
+                <Chip
+                  key={phase.id}
+                  label={phase.name}
+                  color={
+                    phase.status === 'COMPLETED' ? 'success' :
+                    phase.status === 'IN_PROGRESS' ? 'warning' : 'default'
+                  }
+                  size="small"
+                  variant={phase.status === 'NOT_STARTED' ? 'outlined' : 'filled'}
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
+        
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <JobActionsMenu
+            job={job}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onView={onView}
+          />
+        </Box>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function JobsPage() {
   const router = useRouter()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
@@ -195,23 +250,6 @@ export default function JobsPage() {
     }
   }
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen)
-  }
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
-  }
 
   const handleEditJob = (job: Job) => {
     setSelectedJob(job)
@@ -318,245 +356,61 @@ export default function JobsPage() {
     link.click()
   }
 
-  const JobCard = ({ job }: { job: Job }) => (
-    <Card sx={{ mb: 2 }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              {job.jobNumber}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {job.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {job.customer}
-            </Typography>
-          </Box>
-          <JobActionsMenu
-            job={job}
-            onEdit={handleEditJob}
-            onDelete={handleDeleteJob}
-            onView={handleViewJob}
-          />
-        </Box>
-        
-        <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
-          <Chip
-            label={job.status.replace('_', ' ')}
-            color={getStatusColor(job.status)}
-            size="small"
-          />
-          <Chip
-            label={job.priority}
-            color={getPriorityColor(job.priority)}
-            size="small"
-            variant="outlined"
-          />
-        </Stack>
-
-        {job.jobPhases && job.jobPhases.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" color="text.secondary" gutterBottom display="block">
-              Phases:
-            </Typography>
-            <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-              {job.jobPhases.map((phase) => (
-                <Chip
-                  key={phase.id}
-                  label={phase.name}
-                  color={
-                    phase.status === 'COMPLETED' ? 'success' :
-                    phase.status === 'IN_PROGRESS' ? 'warning' : 'default'
-                  }
-                  size="small"
-                  variant={phase.status === 'NOT_STARTED' ? 'outlined' : 'filled'}
-                />
-              ))}
-            </Stack>
-          </Box>
-        )}
-
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            {job.dueDate ? `Due: ${new Date(job.dueDate).toLocaleDateString()}` : 'No due date'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {job.crew.length > 0 ? job.crew.join(', ') : 'Unassigned'}
-          </Typography>
-        </Box>
-      </CardContent>
-    </Card>
-  )
-
   if (!user) return null
 
-  const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ px: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 300 }}>
-          Ortmeier Tech
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List sx={{ flexGrow: 1 }}>
-        {menuItems.map((item) => (
-          <ListItemButton
-            key={item.text}
-            onClick={() => router.push(item.path)}
-            selected={item.path === '/jobs'}
-            sx={{
-              '&:hover': {
-                backgroundColor: 'rgba(225, 78, 202, 0.08)',
-              },
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(225, 78, 202, 0.12)',
-              },
-            }}
-          >
-            <ListItemIcon>
-              <item.icon sx={{ color: 'text.secondary' }} />
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        <ListItemButton onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon sx={{ color: 'text.secondary' }} />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItemButton>
-      </List>
-    </Box>
+  // Action buttons for the page header
+  const actionButtons = (
+    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+      <Button
+        variant="outlined"
+        startIcon={<DownloadIcon />}
+        onClick={exportToCSV}
+        disabled={filteredJobs.length === 0}
+        size={isMobile ? 'small' : 'medium'}
+        sx={{ flex: { xs: 1, sm: 'none' } }}
+      >
+        {isMobile ? 'Export' : 'Export CSV'}
+      </Button>
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => setCreateDialogOpen(true)}
+        size={isMobile ? 'small' : 'medium'}
+        sx={{
+          backgroundColor: '#e14eca',
+          '&:hover': {
+            backgroundColor: '#d236b8',
+          },
+          flex: { xs: 1, sm: 'none' }
+        }}
+      >
+        {isMobile ? 'New' : 'New Job'}
+      </Button>
+    </Stack>
   )
 
+  // Breadcrumbs for navigation
+  const breadcrumbs = [
+    {
+      label: 'Home',
+      path: '/dashboard',
+      icon: <DashboardIcon fontSize="small" />
+    },
+    {
+      label: 'Jobs',
+      path: '/jobs',
+      icon: <WorkIcon fontSize="small" />
+    }
+  ]
+
   return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="Job Management"
+        subtitle="Manage and track all electrical jobs and projects"
+        breadcrumbs={breadcrumbs}
+        actions={actionButtons}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Jobs
-          </Typography>
-          <IconButton onClick={handleMenuClick}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
-              {user.name.charAt(0)}
-            </Avatar>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem>
-              <Typography variant="body2">{user.name}</Typography>
-            </MenuItem>
-            <MenuItem>
-              <Typography variant="caption" color="text.secondary">
-                {user.role}
-              </Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              Logout
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
-
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
-        }}
-      >
-        <Container maxWidth="xl">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="h4">
-              Job Management
-            </Typography>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outlined"
-                startIcon={<DownloadIcon />}
-                onClick={exportToCSV}
-                disabled={filteredJobs.length === 0}
-                size={isMobile ? 'small' : 'medium'}
-              >
-                {isMobile ? 'Export' : 'Export CSV'}
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setCreateDialogOpen(true)}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{
-                  backgroundColor: '#e14eca',
-                  '&:hover': {
-                    backgroundColor: '#d236b8',
-                  },
-                }}
-              >
-                {isMobile ? 'New' : 'New Job'}
-              </Button>
-            </Stack>
-          </Box>
 
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -686,7 +540,15 @@ export default function JobsPage() {
                   No jobs found
                 </Typography>
               ) : (
-                filteredJobs.map((job) => <JobCard key={job.id} job={job} />)
+                filteredJobs.map((job) => (
+                  <JobCard 
+                    key={job.id} 
+                    job={job} 
+                    onEdit={handleEditJob}
+                    onDelete={handleDeleteJob}
+                    onView={handleViewJob}
+                  />
+                ))
               )}
             </Box>
           ) : (
@@ -774,9 +636,7 @@ export default function JobsPage() {
               </Table>
             </TableContainer>
           )}
-        </Container>
-      </Box>
-
+      </ResponsiveContainer>
       <CreateJobDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
@@ -799,6 +659,6 @@ export default function JobsPage() {
         }}
         job={selectedJob}
       />
-    </Box>
+    </ResponsiveLayout>
   )
 }
