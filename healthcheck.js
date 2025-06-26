@@ -17,7 +17,8 @@ const options = {
 
 const request = http.request(options, (res) => {
   console.log(`Health check status: ${res.statusCode}`);
-  if (res.statusCode === 200) {
+  // Accept 200 (OK) and 307 (Temporary Redirect) as healthy
+  if (res.statusCode === 200 || res.statusCode === 307) {
     process.exit(0);
   } else {
     process.exit(1);
