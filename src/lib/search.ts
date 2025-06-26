@@ -275,7 +275,7 @@ export async function searchInvoices(options: SearchOptions = {}) {
 export async function getSearchSuggestions(
   table: string,
   field: string,
-  query: string,
+  searchTerm: string,
   limit: number = 10
 ): Promise<string[]> {
   const result = await query(
@@ -285,7 +285,7 @@ export async function getSearchSuggestions(
      AND ${field} IS NOT NULL 
      ORDER BY ${field} 
      LIMIT $2`,
-    [`%${query}%`, limit]
+    [`%${searchTerm}%`, limit]
   )
 
   return result.rows.map(row => row[field.split('.').pop() || field])
