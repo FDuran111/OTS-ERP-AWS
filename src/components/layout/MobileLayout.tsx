@@ -131,10 +131,10 @@ const navigationItems: NavItem[] = [
 ]
 
 const quickActions = [
-  { title: 'Add Job', icon: <JobsIcon />, path: '/jobs/new', color: 'primary' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] },
-  { title: 'Add Customer', icon: <CustomersIcon />, path: '/customers/new', color: 'secondary' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] },
-  { title: 'Add Lead', icon: <LeadsIcon />, path: '/leads/new', color: 'success' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] },
-  { title: 'Optimize Routes', icon: <OptimizeIcon />, path: '/route-optimization', color: 'warning' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] }
+  { title: 'Add Job', icon: <JobsIcon />, path: '/jobs/new', color: 'primary' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
+  { title: 'Add Customer', icon: <CustomersIcon />, path: '/customers/new', color: 'secondary' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
+  { title: 'Add Lead', icon: <LeadsIcon />, path: '/leads/new', color: 'success' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] },
+  { title: 'Optimize Routes', icon: <OptimizeIcon />, path: '/route-optimization', color: 'warning' as const, roles: ['OWNER', 'ADMIN', 'OFFICE'] as UserRole[] }
 ]
 
 export default function MobileLayout({ children }: MobileLayoutProps) {
