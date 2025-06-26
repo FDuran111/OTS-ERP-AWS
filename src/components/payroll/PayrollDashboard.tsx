@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   Typography,
-  Grid,
   Button,
   TextField,
   FormControl,
@@ -278,47 +277,39 @@ export default function PayrollDashboard() {
       )}
 
       {/* Quick Actions */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item>
-          <Button
-            variant="contained"
-            startIcon={<DownloadIcon />}
-            onClick={() => setExportDialog(true)}
-          >
-            Export Payroll
-          </Button>
-        </Grid>
-        <Grid item>
-          <Button
-            variant="outlined"
-            startIcon={<ReportIcon />}
-            onClick={() => setReportDialog(true)}
-          >
-            Generate Report
-          </Button>
-        </Grid>
-        <Grid item>
-          <Button
-            variant="outlined"
-            startIcon={<PeriodIcon />}
-            onClick={fetchPayrollPeriods}
-          >
-            Manage Periods
-          </Button>
-        </Grid>
-        <Grid item>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={() => {
-              fetchPayrollPeriods()
-              fetchPendingApprovals()
-            }}
-          >
-            Refresh
-          </Button>
-        </Grid>
-      </Grid>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+        <Button
+          variant="contained"
+          startIcon={<DownloadIcon />}
+          onClick={() => setExportDialog(true)}
+        >
+          Export Payroll
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<ReportIcon />}
+          onClick={() => setReportDialog(true)}
+        >
+          Generate Report
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<PeriodIcon />}
+          onClick={fetchPayrollPeriods}
+        >
+          Manage Periods
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={() => {
+            fetchPayrollPeriods()
+            fetchPendingApprovals()
+          }}
+        >
+          Refresh
+        </Button>
+      </Box>
 
       {/* Summary Cards */}
       {payrollSummary && (
