@@ -330,7 +330,7 @@ export async function clockOut(
     const updatedEntry = updateResult.rows[0]
     
     // Calculate hours and pay
-    const totalMinutes = Math.floor((new Date(updatedEntry.clockOutTime) - new Date(updatedEntry.clockInTime)) / 60000)
+    const totalMinutes = Math.floor((new Date(updatedEntry.clockOutTime).getTime() - new Date(updatedEntry.clockInTime).getTime()) / 60000)
     const netMinutes = totalMinutes - breakMinutes
     const netHours = netMinutes / 60.0
     
