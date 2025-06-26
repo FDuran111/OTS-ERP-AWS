@@ -535,7 +535,7 @@ export async function getUserTimeEntries(
     WHERE te."userId" = $1
   `
   
-  const values = [userId]
+  const values: any[] = [userId]
   let paramIndex = 2
   
   if (startDate) {
