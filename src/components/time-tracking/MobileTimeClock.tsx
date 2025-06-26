@@ -10,7 +10,6 @@ import {
   TextField,
   Autocomplete,
   Chip,
-  Grid,
   Alert,
   CircularProgress,
   IconButton,
@@ -28,6 +27,26 @@ import {
   MenuItem,
   ListSubheader
 } from '@mui/material'
+
+// Temporary Grid component for compatibility
+const Grid = ({ children, container, spacing, xs, md, item, alignItems, justifyContent, ...props }: any) => (
+  <Box 
+    sx={{ 
+      display: container ? 'flex' : 'block',
+      flexWrap: container ? 'wrap' : undefined,
+      gap: container && spacing ? spacing : undefined,
+      flex: xs ? `1 1 calc(${(xs/12)*100}% - ${spacing || 0}px)` : undefined,
+      width: xs === 12 ? '100%' : undefined,
+      alignItems,
+      justifyContent,
+      ...props.sx
+    }}
+    {...props}
+  >
+    {children}
+  </Box>
+)
+
 import {
   PlayArrow as ClockInIcon,
   Stop as ClockOutIcon,
