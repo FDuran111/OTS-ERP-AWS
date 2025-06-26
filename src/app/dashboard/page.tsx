@@ -7,7 +7,6 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
-  Container,
   Typography,
   Card,
   CardContent,
@@ -15,39 +14,27 @@ import {
   List,
   ListItem,
   ListItemText,
-  IconButton,
-  AppBar,
-  Toolbar,
-  Drawer,
-  ListItemIcon,
-  ListItemButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
   Stack,
+  Grid,
+  Button,
+  useTheme,
+  useMediaQuery,
+  Paper,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
   Work as WorkIcon,
-  Schedule as ScheduleIcon,
-  People as PeopleIcon,
-  Inventory as InventoryIcon,
-  Receipt as ReceiptIcon,
-  Assessment as AssessmentIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
-  Menu as MenuIcon,
   AttachMoney,
   AccessTime,
   Group,
   TrendingUp,
   ShoppingCart as PurchaseOrderIcon,
-  Web as CustomerPortalIcon,
+  Add as AddIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import LowStockNotification from '@/components/notifications/LowStockNotification'
 
-const drawerWidth = 240
 
 interface User {
   id: string
@@ -109,30 +96,16 @@ const colorMap = {
   'info': '#63B3ED', // Info blue
 }
 
-const menuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { text: 'Jobs', icon: WorkIcon, path: '/jobs' },
-  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
-  { text: 'Time Tracking', icon: AccessTime, path: '/time' },
-  { text: 'Customers', icon: PeopleIcon, path: '/customers' },
-  { text: 'Leads', icon: TrendingUp, path: '/leads' },
-  { text: 'Materials', icon: InventoryIcon, path: '/materials' },
-  { text: 'Purchase Orders', icon: PurchaseOrderIcon, path: '/purchase-orders' },
-  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
-  { text: 'Customer Portal', icon: CustomerPortalIcon, path: '/customer-portal' },
-  { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
-  { text: 'Settings', icon: SettingsIcon, path: '/settings' },
-]
 
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [stats, setStats] = useState<Stat[]>([])
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([])
   const [phaseData, setPhaseData] = useState<PhaseData | null>(null)
   const [loading, setLoading] = useState(true)
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -179,167 +152,56 @@ export default function DashboardPage() {
     }
   }
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen)
-  }
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
+  const handleQuickAction = (path: string) => {
+    router.push(path)
   }
 
   if (!user) return null
 
-  const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ px: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 300 }}>
-          Ortmeier Tech
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List sx={{ flexGrow: 1 }}>
-        {menuItems.map((item) => (
-          <ListItemButton
-            key={item.text}
-            onClick={() => router.push(item.path)}
-            sx={{
-              '&:hover': {
-                backgroundColor: 'rgba(225, 78, 202, 0.08)',
-              },
-            }}
-          >
-            <ListItemIcon>
-              <item.icon sx={{ color: 'text.secondary' }} />
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        <ListItemButton onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon sx={{ color: 'text.secondary' }} />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItemButton>
-      </List>
-    </Box>
+  // Quick action buttons for mobile and desktop
+  const quickActions = (
+    <Stack direction={isMobile ? 'column' : 'row'} spacing={2} className="w-full md:w-auto">
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => handleQuickAction('/jobs/new')}
+        className="w-full md:w-auto"
+        size={isMobile ? 'large' : 'medium'}
+      >
+        New Job
+      </Button>
+      <Button
+        variant="outlined"
+        startIcon={<TrendingUp />}
+        onClick={() => handleQuickAction('/reports')}
+        className="w-full md:w-auto"
+        size={isMobile ? 'large' : 'medium'}
+      >
+        View Reports
+      </Button>
+    </Stack>
   )
 
+  const breadcrumbs = [
+    {
+      label: 'Home',
+      path: '/dashboard',
+      icon: <HomeIcon fontSize="small" />
+    }
+  ]
+
   return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title={`Welcome back, ${user.name}`}
+        subtitle="Here's what's happening with your jobs today"
+        breadcrumbs={breadcrumbs}
+        actions={quickActions}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Dashboard
-          </Typography>
-          <IconButton onClick={handleMenuClick}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
-              {user.name.charAt(0)}
-            </Avatar>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem>
-              <Typography variant="body2">{user.name}</Typography>
-            </MenuItem>
-            <MenuItem>
-              <Typography variant="caption" color="text.secondary">
-                {user.role}
-              </Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              Logout
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
-
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
-        }}
-      >
-        <Container maxWidth="xl">
-          <Typography variant="h4" sx={{ mb: 1 }}>
-            Welcome back, {user.name}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-            Here's what's happening with your jobs today
-          </Typography>
-
-          {/* Low Stock Notification */}
+        {/* Low Stock Notification */}
+        <Box className="mb-6">
           <LowStockNotification refreshTrigger={loading ? 0 : 1} />
+        </Box>
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
             {loading ? (
@@ -396,169 +258,169 @@ export default function DashboardPage() {
             )}
           </Box>
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 2 }}>
-            <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Recent Jobs
-                  </Typography>
-                  <List>
-                    {loading ? (
-                      <ListItem>
-                        <ListItemText primary="Loading recent jobs..." />
+        {/* Recent Jobs and Phases - Side by Side on Desktop, Stacked on Mobile */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 2 }}>
+          <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Recent Jobs
+                </Typography>
+                <List>
+                  {loading ? (
+                    <ListItem>
+                      <ListItemText primary="Loading recent jobs..." />
+                    </ListItem>
+                  ) : recentJobs.length === 0 ? (
+                    <ListItem>
+                      <ListItemText primary="No recent jobs" />
+                    </ListItem>
+                  ) : (
+                    recentJobs.map((job) => (
+                      <ListItem
+                        key={job.id}
+                        secondaryAction={
+                          <Chip
+                            label={job.status.replace('_', ' ')}
+                            color={job.status === 'completed' ? 'success' : 
+                                   job.status === 'in_progress' ? 'warning' : 'default'}
+                            size="small"
+                          />
+                        }
+                      >
+                        <ListItemText
+                          primary={job.title}
+                          secondary={job.customer}
+                        />
                       </ListItem>
-                    ) : recentJobs.length === 0 ? (
-                      <ListItem>
-                        <ListItemText primary="No recent jobs" />
-                      </ListItem>
-                    ) : (
-                      recentJobs.map((job) => (
-                        <ListItem
-                          key={job.id}
-                          secondaryAction={
-                            <Chip
-                              label={job.status.replace('_', ' ')}
-                              color={job.status === 'completed' ? 'success' : 
-                                     job.status === 'in_progress' ? 'warning' : 'default'}
-                              size="small"
-                            />
-                          }
-                        >
+                    ))
+                  )}
+                </List>
+              </CardContent>
+            </Card>
+          </Box>
+
+          <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Job Phases Progress
+                </Typography>
+                {loading ? (
+                  <Typography>Loading phases...</Typography>
+                ) : phaseData ? (
+                  <Box>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                      <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Underground
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          <Chip 
+                            label={phaseData.summary?.UG?.COMPLETED || 0} 
+                            color="success" 
+                            size="small" 
+                          />
+                          <Chip 
+                            label={phaseData.summary?.UG?.IN_PROGRESS || 0} 
+                            color="warning" 
+                            size="small" 
+                          />
+                          <Chip 
+                            label={phaseData.summary?.UG?.NOT_STARTED || 0} 
+                            color="default" 
+                            size="small" 
+                          />
+                        </Stack>
+                      </Box>
+                      <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Rough-in
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          <Chip 
+                            label={phaseData.summary?.RI?.COMPLETED || 0} 
+                            color="success" 
+                            size="small" 
+                          />
+                          <Chip 
+                            label={phaseData.summary?.RI?.IN_PROGRESS || 0} 
+                            color="warning" 
+                            size="small" 
+                          />
+                          <Chip 
+                            label={phaseData.summary?.RI?.NOT_STARTED || 0} 
+                            color="default" 
+                            size="small" 
+                          />
+                        </Stack>
+                      </Box>
+                      <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Finish
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          <Chip 
+                            label={phaseData.summary?.FN?.COMPLETED || 0} 
+                            color="success" 
+                            size="small" 
+                          />
+                          <Chip 
+                            label={phaseData.summary?.FN?.IN_PROGRESS || 0} 
+                            color="warning" 
+                            size="small" 
+                          />
+                          <Chip 
+                            label={phaseData.summary?.FN?.NOT_STARTED || 0} 
+                            color="default" 
+                            size="small" 
+                          />
+                        </Stack>
+                      </Box>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Overall completion: {phaseData.completionRate || 0}% ({phaseData.completedPhases || 0}/{phaseData.totalPhases || 0} phases)
+                    </Typography>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Recent Updates
+                    </Typography>
+                    <List dense>
+                      {(phaseData.recentUpdates || []).slice(0, 3).map((update) => (
+                        <ListItem key={update.id}>
                           <ListItemText
-                            primary={job.title}
-                            secondary={job.customer}
+                            primary={`${update.jobNumber} - ${update.phaseName}`}
+                            secondary={
+                              <Stack>
+                                <Typography variant="body2">
+                                  {update.customer}
+                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Chip
+                                    label={update.status.replace('_', ' ')}
+                                    color={update.status === 'COMPLETED' ? 'success' : 'warning'}
+                                    size="small"
+                                  />
+                                  <Typography variant="caption" color="text.secondary">
+                                    {new Date(update.updatedAt).toLocaleDateString()}
+                                  </Typography>
+                                </Box>
+                              </Stack>
+                            }
                           />
                         </ListItem>
-                      ))
-                    )}
-                  </List>
-                </CardContent>
-              </Card>
-            </Box>
-
-            <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Job Phases Progress
+                      ))}
+                    </List>
+                  </Box>
+                ) : (
+                  <Typography color="text.secondary">
+                    No phase data available
                   </Typography>
-                  {loading ? (
-                    <Typography>Loading phases...</Typography>
-                  ) : phaseData ? (
-                    <Box>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-                        <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Underground
-                          </Typography>
-                          <Stack direction="row" spacing={1}>
-                            <Chip 
-                              label={phaseData.summary?.UG?.COMPLETED || 0} 
-                              color="success" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.UG?.IN_PROGRESS || 0} 
-                              color="warning" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.UG?.NOT_STARTED || 0} 
-                              color="default" 
-                              size="small" 
-                            />
-                          </Stack>
-                        </Box>
-                        <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Rough-in
-                          </Typography>
-                          <Stack direction="row" spacing={1}>
-                            <Chip 
-                              label={phaseData.summary?.RI?.COMPLETED || 0} 
-                              color="success" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.RI?.IN_PROGRESS || 0} 
-                              color="warning" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.RI?.NOT_STARTED || 0} 
-                              color="default" 
-                              size="small" 
-                            />
-                          </Stack>
-                        </Box>
-                        <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Finish
-                          </Typography>
-                          <Stack direction="row" spacing={1}>
-                            <Chip 
-                              label={phaseData.summary?.FN?.COMPLETED || 0} 
-                              color="success" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.FN?.IN_PROGRESS || 0} 
-                              color="warning" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.FN?.NOT_STARTED || 0} 
-                              color="default" 
-                              size="small" 
-                            />
-                          </Stack>
-                        </Box>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Overall completion: {phaseData.completionRate || 0}% ({phaseData.completedPhases || 0}/{phaseData.totalPhases || 0} phases)
-                      </Typography>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Recent Updates
-                      </Typography>
-                      <List dense>
-                        {(phaseData.recentUpdates || []).slice(0, 3).map((update) => (
-                          <ListItem key={update.id}>
-                            <ListItemText
-                              primary={`${update.jobNumber} - ${update.phaseName}`}
-                              secondary={
-                                <Stack>
-                                  <Typography variant="body2">
-                                    {update.customer}
-                                  </Typography>
-                                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <Chip
-                                      label={update.status.replace('_', ' ')}
-                                      color={update.status === 'COMPLETED' ? 'success' : 'warning'}
-                                      size="small"
-                                    />
-                                    <Typography variant="caption" color="text.secondary">
-                                      {new Date(update.updatedAt).toLocaleDateString()}
-                                    </Typography>
-                                  </Box>
-                                </Stack>
-                              }
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-                    </Box>
-                  ) : (
-                    <Typography color="text.secondary">
-                      No phase data available
-                    </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            </Box>
+                )}
+              </CardContent>
+            </Card>
           </Box>
-        </Container>
-      </Box>
-    </Box>
+        </Box>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }

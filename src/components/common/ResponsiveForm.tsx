@@ -315,16 +315,13 @@ export default function ResponsiveForm({
           </Stack>
         ) : (
           // Desktop: Grid layout
-          <Grid container spacing={3}>
-            {section.fields.map((field) => {
-              const gridProps = field.gridSize || { xs: 12, md: 6 }
-              return (
-                <Grid key={field.name} item {...gridProps}>
-                  {renderField(field)}
-                </Grid>
-              )
-            })}
-          </Grid>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 3 }}>
+            {section.fields.map((field) => (
+              <Box key={field.name}>
+                {renderField(field)}
+              </Box>
+            ))}
+          </Box>
         )}
       </Box>
     )

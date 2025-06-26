@@ -51,9 +51,77 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
+  
+  /* Mobile viewport and scaling fixes */
+  html {
+    width: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
+  
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    width: 100%;
+    overflow-x: hidden;
+    position: relative;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
+  }
+  
+  /* Prevent horizontal scroll on mobile */
+  #__next, main {
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* iOS-specific fixes for proper viewport behavior */
+  @supports (-webkit-touch-callout: none) {
+    html {
+      height: -webkit-fill-available;
+    }
+    
+    body {
+      min-height: -webkit-fill-available;
+    }
+  }
+  
+  /* Fix for input zoom on iOS */
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+  
+  /* Prevent tap highlight on mobile */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Ensure responsive images don't break layout */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Fix for Material-UI container max-widths on mobile */
+  @media (max-width: 600px) {
+    .MuiContainer-root {
+      padding-left: 16px !important;
+      padding-right: 16px !important;
+    }
   }
 }

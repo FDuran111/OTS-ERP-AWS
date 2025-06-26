@@ -109,8 +109,17 @@ export default function MobileQuickActions({
         <Box
           className="fixed bottom-36 right-4 z-50 flex flex-col gap-3"
           sx={{
-            '& > *': {
-              animationDelay: (index: number) => `${index * 50}ms`,
+            '& > :nth-child(1)': {
+              animationDelay: '0ms',
+            },
+            '& > :nth-child(2)': {
+              animationDelay: '50ms',
+            },
+            '& > :nth-child(3)': {
+              animationDelay: '100ms',
+            },
+            '& > :nth-child(4)': {
+              animationDelay: '150ms',
             }
           }}
         >

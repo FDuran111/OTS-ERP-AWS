@@ -22,6 +22,15 @@ declare module '@mui/material/styles' {
 }
 
 export const theme = createTheme({
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 900,
+      lg: 1200,
+      xl: 1536,
+    },
+  },
   palette: {
     mode: 'dark',
     primary: {
@@ -102,6 +111,89 @@ export const theme = createTheme({
     borderRadius: 8,
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        // Global CSS overrides for mobile viewport
+        html: {
+          width: '100%',
+          height: '100%',
+          overflowX: 'hidden',
+          WebkitTextSizeAdjust: '100%',
+          MsTextSizeAdjust: '100%',
+          textSizeAdjust: '100%',
+          touchAction: 'manipulation',
+        },
+        body: {
+          width: '100%',
+          minHeight: '100vh',
+          overflowX: 'hidden',
+          touchAction: 'manipulation',
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
+        },
+        '#__next, main': {
+          width: '100%',
+          overflowX: 'hidden',
+        },
+        // Fix input zoom on iOS
+        'input, textarea, select': {
+          fontSize: '16px !important',
+          '@media (max-width: 768px)': {
+            fontSize: '16px !important',
+          },
+        },
+        // Prevent horizontal scroll
+        '*': {
+          maxWidth: '100vw',
+          WebkitTapHighlightColor: 'transparent',
+        },
+        // Fix for iOS safe areas
+        '@supports (-webkit-touch-callout: none)': {
+          body: {
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            paddingLeft: 'env(safe-area-inset-left)',
+            paddingRight: 'env(safe-area-inset-right)',
+          },
+        },
+      },
+    },
+    // Container component mobile fixes
+    MuiContainer: {
+      defaultProps: {
+        maxWidth: 'xl',
+      },
+      styleOverrides: {
+        root: {
+          paddingLeft: 16,
+          paddingRight: 16,
+          '@media (min-width: 600px)': {
+            paddingLeft: 24,
+            paddingRight: 24,
+          },
+          '@media (max-width: 600px)': {
+            paddingLeft: '16px !important',
+            paddingRight: '16px !important',
+          },
+        },
+      },
+    },
+    // Dialog mobile fixes
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          margin: 16,
+          maxHeight: 'calc(100vh - 32px)',
+          maxWidth: 'calc(100vw - 32px)',
+          '@media (max-width: 600px)': {
+            margin: 8,
+            maxHeight: 'calc(100vh - 16px)',
+            maxWidth: 'calc(100vw - 16px)',
+            width: 'calc(100vw - 16px)',
+          },
+        },
+      },
+    },
     MuiAppBar: {
       styleOverrides: {
         root: {
@@ -129,6 +221,11 @@ export const theme = createTheme({
           padding: '10px 30px',
           fontSize: '0.875rem',
           fontWeight: 500,
+          minHeight: 44, // Apple Human Interface Guidelines
+          '@media (max-width: 600px)': {
+            minHeight: 48,
+            padding: '12px 20px',
+          },
         },
         containedPrimary: {
           backgroundColor: '#E53E3E',
@@ -153,6 +250,11 @@ export const theme = createTheme({
           backgroundColor: '#1A202C',
           backgroundImage: 'none',
           borderRight: '1px solid #4A5568',
+          maxWidth: '100vw',
+          '@media (max-width: 600px)': {
+            width: '80vw',
+            maxWidth: '320px',
+          },
         }
       }
     },
@@ -164,6 +266,13 @@ export const theme = createTheme({
       },
     },
     MuiTextField: {
+      defaultProps: {
+        inputProps: {
+          style: {
+            fontSize: 16, // Prevent zoom on iOS
+          },
+        },
+      },
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
@@ -176,6 +285,9 @@ export const theme = createTheme({
             '&.Mui-focused fieldset': {
               borderColor: '#E53E3E',
             },
+          },
+          '& input': {
+            fontSize: '16px !important',
           },
         },
       },
