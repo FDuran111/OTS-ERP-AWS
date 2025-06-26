@@ -14,14 +14,15 @@ const materialCostSchema = z.object({
 // POST add material cost entry
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     const data = materialCostSchema.parse(body)
 
     // Verify job exists
-    const jobCheck = await query('SELECT id FROM "Job" WHERE id = $1', [params.id])
+    const jobCheck = await query('SELECT id FROM "Job" WHERE id = $1', [resolvedParams.id])
     if (jobCheck.rows.length === 0) {
       return NextResponse.json(
         { error: 'Job not found' },
@@ -60,7 +61,7 @@ export async function POST(
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `, [
-      params.id,
+      resolvedParams.id,
       data.materialId,
       data.quantityUsed,
       unitCost,
@@ -110,9 +111,10 @@ export async function POST(
 // GET material costs for job
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const result = await query(`
       SELECT 
         jmc.*,
@@ -124,7 +126,7 @@ export async function GET(
       LEFT JOIN "Material" m ON jmc."materialId" = m.id
       WHERE jmc."jobId" = $1
       ORDER BY jmc."usageDate" DESC, jmc."createdAt" DESC
-    `, [params.id])
+    `, [resolvedParams.id])
 
     const materialCosts = result.rows.map(row => ({
       id: row.id,
@@ -158,9 +160,10 @@ export async function GET(
 // DELETE material cost entry
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const { searchParams } = new URL(request.url)
     const costId = searchParams.get('costId')
 
@@ -175,7 +178,7 @@ export async function DELETE(
     const verifyResult = await query(`
       SELECT id FROM "JobMaterialCost" 
       WHERE id = $1 AND "jobId" = $2
-    `, [costId, params.id])
+    `, [costId, resolvedParams.id])
 
     if (verifyResult.rows.length === 0) {
       return NextResponse.json(
