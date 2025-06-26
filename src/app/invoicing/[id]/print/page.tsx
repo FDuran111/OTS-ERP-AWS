@@ -15,7 +15,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Grid,
   Alert,
   CircularProgress,
 } from '@mui/material'
@@ -449,8 +448,8 @@ export default function InvoicePrintPage() {
           }}
         >
           {/* Header Section */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={6}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+            <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px' }}>
               <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#e14eca', mb: 1 }}>
                 {companySettings?.company_name || 'Ortmeier Technical Services'}
               </Typography>
@@ -474,8 +473,8 @@ export default function InvoicePrintPage() {
                   License: {companySettings.license_number}
                 </Typography>
               )}
-            </Grid>
-            <Grid item xs={12} md={6} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+            </Box>
+            <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px', textAlign: { xs: 'left', md: 'right' } }}>
               <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 2 }}>
                 INVOICE
               </Typography>
@@ -506,14 +505,14 @@ export default function InvoicePrintPage() {
                   Status: {invoice.status}
                 </Typography>
               </Box>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
 
           <Divider sx={{ my: 3 }} />
 
           {/* Customer and Job Information */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={6}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+            <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px' }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
                 Bill To:
               </Typography>
@@ -542,8 +541,8 @@ export default function InvoicePrintPage() {
                   {invoice.customer.phone}
                 </Typography>
               )}
-            </Grid>
-            <Grid item xs={12} md={6}>
+            </Box>
+            <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px' }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
                 Job Details:
               </Typography>
@@ -558,8 +557,8 @@ export default function InvoicePrintPage() {
                   Location: {invoice.job.address}
                 </Typography>
               )}
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
 
           <Divider sx={{ my: 3 }} />
 

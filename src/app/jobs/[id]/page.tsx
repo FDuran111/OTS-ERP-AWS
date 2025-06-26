@@ -16,7 +16,6 @@ import {
   AppBar,
   Toolbar,
   Button,
-  Grid,
   Divider,
 } from '@mui/material'
 import {
@@ -208,8 +207,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         {/* Job Summary Card */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={8}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+              <Box sx={{ flex: '1 1 calc(66.67% - 12px)', minWidth: '400px' }}>
                 <Typography variant="h5" gutterBottom>
                   {job.title}
                 </Typography>
@@ -241,9 +240,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     {job.zip && ` ${job.zip}`}
                   </Typography>
                 )}
-              </Grid>
+              </Box>
 
-              <Grid item xs={12} md={4}>
+              <Box sx={{ flex: '1 1 calc(33.33% - 12px)', minWidth: '300px' }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {job.dueDate && (
                     <Box>
@@ -278,8 +277,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     </Box>
                   )}
                 </Box>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
 

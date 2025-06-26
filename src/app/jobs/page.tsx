@@ -42,7 +42,6 @@ import {
   Select,
   SelectChangeEvent,
   Collapse,
-  Grid,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -604,8 +603,8 @@ export default function JobsPage() {
               </Box>
 
               <Collapse in={filtersExpanded}>
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  <Box sx={{ flex: '1 1 calc(25% - 12px)', minWidth: '200px' }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Status</InputLabel>
                       <Select
@@ -623,9 +622,9 @@ export default function JobsPage() {
                         <MenuItem value="cancelled">Cancelled</MenuItem>
                       </Select>
                     </FormControl>
-                  </Grid>
+                  </Box>
 
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Box sx={{ flex: '1 1 calc(25% - 12px)', minWidth: '200px' }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Type</InputLabel>
                       <Select
@@ -638,9 +637,9 @@ export default function JobsPage() {
                         <MenuItem value="COMMERCIAL_PROJECT">Commercial Project</MenuItem>
                       </Select>
                     </FormControl>
-                  </Grid>
+                  </Box>
 
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Box sx={{ flex: '1 1 calc(25% - 12px)', minWidth: '200px' }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Priority</InputLabel>
                       <Select
@@ -654,9 +653,9 @@ export default function JobsPage() {
                         <MenuItem value="low">Low</MenuItem>
                       </Select>
                     </FormControl>
-                  </Grid>
+                  </Box>
 
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Box sx={{ flex: '1 1 calc(25% - 12px)', minWidth: '200px' }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Phase</InputLabel>
                       <Select
@@ -670,8 +669,8 @@ export default function JobsPage() {
                         <MenuItem value="FN">Finish</MenuItem>
                       </Select>
                     </FormControl>
-                  </Grid>
-                </Grid>
+                  </Box>
+                </Box>
               </Collapse>
             </CardContent>
           </Card>

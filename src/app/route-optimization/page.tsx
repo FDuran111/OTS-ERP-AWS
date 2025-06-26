@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   Button,
@@ -371,8 +370,8 @@ export default function RouteOptimizationPage() {
       )}
 
       {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 18px)', minWidth: '200px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -391,9 +390,9 @@ export default function RouteOptimizationPage() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 18px)', minWidth: '200px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -412,9 +411,9 @@ export default function RouteOptimizationPage() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 18px)', minWidth: '200px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -433,9 +432,9 @@ export default function RouteOptimizationPage() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Box sx={{ flex: '1 1 calc(25% - 18px)', minWidth: '200px' }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -459,8 +458,8 @@ export default function RouteOptimizationPage() {
               />
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -639,9 +638,9 @@ export default function RouteOptimizationPage() {
             </Button>
           </Box>
 
-          <Grid container spacing={3}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
             {vehicles.map((vehicle) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={vehicle.id}>
+              <Box key={vehicle.id} sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '300px' }}>
                 <Card>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -699,9 +698,9 @@ export default function RouteOptimizationPage() {
                     </Stack>
                   </CardContent>
                 </Card>
-              </Grid>
+              </Box>
             ))}
-          </Grid>
+          </Box>
         </Box>
       )}
 

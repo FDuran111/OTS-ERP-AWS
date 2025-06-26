@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation'
 import {
   Box,
   Container,
-  Grid,
   Typography,
   Card,
   CardContent,
@@ -342,20 +341,20 @@ export default function DashboardPage() {
           {/* Low Stock Notification */}
           <LowStockNotification refreshTrigger={loading ? 0 : 1} />
 
-          <Grid container spacing={3}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
             {loading ? (
               Array.from({ length: 4 }).map((_, index) => (
-                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+                <Box key={index} sx={{ flex: '1 1 calc(25% - 18px)', minWidth: '200px' }}>
                   <Card>
                     <CardContent>
                       <Typography>Loading...</Typography>
                     </CardContent>
                   </Card>
-                </Grid>
+                </Box>
               ))
             ) : (
               stats.map((stat) => (
-                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
+                <Box key={stat.title} sx={{ flex: '1 1 calc(25% - 18px)', minWidth: '200px' }}>
                   <Card>
                     <CardContent>
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -392,13 +391,13 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                </Grid>
+                </Box>
               ))
             )}
-          </Grid>
+          </Box>
 
-          <Grid container spacing={3} sx={{ mt: 2 }}>
-            <Grid size={{ xs: 12, md: 6 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 2 }}>
+            <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
@@ -436,9 +435,9 @@ export default function DashboardPage() {
                   </List>
                 </CardContent>
               </Card>
-            </Grid>
+            </Box>
 
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '400px' }}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
@@ -448,8 +447,8 @@ export default function DashboardPage() {
                     <Typography>Loading phases...</Typography>
                   ) : phaseData ? (
                     <Box>
-                      <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid size={{ xs: 4 }}>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                        <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
                           <Typography variant="caption" color="text.secondary">
                             Underground
                           </Typography>
@@ -470,8 +469,8 @@ export default function DashboardPage() {
                               size="small" 
                             />
                           </Stack>
-                        </Grid>
-                        <Grid size={{ xs: 4 }}>
+                        </Box>
+                        <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
                           <Typography variant="caption" color="text.secondary">
                             Rough-in
                           </Typography>
@@ -492,8 +491,8 @@ export default function DashboardPage() {
                               size="small" 
                             />
                           </Stack>
-                        </Grid>
-                        <Grid size={{ xs: 4 }}>
+                        </Box>
+                        <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '120px' }}>
                           <Typography variant="caption" color="text.secondary">
                             Finish
                           </Typography>
@@ -514,8 +513,8 @@ export default function DashboardPage() {
                               size="small" 
                             />
                           </Stack>
-                        </Grid>
-                      </Grid>
+                        </Box>
+                      </Box>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         Overall completion: {phaseData.completionRate || 0}% ({phaseData.completedPhases || 0}/{phaseData.totalPhases || 0} phases)
                       </Typography>
@@ -556,8 +555,8 @@ export default function DashboardPage() {
                   )}
                 </CardContent>
               </Card>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </Container>
       </Box>
     </Box>
