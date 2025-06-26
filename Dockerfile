@@ -49,6 +49,9 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy healthcheck script
+COPY --from=builder --chown=nextjs:nodejs /app/healthcheck.js ./healthcheck.js
+
 USER nextjs
 
 EXPOSE 3000
