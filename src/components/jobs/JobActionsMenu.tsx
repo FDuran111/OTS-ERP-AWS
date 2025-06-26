@@ -65,7 +65,16 @@ export default function JobActionsMenu({ job, onEdit, onDelete, onView }: JobAct
   }
 
   const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete job ${job.jobNumber}?`)) {
+    const confirmMessage = `Are you sure you want to delete job ${job.jobNumber}?\n\n` +
+      `This will permanently delete:\n` +
+      `• Job details and history\n` +
+      `• Time entries\n` +
+      `• Material usage records\n` +
+      `• Job phases and notes\n` +
+      `• All related data\n\n` +
+      `This action cannot be undone.`
+    
+    if (window.confirm(confirmMessage)) {
       onDelete(job)
     }
     handleClose()

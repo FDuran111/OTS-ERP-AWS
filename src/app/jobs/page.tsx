@@ -263,13 +263,21 @@ export default function JobsPage() {
       })
       
       if (!response.ok) {
-        throw new Error('Failed to delete job')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete job')
       }
       
-      fetchJobs() // Refresh the list
+      const responseData = await response.json()
+      
+      // Refresh the list
+      fetchJobs()
+      
+      // Show success message
+      alert(`✅ Job ${job.jobNumber} has been successfully deleted`)
     } catch (error) {
       console.error('Error deleting job:', error)
-      alert('Failed to delete job. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete job. Please try again.'
+      alert(`❌ ${errorMessage}`)
     }
   }
 
@@ -360,14 +368,24 @@ export default function JobsPage() {
 
   // Action buttons for the page header
   const actionButtons = (
-    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+    <Stack 
+      direction={{ xs: 'column', sm: 'row' }} 
+      spacing={1} 
+      sx={{ 
+        width: { xs: '100%', sm: 'auto' },
+        alignItems: { xs: 'stretch', sm: 'center' }
+      }}
+    >
       <Button
         variant="outlined"
         startIcon={<DownloadIcon />}
         onClick={exportToCSV}
         disabled={filteredJobs.length === 0}
         size={isMobile ? 'small' : 'medium'}
-        sx={{ flex: { xs: 1, sm: 'none' } }}
+        sx={{ 
+          flex: { xs: 1, sm: 'none' },
+          minWidth: { xs: 'auto', sm: '120px' }
+        }}
       >
         {isMobile ? 'Export' : 'Export CSV'}
       </Button>
@@ -381,7 +399,9 @@ export default function JobsPage() {
           '&:hover': {
             backgroundColor: '#d236b8',
           },
-          flex: { xs: 1, sm: 'none' }
+          flex: { xs: 1, sm: 'none' },
+          minWidth: { xs: 'auto', sm: '100px' },
+          whiteSpace: 'nowrap'
         }}
       >
         {isMobile ? 'New' : 'New Job'}

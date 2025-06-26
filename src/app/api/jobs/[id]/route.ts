@@ -339,22 +339,66 @@ export async function DELETE(
 ) {
   const resolvedParams = await params
   try {
-    // Delete related records first
+    // Check if job exists first
+    const jobCheck = await query(
+      'SELECT id, "jobNumber", status FROM "Job" WHERE id = $1',
+      [resolvedParams.id]
+    )
+
+    if (jobCheck.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Job not found' },
+        { status: 404 }
+      )
+    }
+
+    const job = jobCheck.rows[0]
+
+    // Optional: Prevent deletion of completed/billed jobs
+    if (job.status === 'BILLED') {
+      return NextResponse.json(
+        { error: 'Cannot delete billed jobs. Please contact an administrator.' },
+        { status: 400 }
+      )
+    }
+
+    // Delete related records first (in proper order to handle foreign key constraints)
     await Promise.all([
       query('DELETE FROM "JobAssignment" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "JobPhase" WHERE "jobId" = $1', [resolvedParams.id]),
-      query('DELETE FROM "TimeEntry" WHERE "jobId" = $1', [resolvedParams.id]),
+      query('DELETE FROM "TimeEntry" WHERE job_id = $1', [resolvedParams.id]),
       query('DELETE FROM "MaterialUsage" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "ChangeOrder" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "JobNote" WHERE "jobId" = $1', [resolvedParams.id])
     ])
 
     // Finally delete the job
-    await query('DELETE FROM "Job" WHERE id = $1', [resolvedParams.id])
+    const deleteResult = await query('DELETE FROM "Job" WHERE id = $1', [resolvedParams.id])
 
-    return NextResponse.json({ success: true })
+    if (deleteResult.rowCount === 0) {
+      return NextResponse.json(
+        { error: 'Job could not be deleted' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `Job ${job.jobNumber} has been successfully deleted`
+    })
   } catch (error) {
     console.error('Error deleting job:', error)
+    
+    // Handle specific database errors
+    if (error instanceof Error) {
+      if (error.message.includes('foreign key constraint')) {
+        return NextResponse.json(
+          { error: 'Cannot delete job due to related records. Please contact support.' },
+          { status: 400 }
+        )
+      }
+    }
+    
     return NextResponse.json(
       { error: 'Failed to delete job', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

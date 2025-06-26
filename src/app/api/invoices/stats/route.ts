@@ -16,13 +16,15 @@ export async function GET() {
       overdueResult,
       recentInvoicesResult
     ] = await Promise.all([
-      // Total outstanding invoices (SENT + OVERDUE)
+      // Total outstanding invoices (SENT + OVERDUE) 
+      // Also include DRAFT invoices in a separate calculation
       query(`
         SELECT 
-          COALESCE(SUM("totalAmount"), 0) as total_amount,
-          COUNT(*) as count
-        FROM "Invoice" 
-        WHERE status IN ('SENT', 'OVERDUE')
+          COALESCE(SUM(CASE WHEN status IN ('SENT', 'OVERDUE') THEN "totalAmount" ELSE 0 END), 0) as outstanding_amount,
+          COUNT(CASE WHEN status IN ('SENT', 'OVERDUE') THEN 1 END) as outstanding_count,
+          COALESCE(SUM(CASE WHEN status = 'DRAFT' THEN "totalAmount" ELSE 0 END), 0) as draft_amount,
+          COUNT(CASE WHEN status = 'DRAFT' THEN 1 END) as draft_count
+        FROM "Invoice"
       `),
       
       // Pending invoices (DRAFT)
@@ -70,18 +72,29 @@ export async function GET() {
       `)
     ])
 
-    const outstanding = outstandingResult.rows[0]
+    const outstandingData = outstandingResult.rows[0]
     const pending = pendingResult.rows[0]
     const paidThisMonth = paidThisMonthResult.rows[0]
     const overdue = overdueResult.rows[0]
 
+    console.log('Stats query results:', {
+      outstanding: outstandingData,
+      pending: pending,
+      paidThisMonth: paidThisMonth,
+      overdue: overdue
+    })
+
+    // Use the outstanding_amount from the combined query
+    const outstandingAmount = parseFloat(outstandingData.outstanding_amount || 0)
+    const outstandingCount = parseInt(outstandingData.outstanding_count || 0)
+
     const stats = [
       {
         title: 'Total Outstanding',
-        value: `$${parseFloat(outstanding.total_amount).toLocaleString()}`,
+        value: `$${outstandingAmount.toLocaleString()}`,
         icon: 'attach_money',
         color: '#1d8cf8',
-        count: parseInt(outstanding.count)
+        count: outstandingCount
       },
       {
         title: 'Pending (Draft)',
@@ -122,8 +135,8 @@ export async function GET() {
       stats,
       recentInvoices: formattedRecentInvoices,
       details: {
-        outstandingAmount: parseFloat(outstanding.total_amount),
-        outstandingCount: parseInt(outstanding.count),
+        outstandingAmount: outstandingAmount,
+        outstandingCount: outstandingCount,
         pendingAmount: parseFloat(pending.total_amount),
         pendingCount: parseInt(pending.count),
         paidThisMonthAmount: parseFloat(paidThisMonth.total_amount),

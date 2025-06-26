@@ -2,28 +2,17 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import SimpleTimeEntry from '@/components/time/SimpleTimeEntry'
 import ScheduledJobSuggestions from '@/components/time/ScheduledJobSuggestions'
 import ActiveTimerCard from '@/components/time/ActiveTimerCard'
 import {
   Box,
-  Container,
   Typography,
   Card,
   CardContent,
   Chip,
-  IconButton,
-  AppBar,
-  Toolbar,
-  Drawer,
-  ListItemIcon,
-  ListItemButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
-  List,
-  ListItemText,
   Table,
   TableBody,
   TableCell,
@@ -36,19 +25,11 @@ import {
   useMediaQuery,
   useTheme,
   Grid,
+  CircularProgress,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
-  Work as WorkIcon,
-  Schedule as ScheduleIcon,
-  People as PeopleIcon,
-  Inventory as InventoryIcon,
-  Receipt as ReceiptIcon,
-  Assessment as AssessmentIcon,
-  Settings as SettingsIcon,
   AccessTime as TimeIcon,
-  Logout as LogoutIcon,
-  Menu as MenuIcon,
   PlayArrow,
   Stop,
   Timer,
@@ -56,8 +37,6 @@ import {
   Group,
   TrendingUp,
 } from '@mui/icons-material'
-
-const drawerWidth = 240
 
 interface User {
   id: string
@@ -101,19 +80,6 @@ const iconMap = {
   group: Group,
 }
 
-const menuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { text: 'Jobs', icon: WorkIcon, path: '/jobs' },
-  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
-  { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
-  { text: 'Customers', icon: PeopleIcon, path: '/customers' },
-  { text: 'Leads', icon: TrendingUp, path: '/leads' },
-  { text: 'Materials', icon: InventoryIcon, path: '/materials' },
-  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
-  { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
-  { text: 'Settings', icon: SettingsIcon, path: '/settings' },
-]
-
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'Active':
@@ -132,8 +98,6 @@ export default function TimePage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
   const [activeTimers, setActiveTimers] = useState<TimeEntry[]>([])
   const [stats, setStats] = useState<TimeStat[]>([])
@@ -178,358 +142,241 @@ export default function TimePage() {
     }
   }
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen)
-  }
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
-  }
 
   if (!user) return null
 
-  const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ px: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 300 }}>
-          Ortmeier Tech
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List sx={{ flexGrow: 1 }}>
-        {menuItems.map((item) => (
-          <ListItemButton
-            key={item.text}
-            onClick={() => router.push(item.path)}
-            selected={item.path === '/time'}
-            sx={{
-              '&:hover': {
-                backgroundColor: 'rgba(225, 78, 202, 0.08)',
-              },
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(225, 78, 202, 0.12)',
-              },
-            }}
-          >
-            <ListItemIcon>
-              <item.icon sx={{ color: 'text.secondary' }} />
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        <ListItemButton onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon sx={{ color: 'text.secondary' }} />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItemButton>
-      </List>
-    </Box>
+  // Action buttons for the page header
+  const actionButtons = (
+    <Stack 
+      direction={{ xs: 'column', sm: 'row' }} 
+      spacing={1} 
+      sx={{ 
+        width: { xs: '100%', sm: 'auto' },
+        alignItems: { xs: 'stretch', sm: 'center' }
+      }}
+    >
+      <Button
+        variant="contained"
+        startIcon={<TimeIcon />}
+        onClick={() => router.push('/time/mobile')}
+        sx={{ 
+          bgcolor: 'success.main', 
+          '&:hover': { bgcolor: 'success.dark' },
+          flex: { xs: 1, sm: 'none' },
+          minWidth: { xs: 'auto', sm: '140px' }
+        }}
+        size={isMobile ? 'small' : 'medium'}
+      >
+        {isMobile ? 'Mobile Clock' : 'Mobile Clock'}
+      </Button>
+    </Stack>
   )
 
+  // Breadcrumbs for navigation
+  const breadcrumbs = [
+    {
+      label: 'Home',
+      path: '/dashboard',
+      icon: <DashboardIcon fontSize="small" />
+    },
+    {
+      label: 'Time Tracking',
+      path: '/time',
+      icon: <TimeIcon fontSize="small" />
+    }
+  ]
+
   return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="Time Tracking"
+        subtitle="Log time worked on jobs - simplified workflow, no timers needed"
+        breadcrumbs={breadcrumbs}
+        actions={actionButtons}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Time Tracking
-          </Typography>
-          <IconButton onClick={handleMenuClick}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
-              {user.name.charAt(0)}
-            </Avatar>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem>
-              <Typography variant="body2">{user.name}</Typography>
-            </MenuItem>
-            <MenuItem>
-              <Typography variant="caption" color="text.secondary">
-                {user.role}
-              </Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              Logout
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
 
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
-        }}
-      >
-        <Container maxWidth="xl">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Box>
-              <Typography variant="h4">
-                Time Tracking
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Log time worked on jobs - simplified workflow, no timers needed
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<TimeIcon />}
-              onClick={() => router.push('/time/mobile')}
-              sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
-            >
-              Mobile Clock
-            </Button>
-          </Box>
-
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-            {loading ? (
-              Array.from({ length: 4 }).map((_, index) => (
-                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-                  <Card>
-                    <CardContent>
-                      <Typography>Loading...</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))
-            ) : (
-              stats.map((stat) => (
-                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
-                  <Card>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 48,
-                            height: 48,
-                            borderRadius: '12px',
-                            backgroundColor: `${stat.color}20`,
-                            mr: 2,
-                          }}
-                        >
-                          {React.createElement(stat.icon, { sx: { color: stat.color } })}
-                        </Box>
-                        <Box>
-                          <Typography color="text.secondary" variant="caption">
-                            {stat.title}
-                          </Typography>
-                          <Typography variant="h5">{stat.value}</Typography>
-                        </Box>
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          {loading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          ) : (
+            stats.map((stat) => (
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 48,
+                          height: 48,
+                          borderRadius: '12px',
+                          backgroundColor: `${stat.color}20`,
+                          mr: 2,
+                        }}
+                      >
+                        {React.createElement(stat.icon, { sx: { color: stat.color } })}
                       </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))
-            )}
-          </Grid>
-
-          {/* Scheduled Job Suggestions */}
-          <Box sx={{ mb: 3 }}>
-            <ScheduledJobSuggestions onCreateTimeEntry={(schedule) => {
-              // This will trigger the SimpleTimeEntry to pre-fill with the schedule
-              // For now, we'll just show an alert, but you could enhance this further
-              alert(`Creating time entry for ${schedule.job.jobNumber}`)
-            }} />
-          </Box>
-
-          {/* Quick Time Entry */}
-          <Box sx={{ mb: 3 }}>
-            <SimpleTimeEntry onTimeEntryCreated={fetchTimeData} />
-          </Box>
-
-          {/* Active Timers - Legacy Support */}
-          {activeTimers.length > 0 && (
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  ⏱️ Active Timers (Legacy)
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  These are old-style timers that are still running. Stop them to complete the time entries.
-                </Typography>
-                {loading ? (
-                  <Typography>Loading active timers...</Typography>
-                ) : (
-                  <Grid container spacing={2}>
-                    {activeTimers.map((timer) => (
-                      <Grid size={{ xs: 12, md: 6 }} key={timer.id}>
-                        <ActiveTimerCard
-                          timer={{
-                            id: timer.id,
-                            userName: timer.userName,
-                            jobNumber: timer.jobNumber,
-                            jobTitle: timer.jobTitle,
-                            customer: timer.customer,
-                            phaseName: timer.phaseName,
-                            startTime: timer.startTime,
-                            description: timer.description,
-                          }}
-                          onTimerStopped={fetchTimeData}
-                        />
-                      </Grid>
-                    ))}
-                  </Grid>
-                )}
-              </CardContent>
-            </Card>
+                      <Box>
+                        <Typography color="text.secondary" variant="caption">
+                          {stat.title}
+                        </Typography>
+                        <Typography variant="h5">{stat.value}</Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
           )}
+        </Grid>
 
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            📋 Recent Time Entries
-          </Typography>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
+        {/* Scheduled Job Suggestions */}
+        <Box sx={{ mb: 3 }}>
+          <ScheduledJobSuggestions onCreateTimeEntry={(schedule) => {
+            // This will trigger the SimpleTimeEntry to pre-fill with the schedule
+            // For now, we'll just show an alert, but you could enhance this further
+            alert(`Creating time entry for ${schedule.job.jobNumber}`)
+          }} />
+        </Box>
+
+        {/* Quick Time Entry */}
+        <Box sx={{ mb: 3 }}>
+          <SimpleTimeEntry onTimeEntryCreated={fetchTimeData} />
+        </Box>
+
+        {/* Active Timers - Legacy Support */}
+        {activeTimers.length > 0 && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                ⏱️ Active Timers (Legacy)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                These are old-style timers that are still running. Stop them to complete the time entries.
+              </Typography>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <Grid container spacing={2}>
+                  {activeTimers.map((timer) => (
+                    <Grid size={{ xs: 12, md: 6 }} key={timer.id}>
+                      <ActiveTimerCard
+                        timer={{
+                          id: timer.id,
+                          userName: timer.userName,
+                          jobNumber: timer.jobNumber,
+                          jobTitle: timer.jobTitle,
+                          customer: timer.customer,
+                          phaseName: timer.phaseName,
+                          startTime: timer.startTime,
+                          description: timer.description,
+                        }}
+                        onTimerStopped={fetchTimeData}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          📋 Recent Time Entries
+        </Typography>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Employee</TableCell>
+                <TableCell>Job</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>Start Time</TableCell>
+                <TableCell>End Time</TableCell>
+                <TableCell>Hours</TableCell>
+                <TableCell>Phase</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
                 <TableRow>
-                  <TableCell>Employee</TableCell>
-                  <TableCell>Job</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Start Time</TableCell>
-                  <TableCell>End Time</TableCell>
-                  <TableCell>Hours</TableCell>
-                  <TableCell>Phase</TableCell>
+                  <TableCell colSpan={7} align="center">
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                      <CircularProgress size={24} />
+                      <Typography sx={{ ml: 2 }}>Loading time entries...</Typography>
+                    </Box>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center">
-                      Loading time entries...
+              ) : timeEntries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    <Typography color="text.secondary">No time entries found</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                timeEntries.map((entry) => (
+                  <TableRow key={entry.id} hover>
+                    <TableCell>{entry.userName}</TableCell>
+                    <TableCell>
+                      <Stack>
+                        <Typography variant="body2">{entry.jobNumber}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {entry.jobTitle}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {entry.customer}
+                        </Typography>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {new Date(entry.startTime).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      {entry.endTime 
+                        ? new Date(entry.endTime).toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })
+                        : 'Active'
+                      }
+                    </TableCell>
+                    <TableCell>{entry.hours?.toFixed(1) || '-'}</TableCell>
+                    <TableCell>
+                      {entry.phaseName ? (
+                        <Chip
+                          label={entry.phaseName}
+                          size="small"
+                          variant="outlined"
+                        />
+                      ) : (
+                        '-'
+                      )}
                     </TableCell>
                   </TableRow>
-                ) : timeEntries.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center">
-                      No time entries found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  timeEntries.map((entry) => (
-                    <TableRow key={entry.id} hover>
-                      <TableCell>{entry.userName}</TableCell>
-                      <TableCell>
-                        <Stack>
-                          <Typography variant="body2">{entry.jobNumber}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {entry.jobTitle}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {entry.customer}
-                          </Typography>
-                        </Stack>
-                      </TableCell>
-                      <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        {new Date(entry.startTime).toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        {entry.endTime 
-                          ? new Date(entry.endTime).toLocaleTimeString([], { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })
-                          : 'Active'
-                        }
-                      </TableCell>
-                      <TableCell>{entry.hours?.toFixed(1) || '-'}</TableCell>
-                      <TableCell>
-                        {entry.phaseName ? (
-                          <Chip
-                            label={entry.phaseName}
-                            size="small"
-                            variant="outlined"
-                          />
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Container>
-      </Box>
-
-    </Box>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }

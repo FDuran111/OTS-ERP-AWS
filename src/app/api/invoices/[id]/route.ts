@@ -29,78 +29,80 @@ export async function GET(
 ) {
   const resolvedParams = await params
   try {
-    // Mock line items first to calculate correct totals
-    const lineItems = [
-      {
-        id: '1',
-        type: 'LABOR',
-        description: 'Electrical panel installation',
-        quantity: 8,
-        unitPrice: 85,
-        totalPrice: 680, // 8 × $85 = $680
-        materialId: null,
-        laborRateId: '3',
-      },
-      {
-        id: '2',
-        type: 'MATERIAL',
-        description: '200A Main Panel',
-        quantity: 1,
-        unitPrice: 425,
-        totalPrice: 425, // 1 × $425 = $425
-        materialId: 'MAT002',
-        laborRateId: null,
-      },
-      {
-        id: '3',
-        type: 'MATERIAL',
-        description: '12 AWG Wire',
-        quantity: 250,
-        unitPrice: 0.68,
-        totalPrice: 170, // 250 × $0.68 = $170
-        materialId: 'MAT001',
-        laborRateId: null,
-      }
-    ]
+    const invoiceId = resolvedParams.id
+    console.log('Fetching invoice:', invoiceId)
 
-    // Calculate correct financial totals from line items
-    const subtotalAmount = lineItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0)
-    const taxRate = 0.142 // 14.2% tax rate
-    const taxAmount = subtotalAmount * taxRate
-    const totalAmount = subtotalAmount + taxAmount
+    // Get invoice with job and customer info
+    const invoiceResult = await query(`
+      SELECT 
+        i.*,
+        j."jobNumber",
+        j.description as job_description,
+        c."firstName",
+        c."lastName",
+        c.email,
+        c."companyName"
+      FROM "Invoice" i
+      LEFT JOIN "Job" j ON i."jobId" = j.id
+      LEFT JOIN "Customer" c ON i."customerId" = c.id
+      WHERE i.id = $1
+    `, [invoiceId])
 
-    // Mock specific invoice data with CORRECT calculated totals
-    const mockInvoice = {
-      id: resolvedParams.id,
-      invoiceNumber: 'INV-2025-001',
-      status: 'DRAFT',
-      totalAmount: Math.round(totalAmount * 100) / 100, // Round to 2 decimal places
-      subtotalAmount: Math.round(subtotalAmount * 100) / 100,
-      taxAmount: Math.round(taxAmount * 100) / 100,
-      dueDate: '2025-06-15T00:00:00.000Z',
-      sentDate: null,
-      paidDate: null,
-      notes: 'Sample invoice notes',
-      createdAt: '2025-05-15T00:00:00.000Z',
-      job: {
-        jobNumber: '25-001-A12',
-        description: 'Panel upgrade and rewiring',
-        address: '123 Main St',
-      },
-      customer: {
-        firstName: 'John',
-        lastName: 'Johnson',
-        email: 'john@example.com',
-        phone: '555-1234',
-        address: '123 Main St',
-        city: 'Anytown',
-        state: 'CA',
-        zip: '12345',
-      },
-      lineItems: lineItems
+    if (invoiceResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Invoice not found' },
+        { status: 404 }
+      )
     }
 
-    return NextResponse.json(mockInvoice)
+    const invoice = invoiceResult.rows[0]
+
+    // Get line items for this invoice
+    const lineItemsResult = await query(
+      `SELECT * FROM "InvoiceLineItem" WHERE "invoiceId" = $1 ORDER BY "createdAt" ASC`,
+      [invoiceId]
+    )
+
+    console.log('Found line items:', lineItemsResult.rows.length)
+
+    // Transform the data
+    const transformedInvoice = {
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      jobId: invoice.jobId,
+      status: invoice.status,
+      totalAmount: parseFloat(invoice.totalAmount),
+      subtotalAmount: parseFloat(invoice.subtotalAmount),
+      taxAmount: parseFloat(invoice.taxAmount),
+      dueDate: invoice.dueDate,
+      sentDate: invoice.sentDate,
+      paidDate: invoice.paidDate,
+      notes: invoice.notes,
+      createdAt: invoice.createdAt,
+      job: {
+        id: invoice.jobId,
+        jobNumber: invoice.jobNumber || 'N/A',
+        description: invoice.job_description || 'No description'
+      },
+      customer: {
+        firstName: invoice.firstName || 'Unknown',
+        lastName: invoice.lastName || 'Customer',
+        email: invoice.email || '',
+        companyName: invoice.companyName || ''
+      },
+      lineItems: lineItemsResult.rows.map(item => ({
+        id: item.id,
+        type: item.type,
+        description: item.description,
+        quantity: parseFloat(item.quantity),
+        unitPrice: parseFloat(item.unitPrice),
+        totalPrice: parseFloat(item.totalPrice),
+        materialId: item.materialId,
+        laborRateId: item.laborRateId
+      }))
+    }
+
+    return NextResponse.json(transformedInvoice)
   } catch (error) {
     console.error('Error fetching invoice:', error)
     return NextResponse.json(
@@ -117,50 +119,78 @@ export async function PATCH(
 ) {
   const resolvedParams = await params
   try {
+    const invoiceId = resolvedParams.id
     const body = await request.json()
-    const data = updateInvoiceSchema.parse(body)
+    console.log('PATCH invoice:', invoiceId, 'with data:', body)
 
-    // Mock successful update response
-    const mockUpdatedInvoice = {
-      id: resolvedParams.id,
-      invoiceNumber: 'INV-2025-001',
-      status: data.status || 'DRAFT',
-      totalAmount: data.totalAmount || 2450.00,
-      subtotalAmount: data.subtotalAmount || 2268.52,
-      taxAmount: data.taxAmount || 181.48,
-      dueDate: data.dueDate?.toISOString() || '2025-06-15T00:00:00.000Z',
-      sentDate: data.sentDate?.toISOString() || null,
-      paidDate: data.paidDate?.toISOString() || null,
-      notes: data.notes || null,
-      createdAt: '2025-05-15T00:00:00.000Z',
-      job: {
-        jobNumber: '25-001-A12',
-        description: 'Panel upgrade and rewiring',
-      },
-      customer: {
-        firstName: 'John',
-        lastName: 'Johnson',
-        email: 'john@example.com',
-      },
-      lineItems: data.lineItems?.map(item => ({
-        id: item.id || Math.random().toString(36).substr(2, 9),
-        ...item,
-        totalPrice: item.quantity * item.unitPrice,
-      })) || []
+    // Build update query dynamically based on provided fields
+    const updateFields = []
+    const updateParams = []
+    let paramIndex = 1
+
+    if (body.status) {
+      updateFields.push(`status = $${paramIndex}`)
+      updateParams.push(body.status)
+      paramIndex++
     }
 
-    return NextResponse.json(mockUpdatedInvoice)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (body.sentDate) {
+      updateFields.push(`"sentDate" = $${paramIndex}`)
+      updateParams.push(new Date(body.sentDate))
+      paramIndex++
+    }
+
+    if (body.paidDate) {
+      updateFields.push(`"paidDate" = $${paramIndex}`)
+      updateParams.push(new Date(body.paidDate))
+      paramIndex++
+    }
+
+    if (body.dueDate) {
+      updateFields.push(`"dueDate" = $${paramIndex}`)
+      updateParams.push(new Date(body.dueDate))
+      paramIndex++
+    }
+
+    if (body.notes !== undefined) {
+      updateFields.push(`notes = $${paramIndex}`)
+      updateParams.push(body.notes)
+      paramIndex++
+    }
+
+    // Always update updatedAt
+    updateFields.push(`"updatedAt" = $${paramIndex}`)
+    updateParams.push(new Date())
+    paramIndex++
+
+    // Add invoice ID as last parameter
+    updateParams.push(invoiceId)
+
+    const updateQuery = `
+      UPDATE "Invoice" 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `
+
+    console.log('Update query:', updateQuery)
+    console.log('Update params:', updateParams)
+
+    const result = await query(updateQuery, updateParams)
+
+    if (result.rows.length === 0) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
-        { status: 400 }
+        { error: 'Invoice not found' },
+        { status: 404 }
       )
     }
-    
+
+    console.log('Invoice updated successfully:', result.rows[0])
+    return NextResponse.json(result.rows[0])
+  } catch (error) {
     console.error('Error updating invoice:', error)
     return NextResponse.json(
-      { error: 'Failed to update invoice' },
+      { error: 'Failed to update invoice', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

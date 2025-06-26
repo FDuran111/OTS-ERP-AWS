@@ -13,6 +13,7 @@ import {
   Switch,
   Grid,
   Typography,
+  Box,
 } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
@@ -25,15 +26,15 @@ interface CreateCustomerDialogProps {
 }
 
 const customerSchema = z.object({
-  companyName: z.string().optional(),
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  companyName: z.string().max(100, 'Company name too long').optional(),
+  firstName: z.string().min(1, 'First name is required').max(50, 'First name too long'),
+  lastName: z.string().min(1, 'Last name is required').max(50, 'Last name too long'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().min(1, 'Phone is required'),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip: z.string().optional(),
+  phone: z.string().max(20, 'Phone number too long').optional(),
+  address: z.string().max(200, 'Address too long').optional(),
+  city: z.string().max(50, 'City name too long').optional(),
+  state: z.string().max(2, 'State must be 2 characters').optional(),
+  zip: z.string().max(10, 'ZIP code too long').optional(),
   isCommercial: z.boolean(),
 })
 
@@ -71,15 +72,15 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
       setSubmitting(true)
       
       const submitData = {
-        companyName: isCommercial ? data.companyName : undefined,
+        companyName: isCommercial && data.companyName ? data.companyName : undefined,
         firstName: data.firstName,
         lastName: data.lastName,
-        email: data.email || undefined,
-        phone: data.phone,
-        address: data.address || undefined,
-        city: data.city || undefined,
-        state: data.state || undefined,
-        zip: data.zip || undefined,
+        email: data.email && data.email.trim() !== '' ? data.email : undefined,
+        phone: data.phone && data.phone.trim() !== '' ? data.phone : undefined,
+        address: data.address && data.address.trim() !== '' ? data.address : undefined,
+        city: data.city && data.city.trim() !== '' ? data.city : undefined,
+        state: data.state && data.state.trim() !== '' ? data.state : undefined,
+        zip: data.zip && data.zip.trim() !== '' ? data.zip : undefined,
       }
 
       const response = await fetch('/api/customers', {
@@ -91,7 +92,8 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create customer')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create customer')
       }
 
       reset()
@@ -99,7 +101,8 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
       onClose()
     } catch (error) {
       console.error('Error creating customer:', error)
-      alert('Failed to create customer. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create customer. Please try again.'
+      alert(errorMessage)
     } finally {
       setSubmitting(false)
     }
@@ -198,7 +201,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
                   <TextField
                     {...field}
                     value={field.value || ''}
-                    label="Phone Number *"
+                    label="Phone Number"
                     fullWidth
                     error={!!errors.phone}
                     helperText={errors.phone?.message}

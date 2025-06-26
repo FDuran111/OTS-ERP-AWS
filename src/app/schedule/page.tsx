@@ -2,50 +2,27 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   Box,
-  Container,
   Typography,
   Card,
   CardContent,
   Chip,
-  IconButton,
-  AppBar,
-  Toolbar,
-  Drawer,
-  ListItemIcon,
-  ListItemButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
-  List,
-  ListItemText,
   Button,
   Paper,
   Stack,
   CircularProgress,
   Alert,
   Grid,
+  useTheme,
+  useMediaQuery,
+  IconButton,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
-  Work as WorkIcon,
   Schedule as ScheduleIcon,
-  People as PeopleIcon,
-  Inventory as InventoryIcon,
-  Receipt as ReceiptIcon,
-  Assessment as AssessmentIcon,
-  Settings as SettingsIcon,
-  AccessTime as TimeIcon,
-  Logout as LogoutIcon,
-  Menu as MenuIcon,
-  ChevronLeft,
-  ChevronRight,
-  Today,
-  CalendarMonth,
-  TrendingUp,
-  Add as AddIcon,
   Notifications as NotificationsIcon,
   Event as EventIcon,
   Warning as WarningIcon,
@@ -57,15 +34,12 @@ import JobSchedulingCalendar from '@/components/scheduling/JobSchedulingCalendar
 import CrewAvailabilityWidget from '@/components/scheduling/CrewAvailabilityWidget'
 import ReminderManagement from '@/components/reminders/ReminderManagement'
 
-const drawerWidth = 240
-
 interface User {
   id: string
   email: string
   name: string
   role: string
 }
-
 
 interface UpcomingReminder {
   id: string
@@ -79,24 +53,11 @@ interface UpcomingReminder {
   type: 'start_reminder' | 'deadline_warning' | 'overdue'
 }
 
-const menuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { text: 'Jobs', icon: WorkIcon, path: '/jobs' },
-  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
-  { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
-  { text: 'Customers', icon: PeopleIcon, path: '/customers' },
-  { text: 'Leads', icon: TrendingUp, path: '/leads' },
-  { text: 'Materials', icon: InventoryIcon, path: '/materials' },
-  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
-  { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
-  { text: 'Settings', icon: SettingsIcon, path: '/settings' },
-]
-
 export default function SchedulePage() {
   const router = useRouter()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [upcomingReminders, setUpcomingReminders] = useState<UpcomingReminder[]>([])
   const [showReminders, setShowReminders] = useState(true)
   const [reminderManagementOpen, setReminderManagementOpen] = useState(false)
@@ -155,23 +116,6 @@ export default function SchedulePage() {
     }
   }
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen)
-  }
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
-  }
 
   const handleJobScheduled = () => {
     fetchUpcomingReminders()
@@ -205,180 +149,54 @@ export default function SchedulePage() {
 
   if (!user) return null
 
-  const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ px: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 300 }}>
-          Ortmeier Tech
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List sx={{ flexGrow: 1 }}>
-        {menuItems.map((item) => (
-          <ListItemButton
-            key={item.text}
-            onClick={() => router.push(item.path)}
-            selected={item.path === '/schedule'}
-            sx={{
-              '&:hover': {
-                backgroundColor: 'rgba(225, 78, 202, 0.08)',
-              },
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(225, 78, 202, 0.12)',
-              },
-            }}
-          >
-            <ListItemIcon>
-              <item.icon sx={{ color: 'text.secondary' }} />
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        <ListItemButton onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon sx={{ color: 'text.secondary' }} />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItemButton>
-      </List>
-    </Box>
+  // Action buttons for the page header
+  const actionButtons = (
+    <Stack 
+      direction={{ xs: 'column', sm: 'row' }} 
+      spacing={1} 
+      sx={{ 
+        width: { xs: '100%', sm: 'auto' },
+        alignItems: { xs: 'stretch', sm: 'center' }
+      }}
+    >
+      <Button
+        startIcon={<TvIcon />}
+        variant="outlined"
+        size={isMobile ? 'small' : 'large'}
+        onClick={() => window.open('/office-display', '_blank')}
+        sx={{ 
+          fontWeight: 600,
+          flex: { xs: 1, sm: 'none' },
+          minWidth: { xs: 'auto', sm: '140px' }
+        }}
+      >
+        Office Display
+      </Button>
+    </Stack>
   )
 
+  // Breadcrumbs for navigation
+  const breadcrumbs = [
+    {
+      label: 'Home',
+      path: '/dashboard',
+      icon: <DashboardIcon fontSize="small" />
+    },
+    {
+      label: 'Schedule',
+      path: '/schedule',
+      icon: <ScheduleIcon fontSize="small" />
+    }
+  ]
+
   return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="Schedule Management"
+        subtitle="Manage job schedules, reminders, and crew availability"
+        breadcrumbs={breadcrumbs}
+        actions={actionButtons}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Schedule
-          </Typography>
-          
-          {/* Notification indicator */}
-          <IconButton 
-            onClick={() => setShowReminders(!showReminders)}
-            sx={{ mr: 1 }}
-          >
-            <NotificationsIcon />
-            {upcomingReminders.length > 0 && (
-              <Chip
-                label={upcomingReminders.length}
-                size="small"
-                color="error"
-                sx={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  minWidth: 20,
-                  height: 20,
-                  fontSize: '0.75rem'
-                }}
-              />
-            )}
-          </IconButton>
-          
-          <IconButton onClick={handleMenuClick}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
-              {user.name.charAt(0)}
-            </Avatar>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem>
-              <Typography variant="body2">{user.name}</Typography>
-            </MenuItem>
-            <MenuItem>
-              <Typography variant="caption" color="text.secondary">
-                {user.role}
-              </Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              Logout
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
-
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
-        }}
-      >
-        <Container maxWidth="xl">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="h3" sx={{ fontWeight: 700, color: 'primary.main' }}>
-              Schedule Management
-            </Typography>
-            <Button
-              startIcon={<TvIcon />}
-              variant="outlined"
-              size="large"
-              onClick={() => window.open('/office-display', '_blank')}
-              sx={{ fontWeight: 600 }}
-            >
-              Office Display
-            </Button>
-          </Box>
 
 
           {/* Upcoming Reminders Section */}
@@ -493,8 +311,7 @@ export default function SchedulePage() {
           <Box sx={{ mb: 4 }}>
             <CrewAvailabilityWidget />
           </Box>
-        </Container>
-      </Box>
+      </ResponsiveContainer>
 
       {/* Reminder Management Dialog */}
       {reminderManagementOpen && (
@@ -536,6 +353,6 @@ export default function SchedulePage() {
         </Box>
       )}
 
-    </Box>
+    </ResponsiveLayout>
   )
 }

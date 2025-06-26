@@ -314,16 +314,36 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
             bgcolor: 'primary.50'
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'flex-start', sm: 'center' }, 
+            gap: { xs: 2, sm: 0 },
+            mb: 3 
+          }}>
+            <Typography variant="h4" sx={{ 
+              fontWeight: 700, 
+              color: 'primary.main',
+              fontSize: { xs: '1.5rem', sm: '2rem' }
+            }}>
               Job Scheduling Calendar
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1,
+              width: { xs: '100%', sm: 'auto' },
+              justifyContent: { xs: 'flex-start', sm: 'flex-end' }
+            }}>
               <Button
                 variant={view === 'month' ? 'contained' : 'outlined'}
                 onClick={() => setView('month')}
                 size="medium"
-                sx={{ fontWeight: 600 }}
+                sx={{ 
+                  fontWeight: 600,
+                  flex: { xs: 1, sm: 'none' },
+                  minWidth: { xs: 'auto', sm: '80px' }
+                }}
               >
                 Month
               </Button>
@@ -331,7 +351,11 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
                 variant={view === 'week' ? 'contained' : 'outlined'}
                 onClick={() => setView('week')}
                 size="medium"
-                sx={{ fontWeight: 600 }}
+                sx={{ 
+                  fontWeight: 600,
+                  flex: { xs: 1, sm: 'none' },
+                  minWidth: { xs: 'auto', sm: '80px' }
+                }}
               >
                 Week
               </Button>
@@ -339,22 +363,47 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
           </Box>
 
           {/* Date Navigation */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'stretch', sm: 'center' },
+            gap: { xs: 2, sm: 0 }
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: { xs: 1, sm: 3 },
+              justifyContent: { xs: 'space-between', sm: 'flex-start' }
+            }}>
               <Button 
                 variant="outlined"
                 onClick={() => setCurrentDate(subDays(currentDate, view === 'month' ? 30 : 7))}
-                sx={{ fontWeight: 500 }}
+                sx={{ 
+                  fontWeight: 500,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  px: { xs: 1, sm: 2 }
+                }}
               >
                 ← Previous
               </Button>
-              <Typography variant="h5" sx={{ fontWeight: 600, minWidth: 200, textAlign: 'center' }}>
+              <Typography variant="h5" sx={{ 
+                fontWeight: 600, 
+                textAlign: 'center',
+                fontSize: { xs: '1.1rem', sm: '1.5rem' },
+                minWidth: { xs: 'auto', sm: 200 },
+                flex: { xs: 1, sm: 'none' }
+              }}>
                 {format(currentDate, 'MMMM yyyy')}
               </Typography>
               <Button 
                 variant="outlined"
                 onClick={() => setCurrentDate(addDays(currentDate, view === 'month' ? 30 : 7))}
-                sx={{ fontWeight: 500 }}
+                sx={{ 
+                  fontWeight: 500,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  px: { xs: 1, sm: 2 }
+                }}
               >
                 Next →
               </Button>
@@ -362,7 +411,11 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
             <Button 
               variant="contained" 
               onClick={() => setCurrentDate(new Date())}
-              sx={{ fontWeight: 600 }}
+              sx={{ 
+                fontWeight: 600,
+                alignSelf: { xs: 'center', sm: 'auto' },
+                width: { xs: 'auto', sm: 'auto' }
+              }}
             >
               Today
             </Button>

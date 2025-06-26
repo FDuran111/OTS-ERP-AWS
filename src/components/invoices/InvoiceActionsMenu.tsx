@@ -211,7 +211,7 @@ export default function InvoiceActionsMenu({
             <ListItemIcon>
               <PaymentIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Mark as Paid</ListItemText>
+            <ListItemText>Record Payment</ListItemText>
           </MenuItem>
         )}
         

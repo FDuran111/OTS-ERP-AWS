@@ -16,7 +16,7 @@ export const customerSchema = z.object({
   companyName: z.string().max(100, 'Company name too long').optional(),
   firstName: z.string().min(1, 'First name is required').max(50, 'First name too long'),
   lastName: z.string().min(1, 'Last name is required').max(50, 'Last name too long'),
-  email: commonSchemas.email,
+  email: z.string().email('Invalid email format').optional().or(z.literal('')),
   phone: z.string().max(20, 'Phone number too long').optional(),
   address: z.string().max(200, 'Address too long').optional(),
   city: z.string().max(50, 'City name too long').optional(),

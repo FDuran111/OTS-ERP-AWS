@@ -5,12 +5,12 @@ import type { UserRole } from './auth'
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // Simple connection settings for Supabase
-  max: 5, // Maximum 5 connections
+  max: 10, // Increase max connections
   idleTimeoutMillis: 30000, // Close idle connections after 30s
-  connectionTimeoutMillis: 10000, // 10s connection timeout
+  connectionTimeoutMillis: 30000, // Increase to 30s connection timeout
   // Add retry logic for DNS issues
-  query_timeout: 30000,
-  statement_timeout: 30000,
+  query_timeout: 60000, // Increase to 60s query timeout
+  statement_timeout: 60000, // Increase to 60s statement timeout
 })
 
 // Log pool errors

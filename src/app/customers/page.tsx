@@ -5,25 +5,14 @@ import { useRouter } from 'next/navigation'
 import CreateCustomerDialog from '@/components/customers/CreateCustomerDialog'
 import EditCustomerDialog from '@/components/customers/EditCustomerDialog'
 import CustomerActionsMenu from '@/components/customers/CustomerActionsMenu'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   Box,
-  Container,
   Typography,
   Card,
   CardContent,
   Chip,
-  IconButton,
-  AppBar,
-  Toolbar,
-  Drawer,
-  ListItemIcon,
-  ListItemButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
-  List,
-  ListItemText,
   Table,
   TableBody,
   TableCell,
@@ -34,29 +23,19 @@ import {
   Button,
   TextField,
   InputAdornment,
+  Stack,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
-  Work as WorkIcon,
-  Schedule as ScheduleIcon,
   People as PeopleIcon,
-  Inventory as InventoryIcon,
-  Receipt as ReceiptIcon,
-  Assessment as AssessmentIcon,
-  Settings as SettingsIcon,
-  AccessTime as TimeIcon,
-  Logout as LogoutIcon,
-  Menu as MenuIcon,
   PersonAdd as PersonAddIcon,
   Search as SearchIcon,
-  MoreVert as MoreVertIcon,
   Phone,
   Email,
   LocationOn,
-  TrendingUp,
 } from '@mui/icons-material'
-
-const drawerWidth = 240
 
 interface User {
   id: string
@@ -80,26 +59,11 @@ interface Customer {
   status: string
 }
 
-// Removed mockCustomers - data now comes from API
-
-const menuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { text: 'Jobs', icon: WorkIcon, path: '/jobs' },
-  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
-  { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
-  { text: 'Customers', icon: PeopleIcon, path: '/customers' },
-  { text: 'Leads', icon: TrendingUp, path: '/leads' },
-  { text: 'Materials', icon: InventoryIcon, path: '/materials' },
-  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
-  { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
-  { text: 'Settings', icon: SettingsIcon, path: '/settings' },
-]
-
 export default function CustomersPage() {
   const router = useRouter()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
@@ -133,23 +97,6 @@ export default function CustomersPage() {
     }
   }
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen)
-  }
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
-  }
 
   const handleEditCustomer = (customer: Customer) => {
     setSelectedCustomer(customer)
@@ -182,160 +129,57 @@ export default function CustomersPage() {
 
   if (!user) return null
 
-  const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ px: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 300 }}>
-          Ortmeier Tech
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List sx={{ flexGrow: 1 }}>
-        {menuItems.map((item) => (
-          <ListItemButton
-            key={item.text}
-            onClick={() => router.push(item.path)}
-            selected={item.path === '/customers'}
-            sx={{
-              '&:hover': {
-                backgroundColor: 'rgba(225, 78, 202, 0.08)',
-              },
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(225, 78, 202, 0.12)',
-              },
-            }}
-          >
-            <ListItemIcon>
-              <item.icon sx={{ color: 'text.secondary' }} />
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        <ListItemButton onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon sx={{ color: 'text.secondary' }} />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItemButton>
-      </List>
-    </Box>
+  // Action buttons for the page header
+  const actionButtons = (
+    <Stack 
+      direction={{ xs: 'column', sm: 'row' }} 
+      spacing={1} 
+      sx={{ 
+        width: { xs: '100%', sm: 'auto' },
+        alignItems: { xs: 'stretch', sm: 'center' }
+      }}
+    >
+      <Button
+        variant="contained"
+        startIcon={<PersonAddIcon />}
+        onClick={() => setCreateDialogOpen(true)}
+        sx={{
+          backgroundColor: '#e14eca',
+          '&:hover': {
+            backgroundColor: '#d236b8',
+          },
+          flex: { xs: 1, sm: 'none' },
+          minWidth: { xs: 'auto', sm: '140px' }
+        }}
+        size={isMobile ? 'small' : 'medium'}
+      >
+        {isMobile ? 'New' : 'New Customer'}
+      </Button>
+    </Stack>
   )
 
+  // Breadcrumbs for navigation
+  const breadcrumbs = [
+    {
+      label: 'Home',
+      path: '/dashboard',
+      icon: <DashboardIcon fontSize="small" />
+    },
+    {
+      label: 'Customers',
+      path: '/customers',
+      icon: <PeopleIcon fontSize="small" />
+    }
+  ]
+
   return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="Customer Management"
+        subtitle="Manage and track all customers and their information"
+        breadcrumbs={breadcrumbs}
+        actions={actionButtons}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Customers
-          </Typography>
-          <IconButton onClick={handleMenuClick}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
-              {user.name.charAt(0)}
-            </Avatar>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem>
-              <Typography variant="body2">{user.name}</Typography>
-            </MenuItem>
-            <MenuItem>
-              <Typography variant="caption" color="text.secondary">
-                {user.role}
-              </Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              Logout
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
-
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
-        }}
-      >
-        <Container maxWidth="xl">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="h4">
-              Customer Management
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<PersonAddIcon />}
-              onClick={() => setCreateDialogOpen(true)}
-              sx={{
-                backgroundColor: '#e14eca',
-                '&:hover': {
-                  backgroundColor: '#d236b8',
-                },
-              }}
-            >
-              New Customer
-            </Button>
-          </Box>
 
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -443,8 +287,7 @@ export default function CustomersPage() {
               </TableBody>
             </Table>
           </TableContainer>
-        </Container>
-      </Box>
+      </ResponsiveContainer>
 
       <CreateCustomerDialog
         open={createDialogOpen}
@@ -468,6 +311,6 @@ export default function CustomersPage() {
         }}
         customer={selectedCustomer}
       />
-    </Box>
+    </ResponsiveLayout>
   )
 }

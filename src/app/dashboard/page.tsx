@@ -160,12 +160,26 @@ export default function DashboardPage() {
 
   // Quick action buttons for mobile and desktop
   const quickActions = (
-    <Stack direction={isMobile ? 'column' : 'row'} spacing={2} className="w-full md:w-auto">
+    <Stack 
+      direction={isMobile ? 'column' : 'row'} 
+      spacing={2} 
+      sx={{
+        width: { xs: '100%', md: 'auto' },
+        alignItems: { xs: 'stretch', md: 'center' }
+      }}
+    >
       <Button
         variant="contained"
         startIcon={<AddIcon />}
         onClick={() => handleQuickAction('/jobs/new')}
-        className="w-full md:w-auto"
+        sx={{
+          width: { xs: '100%', md: 'auto' },
+          minWidth: { xs: 'auto', md: '120px' },
+          backgroundColor: '#e14eca',
+          '&:hover': {
+            backgroundColor: '#d236b8',
+          },
+        }}
         size={isMobile ? 'large' : 'medium'}
       >
         New Job
@@ -174,7 +188,11 @@ export default function DashboardPage() {
         variant="outlined"
         startIcon={<TrendingUp />}
         onClick={() => handleQuickAction('/reports')}
-        className="w-full md:w-auto"
+        sx={{
+          width: { xs: '100%', md: 'auto' },
+          minWidth: { xs: 'auto', md: '140px' },
+          whiteSpace: 'nowrap'
+        }}
         size={isMobile ? 'large' : 'medium'}
       >
         View Reports

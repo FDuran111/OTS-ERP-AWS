@@ -26,6 +26,13 @@ interface Vendor {
   code: string
 }
 
+interface StorageLocation {
+  id: string
+  name: string
+  code: string
+  type: string
+}
+
 interface AddMaterialDialogProps {
   open: boolean
   onClose: () => void
@@ -93,6 +100,7 @@ const commonUnits = [
 
 export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: AddMaterialDialogProps) {
   const [vendors, setVendors] = useState<Vendor[]>([])
+  const [storageLocations, setStorageLocations] = useState<StorageLocation[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   const {
@@ -117,6 +125,7 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
   useEffect(() => {
     if (open) {
       fetchVendors()
+      fetchStorageLocations()
     }
   }, [open])
 
@@ -137,6 +146,18 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
       }
     } catch (error) {
       console.error('Error fetching vendors:', error)
+    }
+  }
+
+  const fetchStorageLocations = async () => {
+    try {
+      const response = await fetch('/api/storage-locations')
+      if (response.ok) {
+        const data = await response.json()
+        setStorageLocations(data)
+      }
+    } catch (error) {
+      console.error('Error fetching storage locations:', error)
     }
   }
 
@@ -422,13 +443,19 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
                 name="location"
                 control={control}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    value={field.value || ''}
-                    label="Storage Location"
-                    fullWidth
-                    placeholder="e.g., A1-B2"
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Storage Location</InputLabel>
+                    <Select {...field} value={field.value || ''} label="Storage Location">
+                      <MenuItem value="">
+                        <em>No location selected</em>
+                      </MenuItem>
+                      {storageLocations.map((location) => (
+                        <MenuItem key={location.id} value={location.code}>
+                          {location.name} ({location.code})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 )}
               />
             </Grid>

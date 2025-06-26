@@ -5,25 +5,14 @@ export const dynamic = 'force-dynamic'
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   Box,
-  Container,
   Typography,
   Card,
   CardContent,
   Chip,
-  IconButton,
-  AppBar,
-  Toolbar,
-  Drawer,
-  ListItemIcon,
-  ListItemButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
-  List,
-  ListItemText,
   Table,
   TableBody,
   TableCell,
@@ -46,6 +35,8 @@ import {
   DialogActions,
   useMediaQuery,
   useTheme,
+  Stack,
+  MenuItem,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -388,159 +379,57 @@ export default function MaterialsPage() {
 
   if (!user) return null
 
-  const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ px: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 300 }}>
-          Ortmeier Tech
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List sx={{ flexGrow: 1 }}>
-        {menuItems.map((item) => (
-          <ListItemButton
-            key={item.text}
-            onClick={() => router.push(item.path)}
-            selected={item.path === '/materials'}
-            sx={{
-              '&:hover': {
-                backgroundColor: 'rgba(225, 78, 202, 0.08)',
-              },
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(225, 78, 202, 0.12)',
-              },
-            }}
-          >
-            <ListItemIcon>
-              <item.icon sx={{ color: 'text.secondary' }} />
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        <ListItemButton onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon sx={{ color: 'text.secondary' }} />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItemButton>
-      </List>
-    </Box>
+  // Action buttons for the page header
+  const actionButtons = (
+    <Stack 
+      direction={{ xs: 'column', sm: 'row' }} 
+      spacing={1} 
+      sx={{ 
+        width: { xs: '100%', sm: 'auto' },
+        alignItems: { xs: 'stretch', sm: 'center' }
+      }}
+    >
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => setAddDialogOpen(true)}
+        sx={{
+          backgroundColor: '#e14eca',
+          '&:hover': {
+            backgroundColor: '#d236b8',
+          },
+          flex: { xs: 1, sm: 'none' },
+          minWidth: { xs: 'auto', sm: '140px' }
+        }}
+        size="medium"
+      >
+        Add Material
+      </Button>
+    </Stack>
   )
 
+  // Breadcrumbs for navigation
+  const breadcrumbs = [
+    {
+      label: 'Home',
+      path: '/dashboard',
+      icon: <DashboardIcon fontSize="small" />
+    },
+    {
+      label: 'Materials',
+      path: '/materials',
+      icon: <InventoryIcon fontSize="small" />
+    }
+  ]
+
   return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="Materials & Inventory"
+        subtitle="Manage electrical materials, track inventory, and monitor stock levels"
+        breadcrumbs={breadcrumbs}
+        actions={actionButtons}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Materials & Inventory
-          </Typography>
-          <IconButton onClick={handleMenuClick}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
-              {user.name.charAt(0)}
-            </Avatar>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem>
-              <Typography variant="body2">{user.name}</Typography>
-            </MenuItem>
-            <MenuItem>
-              <Typography variant="caption" color="text.secondary">
-                {user.role}
-              </Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              Logout
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
-
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
-        }}
-      >
-        <Container maxWidth="xl">
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', lg: 'row' },
-            justifyContent: 'space-between', 
-            alignItems: { xs: 'stretch', lg: 'center' }, 
-            gap: { xs: 2, lg: 0 },
-            mb: 4 
-          }}>
-            <Typography 
-              variant="h4"
-              sx={{ 
-                fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' },
-                mb: { xs: 1, lg: 0 }
-              }}
-            >
-              Materials & Inventory
-            </Typography>
             <Box sx={{ 
               display: 'flex', 
               flexWrap: 'wrap',
@@ -626,25 +515,7 @@ export default function MaterialsPage() {
               >
                 {isMobile ? 'Reserve' : 'Reserve Materials'}
               </Button>
-              <Button
-                variant="contained"
-                startIcon={!isMobile ? <AddIcon /> : undefined}
-                onClick={handleAddMaterial}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{
-                  backgroundColor: '#e14eca',
-                  '&:hover': {
-                    backgroundColor: '#d236b8',
-                  },
-                  minWidth: { xs: 'auto', sm: '120px' },
-                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
-                  maxWidth: { xs: 'none', sm: '160px' }
-                }}
-              >
-                {isMobile ? 'Add' : 'Add Material'}
-              </Button>
             </Box>
-          </Box>
 
           <Grid container spacing={3} sx={{ mb: 3 }}>
             {stats.map((stat) => {
@@ -1133,8 +1004,7 @@ export default function MaterialsPage() {
               setRefreshTrigger(prev => prev + 1)
             }}
           />
-        </Container>
-      </Box>
-    </Box>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }

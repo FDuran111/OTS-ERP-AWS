@@ -117,7 +117,7 @@ const menuItems = [
   { text: 'Customers', icon: PeopleIcon, path: '/customers' },
   { text: 'Leads', icon: TrendingUp, path: '/leads' },
   { text: 'Materials', icon: InventoryIcon, path: '/materials' },
-  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
+  { text: 'A/R - Invoicing', icon: ReceiptIcon, path: '/invoicing' },
   { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
   { text: 'Settings', icon: SettingsIcon, path: '/settings' },
 ]
@@ -171,6 +171,11 @@ export default function InvoicingPage() {
       }
       const data = await response.json()
       console.log('Fetched invoices:', data)
+      // Log the first invoice to see its structure
+      if (data.length > 0) {
+        console.log('First invoice details:', data[0])
+        console.log('First invoice line items:', data[0].lineItems)
+      }
       setInvoices(data)
       setError(null)
     } catch (error) {
@@ -215,9 +220,23 @@ export default function InvoicingPage() {
     setCreateDialogOpen(true)
   }
 
-  const handleEditInvoice = (invoice: Invoice) => {
-    setSelectedInvoice(invoice)
-    setEditDialogOpen(true)
+  const handleEditInvoice = async (invoice: Invoice) => {
+    try {
+      // Fetch full invoice details including line items
+      const response = await fetch(`/api/invoices/${invoice.id}`)
+      if (response.ok) {
+        const fullInvoice = await response.json()
+        console.log('Fetched full invoice for editing:', fullInvoice)
+        setSelectedInvoice(fullInvoice)
+        setEditDialogOpen(true)
+      } else {
+        console.error('Failed to fetch invoice details')
+        alert('Failed to load invoice details')
+      }
+    } catch (error) {
+      console.error('Error fetching invoice for edit:', error)
+      alert('Failed to load invoice details')
+    }
   }
 
   const handleDeleteInvoice = async (invoice: Invoice) => {
@@ -331,7 +350,7 @@ export default function InvoicingPage() {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Invoicing
+            Accounts Receivable - Customer Invoices
           </Typography>
           <IconButton onClick={handleMenuClick}>
             <Avatar sx={{ bgcolor: 'primary.main' }}>
@@ -407,9 +426,14 @@ export default function InvoicingPage() {
       >
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="h4">
-              Invoicing
-            </Typography>
+            <Box>
+              <Typography variant="h4">
+                Accounts Receivable
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Create and manage customer invoices for completed electrical work
+              </Typography>
+            </Box>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -421,7 +445,7 @@ export default function InvoicingPage() {
                 },
               }}
             >
-              Create Invoice
+              Create Customer Invoice
             </Button>
           </Box>
 

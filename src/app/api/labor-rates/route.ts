@@ -20,9 +20,6 @@ export async function GET(request: NextRequest) {
         description,
         "hourlyRate",
         "skillLevel",
-        category,
-        "effectiveDate",
-        "expiryDate",
         active,
         "createdAt",
         "updatedAt"
@@ -45,10 +42,7 @@ const laborRateSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
   hourlyRate: z.number().positive('Hourly rate must be positive'),
-  skillLevel: z.enum(['APPRENTICE', 'HELPER', 'TECH_L1', 'TECH_L2', 'JOURNEYMAN', 'FOREMAN', 'LOW_VOLTAGE', 'CABLING', 'INSTALL']),
-  category: z.enum(['ELECTRICAL', 'LOW_VOLTAGE', 'SERVICE', 'INSTALL', 'SPECIALTY']).optional(),
-  effectiveDate: z.string().optional(),
-  expiryDate: z.string().optional(),
+  skillLevel: z.string().min(1, 'Skill level is required'),
 })
 
 // POST create new labor rate
@@ -70,19 +64,20 @@ export async function POST(request: Request) {
       )
     }
 
+    // Generate a unique ID
+    const id = `clr_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    
     const result = await query(
       `INSERT INTO "LaborRate" (
-        name, description, "hourlyRate", "skillLevel", category, 
-        "effectiveDate", "expiryDate", active, "createdAt", "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW()) RETURNING *`,
+        id, name, description, "hourlyRate", "skillLevel", 
+        active, "createdAt", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *`,
       [
+        id,
         data.name,
         data.description || null,
         data.hourlyRate,
         data.skillLevel,
-        data.category || 'ELECTRICAL',
-        data.effectiveDate ? new Date(data.effectiveDate) : new Date(),
-        data.expiryDate ? new Date(data.expiryDate) : null,
         true
       ]
     )

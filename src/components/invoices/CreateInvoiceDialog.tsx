@@ -24,6 +24,7 @@ import {
   TableRow,
   Paper,
   Box,
+  Chip,
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -37,7 +38,10 @@ interface Job {
   id: string
   jobNumber: string
   description: string
+  title?: string
+  status: string
   customer: {
+    companyName?: string
     firstName: string
     lastName: string
   }
@@ -98,7 +102,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
       jobId: '',
       dueDate: '',
       notes: '',
-      lineItems: [{ type: 'LABOR', description: '', quantity: 1, unitPrice: 0 }]
+      lineItems: []
     }
   })
 
@@ -114,12 +118,17 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
       fetchJobs()
       fetchMaterials()
       fetchLaborRates()
+      // Add a default line item if none exist
+      if (fields.length === 0) {
+        append({ type: 'LABOR', description: 'Labor', quantity: 1, unitPrice: 50 })
+      }
     }
-  }, [open])
+  }, [open, append, fields.length])
 
   const fetchJobs = async () => {
     try {
-      const response = await fetch('/api/jobs?status=COMPLETED')
+      // Fetch active jobs (IN_PROGRESS, SCHEDULED, DISPATCHED)
+      const response = await fetch('/api/jobs?status=IN_PROGRESS,SCHEDULED,DISPATCHED')
       if (response.ok) {
         const data = await response.json()
         setJobs(data)
@@ -130,6 +139,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
             id: '1',
             jobNumber: '25-001-A12',
             description: 'Panel upgrade and rewiring',
+            status: 'IN_PROGRESS',
             customer: {
               firstName: 'John',
               lastName: 'Johnson'
@@ -139,6 +149,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
             id: '2',
             jobNumber: '25-002-B34',
             description: 'Commercial electrical installation',
+            status: 'SCHEDULED',
             customer: {
               firstName: 'Tech',
               lastName: 'Corp'
@@ -148,6 +159,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
             id: '3',
             jobNumber: '25-003-C56',
             description: 'Outlet installation',
+            status: 'DISPATCHED',
             customer: {
               firstName: 'Mary',
               lastName: 'Smith'
@@ -164,6 +176,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
           id: '1',
           jobNumber: '25-001-A12',
           description: 'Panel upgrade and rewiring',
+          status: 'IN_PROGRESS',
           customer: {
             firstName: 'John',
             lastName: 'Johnson'
@@ -201,6 +214,8 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
   const onSubmit = async (data: InvoiceFormData) => {
     try {
       setSubmitting(true)
+      
+      console.log('Submitting invoice data:', data)
 
       const response = await fetch('/api/invoices', {
         method: 'POST',
@@ -210,9 +225,13 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
 
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('Invoice creation failed:', errorData)
         throw new Error(errorData.error || 'Failed to create invoice')
       }
 
+      const result = await response.json()
+      console.log('Invoice created successfully:', result)
+      
       onInvoiceCreated()
       onClose()
       reset()
@@ -230,7 +249,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
   }
 
   const addLineItem = () => {
-    append({ type: 'LABOR', description: '', quantity: 1, unitPrice: 0 })
+    append({ type: 'LABOR', description: 'Labor', quantity: 1, unitPrice: 50 })
   }
 
   const handleMaterialSelect = (index: number, materialId: string) => {
@@ -282,11 +301,31 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
                   <FormControl fullWidth error={!!errors.jobId}>
                     <InputLabel>Job *</InputLabel>
                     <Select {...field} value={field.value || ''} label="Job *">
-                      {jobs.map((job) => (
-                        <MenuItem key={job.id} value={job.id}>
-                          {job.jobNumber} - {job.description}
+                      {jobs.length === 0 ? (
+                        <MenuItem disabled>
+                          <Typography color="text.secondary">
+                            No active jobs available
+                          </Typography>
                         </MenuItem>
-                      ))}
+                      ) : (
+                        jobs.map((job) => (
+                          <MenuItem key={job.id} value={job.id}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                              <Typography>{job.jobNumber} - {job.description}</Typography>
+                              <Chip 
+                                label={job.status} 
+                                size="small" 
+                                color={
+                                  job.status === 'IN_PROGRESS' ? 'primary' : 
+                                  job.status === 'SCHEDULED' ? 'info' : 
+                                  job.status === 'DISPATCHED' ? 'warning' : 'default'
+                                }
+                                sx={{ ml: 'auto' }}
+                              />
+                            </Box>
+                          </MenuItem>
+                        ))
+                      )}
                     </Select>
                     {errors.jobId && (
                       <Typography variant="caption" color="error">
@@ -321,7 +360,7 @@ export default function CreateInvoiceDialog({ open, onClose, onInvoiceCreated }:
             {selectedJob && (
               <Grid size={{ xs: 12 }}>
                 <Typography variant="h6" gutterBottom>
-                  Customer: {selectedJob.customer.firstName} {selectedJob.customer.lastName}
+                  Customer: {selectedJob.customer.companyName || `${selectedJob.customer.firstName} ${selectedJob.customer.lastName}`}
                 </Typography>
               </Grid>
             )}

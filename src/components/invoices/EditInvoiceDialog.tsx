@@ -137,6 +137,9 @@ export default function EditInvoiceDialog({ open, invoice, onClose, onInvoiceUpd
 
   useEffect(() => {
     if (open && invoice) {
+      console.log('EditInvoiceDialog - Loading invoice:', invoice)
+      console.log('EditInvoiceDialog - Line items:', invoice.lineItems)
+      
       fetchMaterials()
       fetchLaborRates()
       
@@ -152,6 +155,8 @@ export default function EditInvoiceDialog({ open, invoice, onClose, onInvoiceUpd
             laborRateId: item.laborRateId,
           }))
         : [{ type: 'LABOR' as const, description: '', quantity: 1, unitPrice: 0 }]
+
+      console.log('EditInvoiceDialog - Processed line items:', lineItems)
 
       reset({
         dueDate: invoice.dueDate.split('T')[0], // Convert to YYYY-MM-DD format
