@@ -12,7 +12,7 @@ const createTimeEntrySchema = z.object({
 
 // GET all time entries
 export const GET = withRBAC({
-  roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN']
+  requiredRoles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN']
 })(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
@@ -98,7 +98,7 @@ export const GET = withRBAC({
 
 // POST create a new time entry (start timer)
 export const POST = withRBAC({
-  roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN']
+  requiredRoles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN']
 })(async (request: NextRequest) => {
   try {
     const body = await request.json()

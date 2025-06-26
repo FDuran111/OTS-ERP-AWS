@@ -5,7 +5,7 @@ import { withRBAC } from '@/lib/rbac-middleware'
 
 // GET all jobs
 export const GET = withRBAC({
-  roles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER']
+  requiredRoles: ['OWNER', 'ADMIN', 'OFFICE', 'TECHNICIAN', 'VIEWER']
 })(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
@@ -129,7 +129,7 @@ const createJobSchema = z.object({
 
 // POST create a new job
 export const POST = withRBAC({
-  roles: ['OWNER', 'ADMIN', 'OFFICE']
+  requiredRoles: ['OWNER', 'ADMIN', 'OFFICE']
 })(async (request: NextRequest) => {
   try {
     const body = await request.json()

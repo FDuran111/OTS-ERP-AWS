@@ -4,7 +4,7 @@ import { startOfMonth, endOfMonth } from 'date-fns'
 import { withRBAC } from '@/lib/rbac-middleware'
 
 export const GET = withRBAC({
-  roles: ['OWNER', 'ADMIN', 'OFFICE']
+  requiredRoles: ['OWNER', 'ADMIN', 'OFFICE']
 })(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
