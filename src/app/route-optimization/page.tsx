@@ -33,8 +33,8 @@ import {
   Avatar,
   LinearProgress,
   Tooltip,
-  DatePicker,
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import {
   LocalShipping as TruckIcon,
   Route as RouteIcon,

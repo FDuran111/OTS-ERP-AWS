@@ -8,7 +8,6 @@ import {
   Button,
   Card,
   CardContent,
-  Grid,
   Chip,
   IconButton,
   Menu,
@@ -302,8 +301,8 @@ export default function ServiceCallsPage() {
         
         {/* Stats Cards */}
         {stats && (
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={6} sm={4} md={2}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+            <Box sx={{ flex: '1 1 calc(16.67% - 16px)', minWidth: '120px' }}>
               <Card>
                 <CardContent sx={{ textAlign: 'center', p: 2 }}>
                   <Typography variant="h6" color="primary">
@@ -312,8 +311,8 @@ export default function ServiceCallsPage() {
                   <Typography variant="caption">Total</Typography>
                 </CardContent>
               </Card>
-            </Grid>
-            <Grid item xs={6} sm={4} md={2}>
+            </Box>
+            <Box sx={{ flex: '1 1 calc(16.67% - 16px)', minWidth: '120px' }}>
               <Card>
                 <CardContent sx={{ textAlign: 'center', p: 2 }}>
                   <Typography variant="h6" color="info.main">
@@ -322,8 +321,8 @@ export default function ServiceCallsPage() {
                   <Typography variant="caption">New</Typography>
                 </CardContent>
               </Card>
-            </Grid>
-            <Grid item xs={6} sm={4} md={2}>
+            </Box>
+            <Box sx={{ flex: '1 1 calc(16.67% - 16px)', minWidth: '120px' }}>
               <Card>
                 <CardContent sx={{ textAlign: 'center', p: 2 }}>
                   <Typography variant="h6" color="warning.main">
@@ -332,8 +331,8 @@ export default function ServiceCallsPage() {
                   <Typography variant="caption">Active</Typography>
                 </CardContent>
               </Card>
-            </Grid>
-            <Grid item xs={6} sm={4} md={2}>
+            </Box>
+            <Box sx={{ flex: '1 1 calc(16.67% - 16px)', minWidth: '120px' }}>
               <Card>
                 <CardContent sx={{ textAlign: 'center', p: 2 }}>
                   <Typography variant="h6" color="success.main">
@@ -342,8 +341,8 @@ export default function ServiceCallsPage() {
                   <Typography variant="caption">Completed</Typography>
                 </CardContent>
               </Card>
-            </Grid>
-            <Grid item xs={6} sm={4} md={2}>
+            </Box>
+            <Box sx={{ flex: '1 1 calc(16.67% - 16px)', minWidth: '120px' }}>
               <Card>
                 <CardContent sx={{ textAlign: 'center', p: 2 }}>
                   <Typography variant="h6" color="error.main">
@@ -352,8 +351,8 @@ export default function ServiceCallsPage() {
                   <Typography variant="caption">Urgent</Typography>
                 </CardContent>
               </Card>
-            </Grid>
-            <Grid item xs={6} sm={4} md={2}>
+            </Box>
+            <Box sx={{ flex: '1 1 calc(16.67% - 16px)', minWidth: '120px' }}>
               <Card>
                 <CardContent sx={{ textAlign: 'center', p: 2 }}>
                   <Typography variant="h6" color="text.primary">
@@ -362,8 +361,8 @@ export default function ServiceCallsPage() {
                   <Typography variant="caption">Today</Typography>
                 </CardContent>
               </Card>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         )}
         
         {/* Search and Filters */}
@@ -420,9 +419,9 @@ export default function ServiceCallsPage() {
       )}
 
       {/* Service Calls List */}
-      <Grid container spacing={2}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
         {serviceCalls.map((call) => (
-          <Grid item xs={12} md={6} lg={4} key={call.id}>
+          <Box sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: '300px' }} key={call.id}>
             <Card
               sx={{
                 position: 'relative',
@@ -436,11 +435,14 @@ export default function ServiceCallsPage() {
                       <Typography variant="h6" noWrap>
                         {call.callNumber}
                       </Typography>
-                      {getPriorityIcon(call.priority) && (
-                        <Tooltip title={`${call.priority} Priority`}>
-                          {getPriorityIcon(call.priority)}
-                        </Tooltip>
-                      )}
+                      {(() => {
+                        const priorityIcon = getPriorityIcon(call.priority)
+                        return priorityIcon && (
+                          <Tooltip title={`${call.priority} Priority`}>
+                            {priorityIcon}
+                          </Tooltip>
+                        )
+                      })()}
                     </Box>
                     
                     <Typography variant="body1" noWrap sx={{ mb: 1 }}>
@@ -517,9 +519,9 @@ export default function ServiceCallsPage() {
                 </Box>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
         ))}
-      </Grid>
+      </Box>
 
       {serviceCalls.length === 0 && !loading && (
         <Box sx={{ textAlign: 'center', py: 8 }}>
