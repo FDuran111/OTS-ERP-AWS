@@ -313,8 +313,8 @@ export default function PayrollDashboard() {
 
       {/* Summary Cards */}
       {payrollSummary && (
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
+          <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '200px' }}>
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
@@ -325,8 +325,8 @@ export default function PayrollDashboard() {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Box>
+          <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '200px' }}>
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
@@ -337,8 +337,8 @@ export default function PayrollDashboard() {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Box>
+          <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '200px' }}>
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
@@ -349,8 +349,8 @@ export default function PayrollDashboard() {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Box>
+          <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '200px' }}>
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
@@ -361,8 +361,8 @@ export default function PayrollDashboard() {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       )}
 
       {/* Tabs */}
@@ -496,8 +496,8 @@ export default function PayrollDashboard() {
           Reports & Analytics
         </Typography>
         
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={4}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+          <Box sx={{ flex: '1 1 calc(33.33% - 24px)', minWidth: '300px' }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -511,9 +511,9 @@ export default function PayrollDashboard() {
                 </Button>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
           
-          <Grid item xs={12} sm={6} md={4}>
+          <Box sx={{ flex: '1 1 calc(33.33% - 24px)', minWidth: '300px' }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -527,9 +527,9 @@ export default function PayrollDashboard() {
                 </Button>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
           
-          <Grid item xs={12} sm={6} md={4}>
+          <Box sx={{ flex: '1 1 calc(33.33% - 24px)', minWidth: '300px' }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -543,8 +543,8 @@ export default function PayrollDashboard() {
                 </Button>
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </TabPanel>
 
       {/* Export Dialog */}
