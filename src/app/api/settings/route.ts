@@ -6,13 +6,13 @@ import { verifyToken, hashPassword, comparePassword } from '@/lib/auth'
 // Validation schemas
 const CompanySettingsSchema = z.object({
   company_name: z.string().min(1, 'Company name is required'),
-  business_address: z.string().optional(),
-  phone_number: z.string().optional(),
-  email: z.string().email().optional(),
-  license_number: z.string().optional(),
-  tax_id: z.string().optional(),
-  default_hourly_rate: z.number().min(0).optional(),
-  invoice_terms: z.string().optional(),
+  business_address: z.string().optional().nullable(),
+  phone_number: z.string().optional().nullable(),
+  email: z.string().email().optional().nullable().or(z.literal('')),
+  license_number: z.string().optional().nullable(),
+  tax_id: z.string().optional().nullable(),
+  default_hourly_rate: z.number().min(0).optional().nullable(),
+  invoice_terms: z.string().optional().nullable(),
 })
 
 const NotificationSettingsSchema = z.object({
@@ -166,13 +166,13 @@ export async function POST(request: NextRequest) {
              WHERE id = $9`,
             [
               companyData.company_name,
-              companyData.business_address,
-              companyData.phone_number,
-              companyData.email,
-              companyData.license_number,
-              companyData.tax_id,
-              companyData.default_hourly_rate,
-              companyData.invoice_terms,
+              companyData.business_address || null,
+              companyData.phone_number || null,
+              companyData.email || null,
+              companyData.license_number || null,
+              companyData.tax_id || null,
+              companyData.default_hourly_rate || null,
+              companyData.invoice_terms || null,
               existingCompany.rows[0].id,
             ]
           )
@@ -184,13 +184,13 @@ export async function POST(request: NextRequest) {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
             [
               companyData.company_name,
-              companyData.business_address,
-              companyData.phone_number,
-              companyData.email,
-              companyData.license_number,
-              companyData.tax_id,
-              companyData.default_hourly_rate,
-              companyData.invoice_terms,
+              companyData.business_address || null,
+              companyData.phone_number || null,
+              companyData.email || null,
+              companyData.license_number || null,
+              companyData.tax_id || null,
+              companyData.default_hourly_rate || null,
+              companyData.invoice_terms || null,
             ]
           )
         }

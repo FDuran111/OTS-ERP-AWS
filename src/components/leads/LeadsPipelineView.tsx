@@ -126,14 +126,19 @@ function DroppableStageColumn({
         sx={{
           minWidth: 280,
           maxWidth: 280,
+          backgroundColor: 'black',
+          borderRadius: 2,
+          p: 1,
+          border: '2px solid black',
         }}
       >
         <Paper
           ref={setNodeRef}
+          elevation={0}
           sx={{
             p: 2,
-            backgroundColor: isOver ? '#e3f2fd' : '#f8f9fa',
-            border: isOver ? '2px solid #1976d2' : '1px solid #e9ecef',
+            backgroundColor: isOver ? '#e3f2fd' : '#1a2332',
+            border: isOver ? '2px solid #1976d2' : '1px solid #2d3748',
             height: '100%',
             transform: isOver ? 'scale(1.02)' : 'scale(1)',
             transition: 'all 0.2s ease-in-out',
@@ -151,15 +156,26 @@ function DroppableStageColumn({
             >
               {stage.label}
             </Typography>
-            <Chip 
-              label={leads.length} 
-              size="small" 
-              sx={{ 
-                backgroundColor: stage.color,
-                color: 'white',
-                fontWeight: 'bold'
-              }}
-            />
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1, mt: 0.5 }}>
+              <Chip 
+                label={leads.length} 
+                size="small" 
+                sx={{ 
+                  backgroundColor: stage.color,
+                  color: 'white',
+                  fontWeight: 'bold'
+                }}
+              />
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: 'success.main',
+                  fontWeight: 600
+                }}
+              >
+                ${leads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0).toLocaleString()}
+              </Typography>
+            </Box>
           </Box>
 
           {/* Content Area */}
@@ -171,6 +187,7 @@ function DroppableStageColumn({
               minHeight: '400px',
               p: 1,
               borderRadius: 1,
+              backgroundColor: '#1a2332',
             }}
           >
             {leads.length === 0 ? (
@@ -179,9 +196,9 @@ function DroppableStageColumn({
                 alignItems: 'center', 
                 justifyContent: 'center',
                 minHeight: '200px',
-                border: '2px dashed #e0e0e0',
+                border: '2px dashed black',
                 borderRadius: 1,
-                backgroundColor: '#fafafa'
+                backgroundColor: '#2d3748'
               }}>
                 <Typography 
                   variant="body2" 
@@ -282,7 +299,7 @@ function DraggableLeadCard({
           transform: isDragging ? 'none' : 'translateY(-2px)',
           boxShadow: isDragging ? 'none' : 3,
         },
-        border: lead.overdue ? '2px solid #f44336' : '1px solid #e0e0e0',
+        border: lead.overdue ? '2px solid #f44336' : '2px solid black',
         position: 'relative',
         touchAction: 'none',
       }}
@@ -678,7 +695,7 @@ export default function LeadsPipelineView({
           gap: 2, 
           overflowX: 'auto', 
           minHeight: '70vh', 
-          p: 1 
+          p: 1
         }}>
           {leadStages.map((stage) => {
             const stageLeads = getLeadsForStage(stage.key)

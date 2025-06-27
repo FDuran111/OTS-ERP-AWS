@@ -225,13 +225,24 @@ export default function JobsPage() {
   const [phaseFilter, setPhaseFilter] = useState('')
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (!storedUser) {
-      router.push('/login')
-      return
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include'
+        })
+        if (!response.ok) {
+          router.push('/login')
+          return
+        }
+        const userData = await response.json()
+        setUser(userData)
+        fetchJobs()
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        router.push('/login')
+      }
     }
-    setUser(JSON.parse(storedUser))
-    fetchJobs()
+    checkAuth()
   }, [router])
 
   const fetchJobs = async () => {

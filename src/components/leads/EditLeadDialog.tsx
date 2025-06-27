@@ -48,7 +48,7 @@ const leadSchema = z.object({
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   phone: z.string().optional(),
   source: z.string().optional(),
-  priority: z.enum(['HIGH', 'MEDIUM', 'LOW']).optional(),
+  priority: z.enum(['HIGH', 'MEDIUM', 'LOW']).optional().nullable(),
   estimatedValue: z.number().min(0).optional(),
   description: z.string().optional(),
   status: z.string(),
@@ -89,6 +89,13 @@ export default function EditLeadDialog({ open, onClose, onLeadUpdated, lead }: E
     resolver: zodResolver(leadSchema),
   })
 
+  // Log validation errors
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log('Form validation errors:', errors)
+    }
+  }, [errors])
+
   useEffect(() => {
     if (open && lead) {
       reset({
@@ -98,7 +105,9 @@ export default function EditLeadDialog({ open, onClose, onLeadUpdated, lead }: E
         email: lead.email || '',
         phone: lead.phone || '',
         source: lead.source || '',
-        priority: lead.priority as 'HIGH' | 'MEDIUM' | 'LOW' | undefined,
+        priority: (lead.priority && ['HIGH', 'MEDIUM', 'LOW'].includes(lead.priority)) 
+          ? lead.priority as 'HIGH' | 'MEDIUM' | 'LOW' 
+          : undefined,
         estimatedValue: lead.estimatedValue || undefined,
         description: lead.description || '',
         status: lead.status,
@@ -107,22 +116,54 @@ export default function EditLeadDialog({ open, onClose, onLeadUpdated, lead }: E
   }, [open, lead, reset])
 
   const onSubmit = async (data: LeadFormData) => {
-    if (!lead) return
+    console.log('onSubmit called with data:', data)
+    if (!lead) {
+      console.log('No lead provided, returning')
+      return
+    }
 
     try {
       setSubmitting(true)
+      console.log('Updating lead with data:', data)
+
+      // Clean the data before sending
+      const cleanedData = {
+        ...data,
+        companyName: data.companyName || undefined,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+        source: data.source || undefined,
+        priority: data.priority || undefined,
+        description: data.description || undefined,
+        estimatedValue: data.estimatedValue || undefined,
+      }
+
+      // Remove undefined values
+      Object.keys(cleanedData).forEach(key => {
+        if (cleanedData[key as keyof typeof cleanedData] === undefined) {
+          delete cleanedData[key as keyof typeof cleanedData]
+        }
+      })
+
+      console.log('Cleaned data being sent:', cleanedData)
 
       const response = await fetch(`/api/leads/${lead.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(cleanedData),
       })
 
+      console.log('Response status:', response.status)
+      
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('Error response:', errorData)
         throw new Error(errorData.error || 'Failed to update lead')
       }
 
+      const result = await response.json()
+      console.log('Update successful:', result)
+      
       onLeadUpdated()
       onClose()
     } catch (error) {
@@ -261,7 +302,8 @@ export default function EditLeadDialog({ open, onClose, onLeadUpdated, lead }: E
                 render={({ field }) => (
                   <FormControl fullWidth>
                     <InputLabel>Priority</InputLabel>
-                    <Select {...field} value={field.value || 'MEDIUM'} label="Priority">
+                    <Select {...field} value={field.value || ''} label="Priority">
+                      <MenuItem value="">Not Set</MenuItem>
                       <MenuItem value="HIGH">High</MenuItem>
                       <MenuItem value="MEDIUM">Medium</MenuItem>
                       <MenuItem value="LOW">Low</MenuItem>
@@ -340,6 +382,7 @@ export default function EditLeadDialog({ open, onClose, onLeadUpdated, lead }: E
             type="submit" 
             variant="contained" 
             disabled={submitting}
+            onClick={() => console.log('Update button clicked')}
             sx={{
               backgroundColor: '#e14eca',
               '&:hover': { backgroundColor: '#d236b8' },

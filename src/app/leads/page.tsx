@@ -32,6 +32,7 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
+  Autocomplete,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -108,6 +109,7 @@ export default function LeadsPage() {
   const [leadMenuAnchor, setLeadMenuAnchor] = useState<{ [key: string]: HTMLElement | null }>({})
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [viewMode, setViewMode] = useState<'table' | 'pipeline'>('pipeline')
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -265,48 +267,22 @@ export default function LeadsPage() {
 
   if (!user) return null
 
+  // Filter leads based on search term
+  const filteredLeads = leads.filter(lead => {
+    if (!searchTerm) return true
+    
+    const search = searchTerm.toLowerCase()
+    const fullName = `${lead.firstName} ${lead.lastName}`.toLowerCase()
+    const company = lead.companyName?.toLowerCase() || ''
+    const email = lead.email?.toLowerCase() || ''
+    
+    return fullName.includes(search) || 
+           company.includes(search) ||
+           email.includes(search)
+  })
+
   // Action buttons for the page header
-  const actionButtons = (
-    <Stack 
-      direction={{ xs: 'column', sm: 'row' }} 
-      spacing={1} 
-      sx={{ 
-        width: { xs: '100%', sm: 'auto' },
-        alignItems: { xs: 'stretch', sm: 'center' }
-      }}
-    >
-      <ToggleButtonGroup
-        value={viewMode}
-        exclusive
-        onChange={(_, value) => value && setViewMode(value)}
-        size="small"
-        sx={{ mr: { xs: 0, sm: 2 }, mb: { xs: 1, sm: 0 } }}
-      >
-        <ToggleButton value="pipeline">
-          <ViewColumnIcon />
-        </ToggleButton>
-        <ToggleButton value="table">
-          <ViewListIcon />
-        </ToggleButton>
-      </ToggleButtonGroup>
-      <Button
-        variant="contained"
-        startIcon={<AddIcon />}
-        onClick={() => setAddLeadDialogOpen(true)}
-        sx={{
-          backgroundColor: '#e14eca',
-          '&:hover': {
-            backgroundColor: '#d236b8',
-          },
-          flex: { xs: 1, sm: 'none' },
-          minWidth: { xs: 'auto', sm: '120px' }
-        }}
-        size={isMobile ? 'small' : 'medium'}
-      >
-        {isMobile ? 'New Lead' : 'New Lead'}
-      </Button>
-    </Stack>
-  )
+  const actionButtons = null
 
   // Breadcrumbs for navigation
   const breadcrumbs = [
@@ -326,7 +302,6 @@ export default function LeadsPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Lead Management"
-        subtitle="Track and manage potential customers through the sales pipeline"
         breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
@@ -348,36 +323,104 @@ export default function LeadsPage() {
             </Alert>
           )}
 
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <TextField
-              placeholder="Search leads..."
-              variant="outlined"
-              size="small"
-              sx={{ width: 300 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
+            <Autocomplete
+              freeSolo
+              options={leads}
+              getOptionLabel={(option) => {
+                if (typeof option === 'string') return option
+                return `${option.firstName} ${option.lastName}${option.companyName ? ` - ${option.companyName}` : ''}`
               }}
+              filterOptions={(options, { inputValue }) => {
+                const filtered = options.filter(option => {
+                  const searchValue = inputValue.toLowerCase()
+                  const fullName = `${option.firstName} ${option.lastName}`.toLowerCase()
+                  const company = option.companyName?.toLowerCase() || ''
+                  const email = option.email?.toLowerCase() || ''
+                  
+                  return fullName.includes(searchValue) || 
+                         company.includes(searchValue) ||
+                         email.includes(searchValue) ||
+                         fullName.startsWith(searchValue) ||
+                         company.startsWith(searchValue)
+                })
+                return filtered.slice(0, 5) // Limit to 5 suggestions
+              }}
+              onInputChange={(event, newInputValue) => {
+                setSearchTerm(newInputValue)
+              }}
+              onChange={(event, newValue) => {
+                if (newValue && typeof newValue !== 'string') {
+                  // If a lead is selected, scroll to it or highlight it
+                  setSearchTerm(`${newValue.firstName} ${newValue.lastName}`)
+                }
+              }}
+              renderOption={(props, option) => {
+                const { key, ...otherProps } = props as any
+                return (
+                  <Box component="li" key={key} {...otherProps}>
+                    <Box>
+                      <Typography variant="body2" fontWeight="medium">
+                        {option.firstName} {option.lastName}
+                      </Typography>
+                      {option.companyName && (
+                        <Typography variant="caption" color="text.secondary">
+                          {option.companyName}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                )
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Search leads..."
+                  variant="outlined"
+                  size="small"
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <>
+                        <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment>
+                        {params.InputProps.startAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+              sx={{ width: 300 }}
             />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <ToggleButtonGroup
                 value={viewMode}
                 exclusive
-                onChange={handleViewModeChange}
+                onChange={(_, value) => value && setViewMode(value)}
                 size="small"
               >
                 <ToggleButton value="pipeline">
-                  <ViewColumnIcon sx={{ mr: 1 }} />
-                  Pipeline
+                  <ViewColumnIcon />
                 </ToggleButton>
                 <ToggleButton value="table">
-                  <ViewListIcon sx={{ mr: 1 }} />
-                  Table
+                  <ViewListIcon />
                 </ToggleButton>
               </ToggleButtonGroup>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setAddLeadDialogOpen(true)}
+                sx={{
+                  backgroundColor: '#e14eca',
+                  '&:hover': {
+                    backgroundColor: '#d236b8',
+                  },
+                }}
+                size="small"
+              >
+                New Lead
+              </Button>
               <Button
                 variant="outlined"
                 onClick={() => fetchLeads()}
@@ -398,7 +441,7 @@ export default function LeadsPage() {
               </Box>
             ) : (
               <LeadsPipelineView
-                leads={leads}
+                leads={filteredLeads}
                 onEditLead={handlePipelineEditLead}
                 onDeleteLead={handlePipelineDeleteLead}
                 onUpdateLeadStatus={handleUpdateLeadStatus}

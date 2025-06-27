@@ -56,8 +56,8 @@ export async function GET(
         te.*,
         u.name as user_name
       FROM "TimeEntry" te
-      INNER JOIN "User" u ON te.user_id = u.id
-      WHERE te.job_id = $1
+      INNER JOIN "User" u ON te."userId" = u.id
+      WHERE te."jobId" = $1
       ORDER BY te.date DESC`,
       [resolvedParams.id]
     )
@@ -354,6 +354,32 @@ export async function DELETE(
 
     const job = jobCheck.rows[0]
 
+    // Check for related invoices
+    const invoiceCheck = await query(
+      'SELECT COUNT(*) as count FROM "Invoice" WHERE "jobId" = $1',
+      [resolvedParams.id]
+    )
+    
+    if (invoiceCheck.rows[0].count > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete this job to preserve financial integrity. This job has associated invoices and must be retained for accounting purposes.' },
+        { status: 400 }
+      )
+    }
+
+    // Check for related schedules
+    const scheduleCheck = await query(
+      'SELECT COUNT(*) as count FROM "JobSchedule" WHERE "jobId" = $1',
+      [resolvedParams.id]
+    )
+    
+    if (scheduleCheck.rows[0].count > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete job with existing schedules. Please remove all schedules first.' },
+        { status: 400 }
+      )
+    }
+
     // Optional: Prevent deletion of completed/billed jobs
     if (job.status === 'BILLED') {
       return NextResponse.json(
@@ -366,10 +392,11 @@ export async function DELETE(
     await Promise.all([
       query('DELETE FROM "JobAssignment" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "JobPhase" WHERE "jobId" = $1', [resolvedParams.id]),
-      query('DELETE FROM "TimeEntry" WHERE job_id = $1', [resolvedParams.id]),
+      query('DELETE FROM "TimeEntry" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "MaterialUsage" WHERE "jobId" = $1', [resolvedParams.id]),
       query('DELETE FROM "ChangeOrder" WHERE "jobId" = $1', [resolvedParams.id]),
-      query('DELETE FROM "JobNote" WHERE "jobId" = $1', [resolvedParams.id])
+      query('DELETE FROM "JobNote" WHERE "jobId" = $1', [resolvedParams.id]),
+      query('DELETE FROM "JobSchedule" WHERE "jobId" = $1', [resolvedParams.id])
     ])
 
     // Finally delete the job
