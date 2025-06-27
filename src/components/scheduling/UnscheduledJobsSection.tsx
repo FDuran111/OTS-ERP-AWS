@@ -10,7 +10,7 @@ interface Job {
   title: string
   customer: string
   customerName: string
-  type: 'SERVICE_CALL' | 'COMMERCIAL_PROJECT'
+  type: 'SERVICE_CALL' | 'INSTALLATION'
   status: string
   priority: string
   estimatedHours?: number

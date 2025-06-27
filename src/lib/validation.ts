@@ -26,7 +26,7 @@ export const customerSchema = z.object({
 
 export const jobSchema = z.object({
   customerId: commonSchemas.id,
-  type: z.enum(['SERVICE_CALL', 'COMMERCIAL_PROJECT']),
+  type: z.enum(['SERVICE_CALL', 'INSTALLATION']),
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
   address: z.string().max(200, 'Address too long').optional(),
   city: z.string().max(50, 'City name too long').optional(),

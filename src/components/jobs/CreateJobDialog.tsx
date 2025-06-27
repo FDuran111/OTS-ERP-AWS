@@ -44,7 +44,7 @@ interface CreateJobDialogProps {
 
 const jobSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
-  type: z.enum(['SERVICE_CALL', 'COMMERCIAL_PROJECT']),
+  type: z.enum(['SERVICE_CALL', 'INSTALLATION']),
   description: z.string().min(1, 'Description is required'),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -109,13 +109,16 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
       const response = await fetch('/api/users')
       if (response.ok) {
         const data = await response.json()
-        const fieldUsers = data.filter((user: User) => 
+        // Extract users array from API response
+        const usersArray = data.users || data || []
+        const fieldUsers = Array.isArray(usersArray) ? usersArray.filter((user: User) => 
           user.role === 'EMPLOYEE' || user.role === 'OWNER_ADMIN' || user.role === 'FOREMAN'
-        )
+        ) : []
         setUsers(fieldUsers)
       }
     } catch (error) {
       console.error('Error fetching users:', error)
+      setUsers([]) // Set empty array on error
     }
   }
 
@@ -129,6 +132,8 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
         estimatedCost: data.estimatedCost || undefined,
         scheduledDate: data.scheduledDate || undefined,
       }
+      
+      console.log('Submitting job data:', submitData)
 
       const response = await fetch('/api/jobs', {
         method: 'POST',
@@ -139,7 +144,9 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create job')
+        const errorData = await response.json()
+        console.error('Create job error response:', errorData)
+        throw new Error(errorData.error || 'Failed to create job')
       }
 
       reset()
@@ -217,7 +224,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                       label="Job Type"
                     >
                       <MenuItem value="SERVICE_CALL">Service Call</MenuItem>
-                      <MenuItem value="COMMERCIAL_PROJECT">Commercial Project</MenuItem>
+                      <MenuItem value="INSTALLATION">Installation</MenuItem>
                     </Select>
                   </FormControl>
                 )}

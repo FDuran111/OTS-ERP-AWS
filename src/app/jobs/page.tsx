@@ -76,7 +76,7 @@ interface Job {
   title: string
   customer: string
   customerId: string
-  type: 'SERVICE_CALL' | 'COMMERCIAL_PROJECT'
+  type: 'SERVICE_CALL' | 'INSTALLATION'
   status: string
   priority: string
   dueDate: string | null
@@ -362,7 +362,7 @@ export default function JobsPage() {
       job.title,
       job.customer,
       job.status.replace('_', ' '),
-      job.type === 'SERVICE_CALL' ? 'Service Call' : 'Commercial Project',
+      job.type === 'SERVICE_CALL' ? 'Service Call' : 'Installation',
       job.priority,
       job.dueDate ? new Date(job.dueDate).toLocaleDateString() : '',
       job.crew.join('; '),
@@ -529,7 +529,7 @@ export default function JobsPage() {
                       >
                         <MenuItem value="">All</MenuItem>
                         <MenuItem value="SERVICE_CALL">Service Call</MenuItem>
-                        <MenuItem value="COMMERCIAL_PROJECT">Commercial Project</MenuItem>
+                        <MenuItem value="INSTALLATION">Installation</MenuItem>
                       </Select>
                     </FormControl>
                   </Box>

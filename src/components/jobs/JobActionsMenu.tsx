@@ -22,7 +22,7 @@ interface Job {
   title: string
   customer: string
   customerId: string
-  type: 'SERVICE_CALL' | 'COMMERCIAL_PROJECT'
+  type: 'SERVICE_CALL' | 'INSTALLATION'
   status: string
   priority: string
   dueDate: string | null

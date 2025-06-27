@@ -115,7 +115,7 @@ export const GET = withRBAC({
 // Schema for creating a job
 const createJobSchema = z.object({
   customerId: z.string(),
-  type: z.enum(['SERVICE_CALL', 'COMMERCIAL_PROJECT']),
+  type: z.enum(['SERVICE_CALL', 'INSTALLATION']),
   description: z.string(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -131,8 +131,9 @@ const createJobSchema = z.object({
 export const POST = withRBAC({
   requiredRoles: ['OWNER_ADMIN', 'FOREMAN']
 })(async (request: NextRequest) => {
+  let body: any
   try {
-    const body = await request.json()
+    body = await request.json()
     const data = createJobSchema.parse(body)
 
     // Get the current year for job numbering
@@ -201,6 +202,55 @@ export const POST = withRBAC({
       }
     }
 
+    // If scheduledDate is provided, create a JobSchedule entry
+    if (data.scheduledDate) {
+      await query(
+        `INSERT INTO "JobSchedule" (
+          id, "jobId", "startDate", "endDate", "estimatedHours", 
+          status, "createdAt", "updatedAt", "createdBy"
+        ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          job.id,
+          new Date(data.scheduledDate),
+          new Date(data.scheduledDate), // Same as start date for now
+          data.estimatedHours || 8, // Default to 8 hours if not specified
+          'SCHEDULED',
+          new Date(),
+          new Date(),
+          'system' // TODO: Get from authenticated user
+        ]
+      )
+      
+      // If assignedUserIds provided, create crew assignments for the schedule
+      if (data.assignedUserIds && data.assignedUserIds.length > 0) {
+        // Get the schedule ID we just created
+        const scheduleResult = await query(
+          `SELECT id FROM "JobSchedule" WHERE "jobId" = $1 ORDER BY "createdAt" DESC LIMIT 1`,
+          [job.id]
+        )
+        
+        if (scheduleResult.rows.length > 0) {
+          const scheduleId = scheduleResult.rows[0].id
+          
+          for (const userId of data.assignedUserIds) {
+            await query(
+              `INSERT INTO "CrewAssignment" (
+                id, "scheduleId", "userId", role, status, "assignedAt", "assignedBy"
+              ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)`,
+              [
+                scheduleId,
+                userId,
+                'TECHNICIAN',
+                'ASSIGNED',
+                new Date(),
+                'system' // TODO: Get from authenticated user
+              ]
+            )
+          }
+        }
+      }
+    }
+
     // Get the complete job with customer info
     const completeJobResult = await query(
       `SELECT 
@@ -217,6 +267,7 @@ export const POST = withRBAC({
     return NextResponse.json(completeJobResult.rows[0], { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors)
       return NextResponse.json(
         { error: 'Invalid request data', details: error.errors },
         { status: 400 }
@@ -224,8 +275,9 @@ export const POST = withRBAC({
     }
     
     console.error('Error creating job:', error)
+    console.error('Request body was:', body)
     return NextResponse.json(
-      { error: 'Failed to create job' },
+      { error: 'Failed to create job', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

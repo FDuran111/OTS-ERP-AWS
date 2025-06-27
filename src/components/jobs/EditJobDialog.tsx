@@ -45,7 +45,7 @@ interface Job {
   title: string
   customer: string
   customerId: string
-  type: 'SERVICE_CALL' | 'COMMERCIAL_PROJECT'
+  type: 'SERVICE_CALL' | 'INSTALLATION'
   status: string
   priority: string
   dueDate: string | null
@@ -73,7 +73,7 @@ interface EditJobDialogProps {
 
 const jobSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
-  type: z.enum(['SERVICE_CALL', 'COMMERCIAL_PROJECT']),
+  type: z.enum(['SERVICE_CALL', 'INSTALLATION']),
   status: z.enum(['ESTIMATE', 'SCHEDULED', 'DISPATCHED', 'IN_PROGRESS', 'COMPLETED', 'BILLED', 'CANCELLED']),
   description: z.string().min(1, 'Description is required'),
   address: z.string().optional(),
@@ -121,12 +121,12 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
         customerId: job.customerId,
         type: job.type,
         status: job.status.toUpperCase() as any,
-        description: job.description,
+        description: job.description || job.title || '',
         address: job.address || '',
         city: job.city || '',
         state: job.state || '',
         zip: job.zip || '',
-        scheduledDate: job.scheduledDate ? new Date(job.scheduledDate).toISOString().slice(0, 16) : '',
+        scheduledDate: (job.scheduledDate || job.dueDate) ? new Date(job.scheduledDate || job.dueDate).toISOString().slice(0, 16) : '',
         completedDate: job.completedDate ? new Date(job.completedDate).toISOString().slice(0, 16) : '',
         estimatedHours: job.estimatedHours,
         estimatedCost: job.estimatedCost,
@@ -173,13 +173,16 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
       const response = await fetch('/api/users')
       if (response.ok) {
         const data = await response.json()
-        const fieldUsers = data.filter((user: User) => 
+        // Extract users array from API response
+        const usersArray = data.users || data || []
+        const fieldUsers = Array.isArray(usersArray) ? usersArray.filter((user: User) => 
           user.role === 'EMPLOYEE' || user.role === 'OWNER_ADMIN' || user.role === 'FOREMAN'
-        )
+        ) : []
         setUsers(fieldUsers)
       }
     } catch (error) {
       console.error('Error fetching users:', error)
+      setUsers([]) // Set empty array on error
     }
   }
 
@@ -292,7 +295,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                       label="Job Type"
                     >
                       <MenuItem value="SERVICE_CALL">Service Call</MenuItem>
-                      <MenuItem value="COMMERCIAL_PROJECT">Commercial Project</MenuItem>
+                      <MenuItem value="INSTALLATION">Installation</MenuItem>
                     </Select>
                   </FormControl>
                 )}

@@ -40,7 +40,7 @@ interface Job {
   customer: string
   customerId: string
   customerName: string
-  type: 'SERVICE_CALL' | 'COMMERCIAL_PROJECT'
+  type: 'SERVICE_CALL' | 'INSTALLATION'
   status: string
   priority: string
   description?: string
@@ -227,7 +227,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     variant="outlined"
                   />
                   <Chip
-                    label={job.type === 'SERVICE_CALL' ? 'Service Call' : 'Commercial Project'}
+                    label={job.type === 'SERVICE_CALL' ? 'Service Call' : 'Installation'}
                     variant="outlined"
                   />
                 </Box>

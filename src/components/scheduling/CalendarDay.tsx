@@ -34,8 +34,9 @@ export function CalendarDay({
     <Paper
       elevation={isToday ? 4 : 1}
       sx={{
-        minHeight: 120,
-        p: 1.5,
+        minHeight: 140,
+        height: '100%',
+        p: 1,
         cursor: 'pointer',
         position: 'relative',
         border: 1,
@@ -44,6 +45,8 @@ export function CalendarDay({
           ? alpha('#1976d2', 0.05) 
           : 'background.paper',
         transition: 'all 0.2s ease-in-out',
+        display: 'flex',
+        flexDirection: 'column',
         '&:hover': {
           bgcolor: isToday 
             ? alpha('#1976d2', 0.1)
@@ -75,87 +78,154 @@ export function CalendarDay({
         sx={{
           fontWeight: isToday ? 700 : 500,
           color: isToday ? 'primary.main' : 'text.primary',
-          mb: 1,
-          fontSize: '0.875rem'
+          mb: 0.5,
+          fontSize: '0.875rem',
+          lineHeight: 1
         }}
       >
         {format(date, 'd')}
       </Typography>
 
       {/* Jobs for this day */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: 0.5, 
+        flexGrow: 1, 
+        overflow: 'auto',
+        '&::-webkit-scrollbar': {
+          width: '4px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: 'transparent',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: 'rgba(0,0,0,0.2)',
+          borderRadius: '2px',
+        }
+      }}>
         {jobs.slice(0, 2).map((entry) => (
-          <Box key={entry.id} sx={{ position: 'relative' }}>
-            <Tooltip 
-              title={`${entry.job.jobNumber} - ${entry.job.title} | ${entry.job.customer}`}
-              placement="top"
-            >
-              <Chip
-                label={`${entry.job.jobNumber.slice(-4)} - ${entry.job.customer.slice(0, 12)}${entry.job.customer.length > 12 ? '...' : ''}`}
-                size="small"
-                color={getPriorityColor(entry.job.priority) as any}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onCrewAssignment(entry)
-                }}
-                sx={{ 
-                  fontSize: '0.65rem',
-                  height: 20,
-                  cursor: 'pointer',
-                  bgcolor: '#3f51b5',
-                  color: 'white',
-                  '&:hover': {
-                    bgcolor: '#303f9f',
-                    transform: 'scale(1.02)'
-                  },
-                  '& .MuiChip-label': {
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    px: 1
-                  }
-                }}
-              />
-            </Tooltip>
+          <Box 
+            key={entry.id} 
+            sx={{ 
+              p: 0.75,
+              borderRadius: 1,
+              bgcolor: entry.job.type === 'INSTALLATION' ? '#4caf50' : '#2196f3',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              '&:hover': {
+                transform: 'scale(1.02)',
+                boxShadow: 2
+              }
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              onCrewAssignment(entry)
+            }}
+          >
+            {/* Job Number and Type Badge */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+              <Typography sx={{ fontSize: '0.7rem', fontWeight: 600 }}>
+                {entry.job.jobNumber}
+              </Typography>
+              <Box sx={{
+                bgcolor: 'rgba(255,255,255,0.3)',
+                px: 0.5,
+                py: 0.25,
+                borderRadius: 0.5,
+                fontSize: '0.6rem',
+                fontWeight: 500
+              }}>
+                {entry.job.type === 'INSTALLATION' ? 'INST' : 'SVC'}
+              </Box>
+            </Box>
             
-            {/* Show crew count if assigned */}
-            {entry.assignedCrew && entry.assignedCrew.length > 0 && (
-              <Box 
-                sx={{ 
-                  position: 'absolute', 
-                  top: -6, 
-                  right: -6, 
-                  bgcolor: 'success.main',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: 16,
-                  height: 16,
+            {/* Customer Name */}
+            <Typography sx={{ 
+              fontSize: '0.75rem', 
+              fontWeight: 500,
+              lineHeight: 1.2,
+              mb: 0.5,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical'
+            }}>
+              {entry.job.customer}
+            </Typography>
+            
+            {/* Job Title/Description */}
+            <Typography sx={{ 
+              fontSize: '0.65rem', 
+              opacity: 0.9,
+              lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {entry.job.title || entry.job.description || 'No description'}
+            </Typography>
+            
+            {/* Bottom Info: Time and Crew */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mt: 0.5,
+              fontSize: '0.6rem'
+            }}>
+              {/* Estimated Hours */}
+              {entry.estimatedHours && (
+                <Box sx={{ opacity: 0.8 }}>
+                  {entry.estimatedHours}h
+                </Box>
+              )}
+              
+              {/* Crew Assignment Badge */}
+              {entry.assignedCrew && entry.assignedCrew.length > 0 && (
+                <Box sx={{ 
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.6rem',
-                  fontWeight: 'bold',
-                  border: '1px solid white'
-                }}
-              >
-                {entry.assignedCrew.length}
-              </Box>
-            )}
+                  gap: 0.25,
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  px: 0.5,
+                  py: 0.25,
+                  borderRadius: 0.5
+                }}>
+                  <Typography sx={{ fontSize: '0.6rem' }}>👷</Typography>
+                  <Typography sx={{ fontSize: '0.6rem', fontWeight: 600 }}>
+                    {entry.assignedCrew.length}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           </Box>
         ))}
         
         {jobs.length > 2 && (
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              color: 'text.secondary',
-              fontSize: '0.65rem',
-              fontStyle: 'italic',
-              textAlign: 'center'
-            }}
-          >
-            +{jobs.length - 2} more jobs
-          </Typography>
+          <Box sx={{
+            textAlign: 'center',
+            py: 0.5,
+            bgcolor: 'action.hover',
+            borderRadius: 0.5,
+            cursor: 'pointer',
+            '&:hover': {
+              bgcolor: 'action.selected'
+            }
+          }}>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: 'text.secondary',
+                fontSize: '0.65rem',
+                fontWeight: 500
+              }}
+            >
+              +{jobs.length - 2} more job{jobs.length - 2 > 1 ? 's' : ''}
+            </Typography>
+          </Box>
         )}
       </Box>
     </Paper>

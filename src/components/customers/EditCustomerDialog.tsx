@@ -66,6 +66,18 @@ export default function EditCustomerDialog({ open, onClose, onCustomerUpdated, c
     formState: { errors },
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
+    defaultValues: {
+      companyName: '',
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      isCommercial: false,
+    },
   })
 
   const isCommercial = watch('isCommercial')
@@ -82,14 +94,14 @@ export default function EditCustomerDialog({ open, onClose, onCustomerUpdated, c
 
       reset({
         companyName: customer.companyName || '',
-        firstName: customer.firstName,
-        lastName: customer.lastName,
+        firstName: customer.firstName || '',
+        lastName: customer.lastName || '',
         email: customer.email || '',
-        phone: customer.phone,
-        address: streetAddress,
-        city: city,
-        state: state,
-        zip: zip,
+        phone: customer.phone || '',
+        address: streetAddress || '',
+        city: city || '',
+        state: state || '',
+        zip: zip || '',
         isCommercial: customer.type === 'Commercial',
       })
     }

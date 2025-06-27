@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
             title: 'Commercial Wiring Project',
             customer: 'ABC Company',
             customerName: 'ABC Company',
-            type: 'COMMERCIAL_PROJECT',
+            type: 'INSTALLATION',
             status: 'ESTIMATE',
             priority: 'High',
             estimatedHours: 8,
@@ -185,6 +185,7 @@ export async function GET(request: NextRequest) {
         title: row.title,
         customerId: row.customerId,
         customerName: row.customerName,
+        customer: row.customerName,
         type: row.type,
         priority: row.priority,
         status: row.jobStatus,
@@ -192,7 +193,9 @@ export async function GET(request: NextRequest) {
         city: row.city,
         state: row.state,
         zip: row.zip,
+        description: row.title,
       },
+      assignedCrew: row.crew.map((c: any) => c.userId),
       crew: Array.isArray(row.crew) ? row.crew : []
     }))
 

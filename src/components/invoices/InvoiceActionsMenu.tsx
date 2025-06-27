@@ -95,13 +95,14 @@ export default function InvoiceActionsMenu({
   }
 
   const handleDelete = async () => {
+    let confirmMessage = `Are you sure you want to delete invoice "${invoice.invoiceNumber}"?\n\n`
+    
     if (invoice.status !== 'DRAFT') {
-      alert('Only draft invoices can be deleted')
-      handleClose()
-      return
+      confirmMessage += `⚠️ WARNING: This is a ${invoice.status} invoice.\n`
+      confirmMessage += `Deleting non-draft invoices may affect financial records.\n\n`
     }
-
-    const confirmMessage = `Are you sure you want to delete invoice "${invoice.invoiceNumber}"?\n\nThis action cannot be undone.`
+    
+    confirmMessage += `This action cannot be undone.`
     
     if (window.confirm(confirmMessage)) {
       await onDelete(invoice)
@@ -161,7 +162,7 @@ export default function InvoiceActionsMenu({
   }
 
   const canEdit = invoice.status === 'DRAFT' || invoice.status === 'SENT'
-  const canDelete = invoice.status === 'DRAFT'
+  const canDelete = true  // Allow deletion of any invoice (with warnings)
   const canMarkSent = invoice.status === 'DRAFT'
   const canMarkPaid = invoice.status === 'SENT' || invoice.status === 'OVERDUE'
 

@@ -99,13 +99,18 @@ export async function GET(
     const completeJob = {
       id: job.id,
       jobNumber: job.jobNumber,
+      title: job.description,  // Map description to title for frontend
       description: job.description,
       status: job.status,
       type: job.type,
+      priority: job.estimatedHours && parseFloat(job.estimatedHours) > 40 ? 'High' : 'Medium',  // Calculate priority
+      customerId: job.customerId,
+      customerName: job.companyName || `${job.firstName} ${job.lastName}`,
       address: job.address,
       city: job.city,
       state: job.state,
       zip: job.zip,
+      dueDate: job.scheduledDate,  // Map scheduledDate to dueDate for frontend consistency
       scheduledDate: job.scheduledDate,
       completedDate: job.completedDate,
       estimatedHours: parseFloat(job.estimatedHours) || 0,
@@ -128,6 +133,7 @@ export async function GET(
         state: job.customer_state,
         zip: job.customer_zip
       },
+      crew: assignmentsResult.rows.map(a => a.name),  // Add crew names for compatibility
       assignments: assignmentsResult.rows.map(assignment => ({
         id: assignment.id,
         userId: assignment.userId,
@@ -180,6 +186,8 @@ export async function GET(
 
 // Schema for updating a job
 const updateJobSchema = z.object({
+  customerId: z.string().optional(),
+  type: z.enum(['SERVICE_CALL', 'INSTALLATION']).optional(),
   description: z.string().optional(),
   status: z.enum(['ESTIMATE', 'SCHEDULED', 'DISPATCHED', 'IN_PROGRESS', 'COMPLETED', 'BILLED', 'CANCELLED']).optional(),
   address: z.string().optional(),
@@ -238,6 +246,14 @@ export async function PATCH(
     const updateValues = []
     let paramIndex = 1
 
+    if (data.customerId !== undefined) {
+      updateFields.push(`"customerId" = $${paramIndex++}`)
+      updateValues.push(data.customerId)
+    }
+    if (data.type !== undefined) {
+      updateFields.push(`type = $${paramIndex++}`)
+      updateValues.push(data.type)
+    }
     if (data.description !== undefined) {
       updateFields.push(`description = $${paramIndex++}`)
       updateValues.push(data.description)
