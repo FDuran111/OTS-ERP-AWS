@@ -126,7 +126,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
         city: job.city || '',
         state: job.state || '',
         zip: job.zip || '',
-        scheduledDate: (job.scheduledDate || job.dueDate) ? new Date(job.scheduledDate || job.dueDate).toISOString().slice(0, 16) : '',
+        scheduledDate: (job.scheduledDate || job.dueDate) ? new Date(job.scheduledDate || job.dueDate || '').toISOString().slice(0, 16) : '',
         completedDate: job.completedDate ? new Date(job.completedDate).toISOString().slice(0, 16) : '',
         estimatedHours: job.estimatedHours,
         estimatedCost: job.estimatedCost,
