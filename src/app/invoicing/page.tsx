@@ -544,7 +544,16 @@ export default function InvoicingPage() {
                     .map((invoice) => (
                       <TableRow key={invoice.id} hover>
                         <TableCell>{invoice.invoiceNumber}</TableCell>
-                        <TableCell>{invoice.job.jobNumber}</TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2">{invoice.job.jobNumber}</Typography>
+                            {invoice.job.description && (
+                              <Typography variant="caption" color="text.secondary">
+                                {invoice.job.description}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
                         <TableCell>
                           {invoice.customer.firstName} {invoice.customer.lastName}
                         </TableCell>

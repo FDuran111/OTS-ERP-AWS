@@ -4,7 +4,17 @@ import { z } from 'zod'
 
 const updateTimeEntrySchema = z.object({
   endTime: z.string().optional(),
-  hours: z.number().optional(),
+  hours: z.number()
+    .optional()
+    .refine(
+      (hours) => {
+        if (hours === undefined) return true
+        // Check if hours is in 0.25 increments (15-minute intervals)
+        const remainder = (hours * 100) % 25
+        return remainder === 0
+      },
+      { message: 'Hours must be in 15-minute (0.25 hour) increments' }
+    ),
   description: z.string().optional(),
 })
 
@@ -88,7 +98,9 @@ export async function PATCH(
         const timeEntry = timeEntryResult.rows[0]
         const endTime = new Date(data.endTime)
         const startTime = new Date(timeEntry.startTime)
-        calculatedHours = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60) * 100) / 100
+        // Calculate hours and round to nearest 15-minute increment
+        const rawHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
+        calculatedHours = Math.round(rawHours * 4) / 4
       }
     }
 

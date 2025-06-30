@@ -26,12 +26,14 @@ import {
   Inventory as InventoryIcon,
   Assessment as AssessmentIcon,
   AttachMoney as MoneyIcon,
+  PhotoLibrary as PhotoIcon,
 } from '@mui/icons-material'
 import JobMaterialReservations from '@/components/jobs/JobMaterialReservations'
 import JobPhasesManager from '@/components/jobs/JobPhasesManager'
 import MaterialUsageTracker from '@/components/jobs/MaterialUsageTracker'
 import RealTimeJobCosts from '@/components/job-costing/RealTimeJobCosts'
 import JobLaborRateOverrides from '@/components/jobs/JobLaborRateOverrides'
+import FileAttachmentManager from '@/components/FileAttachmentManager'
 
 interface Job {
   id: string
@@ -44,6 +46,7 @@ interface Job {
   status: string
   priority: string
   description?: string
+  customerPO?: string
   dueDate: string | null
   completedDate: string | null
   estimatedHours?: number
@@ -255,6 +258,17 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     </Box>
                   )}
 
+                  {job.customerPO && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Customer PO
+                      </Typography>
+                      <Typography variant="body2">
+                        {job.customerPO}
+                      </Typography>
+                    </Box>
+                  )}
+
                   {job.estimatedHours && (
                     <Box>
                       <Typography variant="caption" color="text.secondary">
@@ -315,6 +329,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               label="Billing" 
               iconPosition="start"
             />
+            <Tab 
+              icon={<PhotoIcon />} 
+              label="Photos & Files" 
+              iconPosition="start"
+            />
           </Tabs>
         </Paper>
 
@@ -347,6 +366,16 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
         <TabPanel value={activeTab} index={4}>
           <JobLaborRateOverrides jobId={job.id} />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={5}>
+          <FileAttachmentManager 
+            entityType="job"
+            entityId={job.id}
+            onAttachmentChange={() => {
+              // Optionally refresh job data
+            }}
+          />
         </TabPanel>
       </Container>
     </Box>

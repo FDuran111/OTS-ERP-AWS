@@ -1,8 +1,10 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
+import { permissions, stripPricingData } from '@/lib/permissions'
+import { verifyToken } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const now = new Date()
     const startOfThisMonth = startOfMonth(now)
@@ -150,8 +152,36 @@ export async function GET() {
       },
     ]
 
+    // Get user role to determine what stats to show
+    const token = request.cookies.get('auth-token')?.value
+    let filteredStats = stats
+    
+    if (token) {
+      try {
+        const userPayload = verifyToken(token)
+        const userRole = userPayload.role
+        
+        // Filter stats based on role
+        if (!permissions.canViewRevenueReports(userRole)) {
+          // Remove revenue stat for employees
+          filteredStats = stats.filter(stat => stat.title !== 'Revenue This Month')
+          
+          // Replace with a different stat for employees
+          filteredStats.push({
+            title: 'Pending Estimates',
+            value: pendingEstimates.toString(),
+            change: 'Awaiting review',
+            icon: 'pending_actions',
+            color: 'warning' as const,
+          })
+        }
+      } catch (error) {
+        console.error('Error verifying token:', error)
+      }
+    }
+
     return NextResponse.json({
-      stats,
+      stats: filteredStats,
       recentJobs: recentJobsResult.rows.map(job => ({
         id: job.id,
         title: job.description,

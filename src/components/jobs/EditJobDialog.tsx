@@ -46,6 +46,7 @@ interface Job {
   customer: string
   customerId: string
   type: 'SERVICE_CALL' | 'INSTALLATION'
+  division?: 'LOW_VOLTAGE' | 'LINE_VOLTAGE'
   status: string
   priority: string
   dueDate: string | null
@@ -62,6 +63,7 @@ interface Job {
   zip?: string
   description?: string
   scheduledDate?: string
+  customerPO?: string
 }
 
 interface EditJobDialogProps {
@@ -74,8 +76,10 @@ interface EditJobDialogProps {
 const jobSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
   type: z.enum(['SERVICE_CALL', 'INSTALLATION']),
+  division: z.enum(['LOW_VOLTAGE', 'LINE_VOLTAGE']).optional(),
   status: z.enum(['ESTIMATE', 'SCHEDULED', 'DISPATCHED', 'IN_PROGRESS', 'COMPLETED', 'BILLED', 'CANCELLED']),
   description: z.string().min(1, 'Description is required'),
+  customerPO: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -120,8 +124,10 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
       reset({
         customerId: job.customerId,
         type: job.type,
+        division: job.division || 'LINE_VOLTAGE',
         status: job.status.toUpperCase() as any,
         description: job.description || job.title || '',
+        customerPO: job.customerPO || '',
         address: job.address || '',
         city: job.city || '',
         state: job.state || '',
@@ -282,7 +288,7 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
             </Grid>
 
             {/* Job Type and Status */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Controller
                 name="type"
                 control={control}
@@ -302,7 +308,53 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <Controller
+                name="division"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Division</InputLabel>
+                    <Select
+                      {...field}
+                      value={field.value || 'LINE_VOLTAGE'}
+                      label="Division"
+                    >
+                      <MenuItem value="LINE_VOLTAGE">
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box
+                            sx={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: '50%',
+                              backgroundColor: '#ff9800',
+                              mr: 1
+                            }}
+                          />
+                          Line Voltage (120V/240V)
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="LOW_VOLTAGE">
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box
+                            sx={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: '50%',
+                              backgroundColor: '#9c27b0',
+                              mr: 1
+                            }}
+                          />
+                          Low Voltage (Security/Data)
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Controller
                 name="status"
                 control={control}
@@ -323,6 +375,23 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                       <MenuItem value="CANCELLED">Cancelled</MenuItem>
                     </Select>
                   </FormControl>
+                )}
+              />
+            </Grid>
+
+            {/* Customer PO */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Controller
+                name="customerPO"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    value={field.value || ''}
+                    label="Customer PO Number"
+                    fullWidth
+                    placeholder="Optional"
+                  />
                 )}
               />
             </Grid>

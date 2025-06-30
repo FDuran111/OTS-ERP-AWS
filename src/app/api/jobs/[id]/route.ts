@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { permissions, stripPricingData } from '@/lib/permissions'
+import { verifyToken } from '@/lib/auth'
 
 // GET a single job
 export async function GET(
@@ -103,6 +105,7 @@ export async function GET(
       description: job.description,
       status: job.status,
       type: job.type,
+      division: job.division || 'LINE_VOLTAGE',
       priority: job.estimatedHours && parseFloat(job.estimatedHours) > 40 ? 'High' : 'Medium',  // Calculate priority
       customerId: job.customerId,
       customerName: job.companyName || `${job.firstName} ${job.lastName}`,
@@ -174,6 +177,40 @@ export async function GET(
       notes: notesResult.rows
     }
 
+    // Get user role to determine pricing visibility
+    const token = request.cookies.get('auth-token')?.value
+    if (token) {
+      try {
+        const userPayload = verifyToken(token)
+        const userRole = userPayload.role
+        
+        // Strip pricing data if user is EMPLOYEE
+        if (!permissions.canViewJobCosts(userRole)) {
+          const pricingFields = ['estimatedCost', 'actualCost', 'billedAmount']
+          const strippedJob = stripPricingData(completeJob, userRole, pricingFields)
+          
+          // Also strip material costs
+          if (strippedJob.materialUsage && !permissions.canViewMaterialCosts(userRole)) {
+            strippedJob.materialUsage = strippedJob.materialUsage.map((usage: any) => {
+              const { costAtTime, material, ...rest } = usage
+              return {
+                ...rest,
+                material: {
+                  ...material,
+                  cost: undefined,
+                  price: undefined
+                }
+              }
+            })
+          }
+          
+          return NextResponse.json(strippedJob)
+        }
+      } catch (error) {
+        console.error('Error verifying token:', error)
+      }
+    }
+
     return NextResponse.json(completeJob)
   } catch (error) {
     console.error('Error fetching job:', error)
@@ -188,7 +225,9 @@ export async function GET(
 const updateJobSchema = z.object({
   customerId: z.string().optional(),
   type: z.enum(['SERVICE_CALL', 'INSTALLATION']).optional(),
+  division: z.enum(['LOW_VOLTAGE', 'LINE_VOLTAGE']).optional(),
   description: z.string().optional(),
+  customerPO: z.string().optional(),
   status: z.enum(['ESTIMATE', 'SCHEDULED', 'DISPATCHED', 'IN_PROGRESS', 'COMPLETED', 'BILLED', 'CANCELLED']).optional(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -253,6 +292,10 @@ export async function PATCH(
     if (data.type !== undefined) {
       updateFields.push(`type = $${paramIndex++}`)
       updateValues.push(data.type)
+    }
+    if (data.division !== undefined) {
+      updateFields.push(`division = $${paramIndex++}`)
+      updateValues.push(data.division)
     }
     if (data.description !== undefined) {
       updateFields.push(`description = $${paramIndex++}`)

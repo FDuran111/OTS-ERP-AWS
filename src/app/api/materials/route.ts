@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
 import { withRBAC } from '@/lib/rbac-middleware'
+import { permissions, stripPricingFromArray } from '@/lib/permissions'
+import { verifyToken } from '@/lib/auth'
 
 const createMaterialSchema = z.object({
   code: z.string().min(1, 'Code is required'),
@@ -99,6 +101,23 @@ export const GET = withRBAC({
         updatedAt: material.updatedAt,
       }
     })
+
+    // Get user role to determine pricing visibility
+    const token = request.cookies.get('auth-token')?.value
+    if (token) {
+      try {
+        const userPayload = verifyToken(token)
+        const userRole = userPayload.role
+        
+        // Strip pricing data if user is EMPLOYEE
+        if (!permissions.canViewMaterialCosts(userRole)) {
+          const pricingFields = ['cost', 'price', 'markup']
+          return NextResponse.json(stripPricingFromArray(materials, userRole, pricingFields))
+        }
+      } catch (error) {
+        console.error('Error verifying token:', error)
+      }
+    }
 
     return NextResponse.json(materials)
   } catch (error) {

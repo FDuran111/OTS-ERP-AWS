@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { permissions, stripPricingFromArray } from '@/lib/permissions'
+import { verifyToken } from '@/lib/auth'
 
 // GET all labor rates
 export async function GET(request: NextRequest) {
@@ -27,6 +29,23 @@ export async function GET(request: NextRequest) {
       ${whereClause}
       ORDER BY "skillLevel", "hourlyRate" DESC
     `)
+
+    // Get user role to determine pricing visibility
+    const token = request.cookies.get('auth-token')?.value
+    if (token) {
+      try {
+        const userPayload = verifyToken(token)
+        const userRole = userPayload.role
+        
+        // Strip pricing data if user is EMPLOYEE
+        if (!permissions.canViewLaborRates(userRole)) {
+          const pricingFields = ['hourlyRate']
+          return NextResponse.json(stripPricingFromArray(result.rows, userRole, pricingFields))
+        }
+      } catch (error) {
+        console.error('Error verifying token:', error)
+      }
+    }
 
     return NextResponse.json(result.rows)
   } catch (error) {

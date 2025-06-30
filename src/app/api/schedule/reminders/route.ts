@@ -71,6 +71,22 @@ export async function GET(request: NextRequest) {
         [now, futureDate]
       )
 
+      // Also get unscheduled jobs to remind about scheduling
+      const unscheduledJobsResult = await query(
+        `SELECT 
+          j.*,
+          c."firstName",
+          c."lastName",
+          c."companyName"
+        FROM "Job" j
+        INNER JOIN "Customer" c ON j."customerId" = c.id
+        WHERE j."scheduledDate" IS NULL
+        AND j.status = 'ESTIMATE'
+        AND j."createdAt" >= $1
+        ORDER BY j."createdAt" ASC`,
+        [addDays(now, -30)] // Get unscheduled jobs from last 30 days
+      )
+
       // Generate reminders from scheduled jobs
       reminders = upcomingJobsResult.rows.map(job => {
         const scheduledDate = new Date(job.scheduledDate)
@@ -111,13 +127,48 @@ export async function GET(request: NextRequest) {
           isEnhanced: false
         }
       })
+
+      // Add reminders for unscheduled jobs
+      const unscheduledReminders = unscheduledJobsResult.rows.map(job => {
+        const createdDate = new Date(job.createdAt)
+        const daysSinceCreation = differenceInDays(now, createdDate)
+        const customerName = job.companyName || `${job.firstName} ${job.lastName}`
+        
+        // Increase priority based on how long job has been unscheduled
+        let priority: 'high' | 'medium' | 'low' = 'low'
+        if (daysSinceCreation >= 7) {
+          priority = 'high'
+        } else if (daysSinceCreation >= 3) {
+          priority = 'medium'
+        }
+
+        return {
+          id: `unscheduled-${job.id}`,
+          jobId: job.id,
+          jobNumber: job.jobNumber,
+          title: `Unscheduled Job: ${job.description || 'Needs Scheduling'}`,
+          message: `Job "${job.description}" for ${customerName} has been unscheduled for ${daysSinceCreation} days`,
+          customer: customerName,
+          scheduledDate: null,
+          reminderDate: now.toISOString(),
+          daysUntil: 0, // Show immediately
+          priority,
+          type: 'schedule_needed',
+          status: 'ACTIVE',
+          isEnhanced: false
+        }
+      })
+
+      // Combine both reminder arrays
+      reminders = [...reminders, ...unscheduledReminders]
     }
 
-    // Filter active reminders (within 14 days and not dismissed)
+    // Filter active reminders (within 14 days and not dismissed, or unscheduled jobs)
     const activeReminders = reminders.filter(reminder => 
-      reminder.daysUntil <= 14 && 
-      reminder.daysUntil >= -1 && // Include 1 day overdue
-      (!reminder.status || reminder.status !== 'DISMISSED')
+      (reminder.type === 'schedule_needed') || // Always show unscheduled job reminders
+      (reminder.daysUntil <= 14 && 
+       reminder.daysUntil >= -1 && // Include 1 day overdue
+       (!reminder.status || reminder.status !== 'DISMISSED'))
     )
 
     return NextResponse.json({

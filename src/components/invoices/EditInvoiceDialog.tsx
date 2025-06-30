@@ -372,19 +372,71 @@ export default function EditInvoiceDialog({ open, invoice, onClose, onInvoiceUpd
                           />
                         </TableCell>
                         <TableCell>
-                          <Controller
-                            name={`lineItems.${index}.description`}
-                            control={control}
-                            render={({ field: descField }) => (
-                              <TextField
-                                {...descField}
-                                size="small"
-                                fullWidth
-                                disabled={!canEdit}
-                                error={!!errors.lineItems?.[index]?.description}
-                              />
-                            )}
-                          />
+                          {watchedLineItems?.[index]?.type === 'MATERIAL' ? (
+                            <Controller
+                              name={`lineItems.${index}.materialId`}
+                              control={control}
+                              render={({ field }) => (
+                                <Select
+                                  {...field}
+                                  size="small"
+                                  fullWidth
+                                  disabled={!canEdit}
+                                  value={field.value || ''}
+                                  onChange={(e) => handleMaterialSelect(index, e.target.value)}
+                                  displayEmpty
+                                >
+                                  <MenuItem value="">
+                                    <em>Select Material</em>
+                                  </MenuItem>
+                                  {materials.map((material) => (
+                                    <MenuItem key={material.id} value={material.id}>
+                                      {material.code} - {material.name} (${material.price}/{material.unit})
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              )}
+                            />
+                          ) : watchedLineItems?.[index]?.type === 'LABOR' ? (
+                            <Controller
+                              name={`lineItems.${index}.laborRateId`}
+                              control={control}
+                              render={({ field }) => (
+                                <Select
+                                  {...field}
+                                  size="small"
+                                  fullWidth
+                                  disabled={!canEdit}
+                                  value={field.value || ''}
+                                  onChange={(e) => handleLaborRateSelect(index, e.target.value)}
+                                  displayEmpty
+                                >
+                                  <MenuItem value="">
+                                    <em>Select Labor Rate</em>
+                                  </MenuItem>
+                                  {laborRates.map((laborRate) => (
+                                    <MenuItem key={laborRate.id} value={laborRate.id}>
+                                      {laborRate.name} (${laborRate.hourlyRate}/hr)
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              )}
+                            />
+                          ) : (
+                            <Controller
+                              name={`lineItems.${index}.description`}
+                              control={control}
+                              render={({ field: descField }) => (
+                                <TextField
+                                  {...descField}
+                                  size="small"
+                                  fullWidth
+                                  disabled={!canEdit}
+                                  error={!!errors.lineItems?.[index]?.description}
+                                />
+                              )}
+                            />
+                          )}
                         </TableCell>
                         <TableCell>
                           <Controller

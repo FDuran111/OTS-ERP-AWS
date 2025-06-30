@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns'
+import { withRBAC } from '@/lib/rbac-middleware'
 
-export async function GET(request: NextRequest) {
+export const GET = withRBAC({
+  requiredRoles: ['OWNER_ADMIN', 'FOREMAN']
+})(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period') || 'month' // month, quarter, year
@@ -176,4 +179,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

@@ -45,7 +45,9 @@ interface CreateJobDialogProps {
 const jobSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
   type: z.enum(['SERVICE_CALL', 'INSTALLATION']),
+  division: z.enum(['LOW_VOLTAGE', 'LINE_VOLTAGE']).optional(),
   description: z.string().min(1, 'Description is required'),
+  customerPO: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -63,6 +65,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [isUnscheduled, setIsUnscheduled] = useState(false)
 
   const {
     control,
@@ -126,11 +129,18 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
     try {
       setSubmitting(true)
       
+      // If not unscheduled and no date provided, use current date/time
+      let scheduledDate = data.scheduledDate
+      if (!isUnscheduled && !scheduledDate) {
+        scheduledDate = new Date().toISOString()
+      }
+      
       const submitData = {
         ...data,
         estimatedHours: data.estimatedHours || undefined,
         estimatedCost: data.estimatedCost || undefined,
-        scheduledDate: data.scheduledDate || undefined,
+        scheduledDate: isUnscheduled ? undefined : scheduledDate,
+        status: isUnscheduled ? 'ESTIMATE' : 'SCHEDULED',
       }
       
       console.log('Submitting job data:', submitData)
@@ -150,6 +160,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
       }
 
       reset()
+      setIsUnscheduled(false)
       onJobCreated()
       onClose()
     } catch (error) {
@@ -162,6 +173,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
 
   const handleClose = () => {
     reset()
+    setIsUnscheduled(false)
     onClose()
   }
 
@@ -231,6 +243,70 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
               />
             </Grid>
 
+            {/* Division */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Controller
+                name="division"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Division</InputLabel>
+                    <Select
+                      {...field}
+                      value={field.value || 'LINE_VOLTAGE'}
+                      label="Division"
+                    >
+                      <MenuItem value="LINE_VOLTAGE">
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box
+                            sx={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: '50%',
+                              backgroundColor: '#ff9800',
+                              mr: 1
+                            }}
+                          />
+                          Line Voltage (120V/240V)
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="LOW_VOLTAGE">
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box
+                            sx={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: '50%',
+                              backgroundColor: '#9c27b0',
+                              mr: 1
+                            }}
+                          />
+                          Low Voltage (Security/Data)
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </Grid>
+
+            {/* Customer PO */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Controller
+                name="customerPO"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    value={field.value || ''}
+                    label="Customer PO Number"
+                    fullWidth
+                    placeholder="Optional"
+                  />
+                )}
+              />
+            </Grid>
+
             {/* Scheduled Date */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
@@ -243,10 +319,34 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                     label="Scheduled Date"
                     type="datetime-local"
                     fullWidth
+                    disabled={isUnscheduled}
                     InputLabelProps={{ shrink: true }}
+                    helperText={isUnscheduled ? "Job will be unscheduled" : "Leave empty to use creation date"}
                   />
                 )}
               />
+            </Grid>
+
+            {/* Unscheduled Option */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <Button
+                  variant={isUnscheduled ? "contained" : "outlined"}
+                  onClick={() => setIsUnscheduled(!isUnscheduled)}
+                  sx={{ 
+                    height: '56px',
+                    backgroundColor: isUnscheduled ? '#ff9800' : 'transparent',
+                    color: isUnscheduled ? 'white' : '#ff9800',
+                    borderColor: '#ff9800',
+                    '&:hover': {
+                      backgroundColor: isUnscheduled ? '#f57c00' : 'rgba(255, 152, 0, 0.08)',
+                      borderColor: '#ff9800',
+                    }
+                  }}
+                >
+                  {isUnscheduled ? '✓ Unscheduled' : 'Mark as Unscheduled'}
+                </Button>
+              </FormControl>
             </Grid>
 
             {/* Description */}

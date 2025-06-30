@@ -82,9 +82,52 @@ export function CalendarGrid({
                     {format(day, 'EEEE, MMM d')}
                   </Typography>
                   {jobsOnDay.length > 0 && (
-                    <Typography variant="caption" color="text.secondary">
-                      {jobsOnDay.length} job{jobsOnDay.length > 1 ? 's' : ''} scheduled
-                    </Typography>
+                    <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      {jobsOnDay.slice(0, 3).map((entry) => (
+                        <Box 
+                          key={entry.id} 
+                          sx={{ 
+                            p: 1,
+                            borderRadius: 1,
+                            bgcolor: entry.job.type === 'INSTALLATION' ? '#4caf50' : '#2196f3',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                              transform: 'scale(1.02)',
+                              boxShadow: 2
+                            }
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onCrewAssignment(entry)
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                              {entry.job.jobNumber}
+                            </Typography>
+                            {entry.estimatedHours && (
+                              <Typography sx={{ fontSize: '0.7rem', opacity: 0.9 }}>
+                                {entry.estimatedHours}h
+                              </Typography>
+                            )}
+                          </Box>
+                          <Typography sx={{ fontSize: '0.75rem', fontWeight: 500, mb: 0.5 }}>
+                            {entry.job.customer}
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.7rem', opacity: 0.9 }}>
+                            {entry.job.title || entry.job.description || 'No description'}
+                          </Typography>
+                        </Box>
+                      ))}
+                      {jobsOnDay.length > 3 && (
+                        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', mt: 0.5 }}>
+                          +{jobsOnDay.length - 3} more job{jobsOnDay.length - 3 > 1 ? 's' : ''}
+                        </Typography>
+                      )}
+                    </Box>
                   )}
                 </Box>
               )

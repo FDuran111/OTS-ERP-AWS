@@ -9,7 +9,16 @@ const directTimeEntrySchema = z.object({
   date: z.string().min(1, 'Date is required'),
   startTime: z.string().min(1, 'Start time is required'),
   endTime: z.string().min(1, 'End time is required'),
-  hours: z.number().positive('Hours must be positive'),
+  hours: z.number()
+    .positive('Hours must be positive')
+    .refine(
+      (hours) => {
+        // Check if hours is in 0.25 increments (15-minute intervals)
+        const remainder = (hours * 100) % 25
+        return remainder === 0
+      },
+      { message: 'Hours must be in 15-minute (0.25 hour) increments' }
+    ),
   description: z.string().optional(),
   scheduleId: z.string().optional(),
 })
@@ -34,8 +43,25 @@ export async function POST(request: NextRequest) {
     // Calculate hours based on actual time difference
     const calculatedHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
     
-    // Use the more accurate calculated hours
-    const finalHours = Math.round(calculatedHours * 100) / 100
+    // Round to nearest 15-minute (0.25 hour) increment
+    const roundedHours = Math.round(calculatedHours * 4) / 4
+    
+    // Validate that the provided hours match the calculated hours
+    if (Math.abs(data.hours - roundedHours) > 0.01) {
+      return NextResponse.json(
+        { 
+          error: 'Provided hours do not match the time range', 
+          details: {
+            provided: data.hours,
+            calculated: roundedHours,
+            message: 'Hours must match the time difference rounded to 15-minute increments'
+          }
+        },
+        { status: 400 }
+      )
+    }
+    
+    const finalHours = data.hours
 
     // Check for overlapping time entries for the same user on the same day
     const overlapCheck = await query(`

@@ -153,7 +153,7 @@ export default function InvoicePrintPage() {
             company_name: 'Ortmeier Technical Service',
             business_address: '123 Electric Ave, Anytown, ST 12345',
             phone_number: '(555) 123-4567',
-            email: 'info@ortmeiertech.com',
+            email: 'info@otstech.com',
             license_number: 'EC-123456',
           })
         }
@@ -451,7 +451,7 @@ export default function InvoicePrintPage() {
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
             <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px' }}>
               <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#e14eca', mb: 1 }}>
-                {companySettings?.company_name || 'Ortmeier Technical Services'}
+                {companySettings?.company_name || 'Ortmeier Technical Service'}
               </Typography>
               {companySettings?.business_address && (
                 <Typography variant="body2" color="text.secondary">
@@ -687,7 +687,7 @@ export default function InvoicePrintPage() {
           <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid #e0e0e0' }}>
             <Typography variant="body2" color="text.secondary" align="center">
               Thank you for your business! If you have any questions about this invoice, 
-              please contact us at {companySettings?.email || 'info@ortmeiertech.com'} 
+              please contact us at {companySettings?.email || 'info@otstech.com'} 
               or {companySettings?.phone_number || '(555) 123-4567'}.
             </Typography>
           </Box>

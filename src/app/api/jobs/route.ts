@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
 import { withRBAC } from '@/lib/rbac-middleware'
+import { permissions, stripPricingFromArray } from '@/lib/permissions'
+import { verifyToken } from '@/lib/auth'
 
 // GET all jobs
 export const GET = withRBAC({
@@ -86,6 +88,7 @@ export const GET = withRBAC({
       customerId: job.customerId,
       status: job.status.toLowerCase(),
       type: job.type,
+      division: job.division || 'LINE_VOLTAGE',
       priority: job.estimatedHours && parseFloat(job.estimatedHours) > 40 ? 'high' : 'medium',
       dueDate: job.scheduledDate || null,
       completedDate: job.completedDate || null,
@@ -102,6 +105,23 @@ export const GET = withRBAC({
       phases: [] // Legacy field
     }))
 
+    // Get user role to determine pricing visibility
+    const token = request.cookies.get('auth-token')?.value
+    if (token) {
+      try {
+        const userPayload = verifyToken(token)
+        const userRole = userPayload.role
+        
+        // Strip pricing data if user is EMPLOYEE
+        if (!permissions.canViewJobCosts(userRole)) {
+          const pricingFields = ['estimatedCost', 'actualCost']
+          return NextResponse.json(stripPricingFromArray(transformedJobs, userRole, pricingFields))
+        }
+      } catch (error) {
+        console.error('Error verifying token:', error)
+      }
+    }
+
     return NextResponse.json(transformedJobs)
   } catch (error) {
     console.error('Error fetching jobs:', error)
@@ -116,7 +136,9 @@ export const GET = withRBAC({
 const createJobSchema = z.object({
   customerId: z.string(),
   type: z.enum(['SERVICE_CALL', 'INSTALLATION']),
+  division: z.enum(['LOW_VOLTAGE', 'LINE_VOLTAGE']).optional().default('LINE_VOLTAGE'),
   description: z.string(),
+  customerPO: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -125,6 +147,7 @@ const createJobSchema = z.object({
   estimatedHours: z.number().optional(),
   estimatedCost: z.number().optional(),
   assignedUserIds: z.array(z.string()).optional(),
+  status: z.enum(['ESTIMATE', 'SCHEDULED']).optional(),
 })
 
 // POST create a new job
@@ -160,17 +183,18 @@ export const POST = withRBAC({
     // Create the job
     const jobResult = await query(
       `INSERT INTO "Job" (
-        id, "jobNumber", "customerId", type, description, status,
+        id, "jobNumber", "customerId", type, division, description, status,
         address, city, state, zip, "scheduledDate",
         "estimatedHours", "estimatedCost", "createdAt", "updatedAt"
-      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *`,
       [
         jobNumber,
         data.customerId,
         data.type,
+        data.division || 'LINE_VOLTAGE',
         data.description,
-        'ESTIMATE',
+        data.status || 'ESTIMATE',
         data.address || null,
         data.city || null,
         data.state || null,

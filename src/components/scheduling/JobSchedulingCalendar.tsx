@@ -32,6 +32,7 @@ import {
   Schedule as ScheduleIcon,
   Group as GroupIcon,
 } from '@mui/icons-material'
+import DualCalendarView from './DualCalendarView'
 
 // Temporary Grid component for compatibility
 const Grid = ({ children, container, spacing, xs, md, size, alignItems, justifyContent, ...props }: any) => (
@@ -81,6 +82,7 @@ interface Job {
   customer: string
   customerName: string
   type: 'SERVICE_CALL' | 'INSTALLATION'
+  division?: 'LOW_VOLTAGE' | 'LINE_VOLTAGE'
   status: string
   priority: string
   estimatedHours?: number
@@ -102,6 +104,11 @@ interface ScheduleEntry {
   assignedCrew: string[]
   notes?: string
   status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+  crew: Array<{
+    id: string
+    name: string
+    role: string
+  }>
 }
 
 interface User {
@@ -430,13 +437,13 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
         />
 
         {/* Calendar Grid */}
-        <CalendarGrid
-          days={getCalendarDays()}
+        <DualCalendarView
+          schedules={scheduleEntries}
           currentDate={currentDate}
-          getJobsForDate={getJobsForDate}
           onDateClick={handleDateClick}
           onCrewAssignment={handleCrewAssignment}
           onMaterialReservation={handleMaterialReservation}
+          onWeekChange={setCurrentDate}
         />
 
         {/* Schedule Job Dialog */}

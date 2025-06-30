@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { permissions, stripPricingFromArray } from '@/lib/permissions'
+import { verifyToken } from '@/lib/auth'
+import { withRBAC } from '@/lib/rbac-middleware'
 
 console.log('Invoice route file loaded')
 
@@ -19,7 +22,9 @@ const createInvoiceSchema = z.object({
 })
 
 // GET all invoices
-export async function GET(request: NextRequest) {
+export const GET = withRBAC({
+  requiredRoles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
+})(async (request: NextRequest) => {
   try {
     // Get invoices with job and customer info
     const invoicesResult = await query(`
@@ -95,6 +100,32 @@ export async function GET(request: NextRequest) {
       lineItems: lineItemsByInvoice[invoice.id] || []
     }))
 
+    // Get user role to determine pricing visibility
+    const token = request.cookies.get('auth-token')?.value
+    if (token) {
+      try {
+        const userPayload = verifyToken(token)
+        const userRole = userPayload.role
+        
+        // Strip pricing data if user is EMPLOYEE
+        if (!permissions.canViewInvoiceAmounts(userRole)) {
+          const pricingFields = ['totalAmount', 'subtotalAmount', 'taxAmount']
+          const strippedInvoices = stripPricingFromArray(transformedInvoices, userRole, pricingFields)
+          
+          // Also strip line item pricing
+          return NextResponse.json(strippedInvoices.map(invoice => ({
+            ...invoice,
+            lineItems: invoice.lineItems.map((item: any) => {
+              const { unitPrice, totalPrice, ...rest } = item
+              return rest
+            })
+          })))
+        }
+      } catch (error) {
+        console.error('Error verifying token:', error)
+      }
+    }
+
     return NextResponse.json(transformedInvoices)
   } catch (error) {
     console.error('Error fetching invoices:', error)
@@ -103,10 +134,12 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 // POST create new invoice
-export async function POST(request: NextRequest) {
+export const POST = withRBAC({
+  requiredRoles: ['OWNER_ADMIN', 'FOREMAN']
+})(async (request: NextRequest) => {
   console.log('=== Invoice POST endpoint called ===')
   try {
     const body = await request.json()
@@ -332,4 +365,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

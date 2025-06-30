@@ -58,6 +58,23 @@ const SettingsUpdateSchema = z.object({
   ]),
 })
 
+// Helper function to check if table exists
+async function tableExists(tableName: string): Promise<boolean> {
+  try {
+    const result = await query(
+      `SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = $1
+      )`,
+      [tableName]
+    )
+    return result.rows[0]?.exists || false
+  } catch (error) {
+    console.error(`Error checking if table ${tableName} exists:`, error)
+    return false
+  }
+}
+
 // GET - Fetch all settings
 export async function GET(request: NextRequest) {
   try {
@@ -72,18 +89,19 @@ export async function GET(request: NextRequest) {
     const userPayload = verifyToken(token)
     const userId = userPayload.id
 
-    // Fetch company settings
-    const companyResult = await query(
-      'SELECT * FROM "CompanySettings" ORDER BY id DESC LIMIT 1'
-    )
-    const companySettings = companyResult.rows[0] || {}
-
-    // Fetch user notification settings
-    const notificationResult = await query(
-      'SELECT * FROM "UserNotificationSettings" WHERE user_id = $1',
-      [userId]
-    )
-    const notificationSettings = notificationResult.rows[0] || {
+    // Initialize default settings
+    let companySettings = {
+      company_name: 'Ortmeier Technical Service',
+      business_address: null,
+      phone_number: null,
+      email: null,
+      license_number: null,
+      tax_id: null,
+      default_hourly_rate: 125.00,
+      invoice_terms: 'Net 30',
+    }
+    
+    let notificationSettings = {
       email_notifications: true,
       sms_notifications: false,
       new_job_assignments: true,
@@ -93,26 +111,56 @@ export async function GET(request: NextRequest) {
       customer_messages: true,
       daily_summary: false,
     }
-
-    // Fetch user security settings
-    const securityResult = await query(
-      'SELECT two_factor_auth FROM "UserSecuritySettings" WHERE user_id = $1',
-      [userId]
-    )
-    const securitySettings = securityResult.rows[0] || {
+    
+    let securitySettings = {
       two_factor_auth: false,
     }
-
-    // Fetch user appearance settings
-    const appearanceResult = await query(
-      'SELECT * FROM "UserAppearanceSettings" WHERE user_id = $1',
-      [userId]
-    )
-    const appearanceSettings = appearanceResult.rows[0] || {
+    
+    let appearanceSettings = {
       dark_mode: true,
       show_job_numbers: true,
       compact_view: true,
       show_tooltips: false,
+    }
+
+    // Check if tables exist and fetch data if they do
+    if (await tableExists('CompanySettings')) {
+      const companyResult = await query(
+        'SELECT * FROM "CompanySettings" ORDER BY id DESC LIMIT 1'
+      )
+      if (companyResult.rows.length > 0) {
+        companySettings = companyResult.rows[0]
+      }
+    }
+
+    if (await tableExists('UserNotificationSettings')) {
+      const notificationResult = await query(
+        'SELECT * FROM "UserNotificationSettings" WHERE user_id = $1',
+        [userId]
+      )
+      if (notificationResult.rows.length > 0) {
+        notificationSettings = notificationResult.rows[0]
+      }
+    }
+
+    if (await tableExists('UserSecuritySettings')) {
+      const securityResult = await query(
+        'SELECT two_factor_auth FROM "UserSecuritySettings" WHERE user_id = $1',
+        [userId]
+      )
+      if (securityResult.rows.length > 0) {
+        securitySettings = securityResult.rows[0]
+      }
+    }
+
+    if (await tableExists('UserAppearanceSettings')) {
+      const appearanceResult = await query(
+        'SELECT * FROM "UserAppearanceSettings" WHERE user_id = $1',
+        [userId]
+      )
+      if (appearanceResult.rows.length > 0) {
+        appearanceSettings = appearanceResult.rows[0]
+      }
     }
 
     return NextResponse.json({
@@ -150,6 +198,15 @@ export async function POST(request: NextRequest) {
     switch (type) {
       case 'company':
         const companyData = CompanySettingsSchema.parse(data)
+        
+        // Check if table exists
+        if (!(await tableExists('CompanySettings'))) {
+          console.warn('CompanySettings table does not exist')
+          return NextResponse.json({ 
+            success: false, 
+            message: 'Settings tables not initialized. Please contact administrator.' 
+          })
+        }
         
         // Check if company settings exist
         const existingCompany = await query(
@@ -198,6 +255,15 @@ export async function POST(request: NextRequest) {
 
       case 'notifications':
         const notificationData = NotificationSettingsSchema.parse(data)
+        
+        // Check if table exists
+        if (!(await tableExists('UserNotificationSettings'))) {
+          console.warn('UserNotificationSettings table does not exist')
+          return NextResponse.json({ 
+            success: false, 
+            message: 'Settings tables not initialized. Please contact administrator.' 
+          })
+        }
         
         // Upsert notification settings
         await query(
@@ -261,28 +327,49 @@ export async function POST(request: NextRequest) {
             [hashedPassword, userId]
           )
           
-          // Update password changed timestamp
-          await query(
-            `INSERT INTO "UserSecuritySettings" (user_id, password_changed_at)
-             VALUES ($1, CURRENT_TIMESTAMP)
-             ON CONFLICT (user_id) DO UPDATE SET
-             password_changed_at = CURRENT_TIMESTAMP`,
-            [userId]
-          )
+          // Only update password timestamp if table exists
+          if (await tableExists('UserSecuritySettings')) {
+            await query(
+              `INSERT INTO "UserSecuritySettings" (user_id, password_changed_at)
+               VALUES ($1, CURRENT_TIMESTAMP)
+               ON CONFLICT (user_id) DO UPDATE SET
+               password_changed_at = CURRENT_TIMESTAMP`,
+              [userId]
+            )
+          }
         }
 
-        // Upsert security settings
-        await query(
-          `INSERT INTO "UserSecuritySettings" (user_id, two_factor_auth)
-           VALUES ($1, $2)
-           ON CONFLICT (user_id) DO UPDATE SET
-           two_factor_auth = EXCLUDED.two_factor_auth`,
-          [userId, securityData.two_factor_auth]
-        )
+        // Only update security settings if table exists
+        if (await tableExists('UserSecuritySettings')) {
+          await query(
+            `INSERT INTO "UserSecuritySettings" (user_id, two_factor_auth)
+             VALUES ($1, $2)
+             ON CONFLICT (user_id) DO UPDATE SET
+             two_factor_auth = EXCLUDED.two_factor_auth`,
+            [userId, securityData.two_factor_auth]
+          )
+        } else {
+          console.warn('UserSecuritySettings table does not exist')
+          if (!securityData.new_password) {
+            return NextResponse.json({ 
+              success: false, 
+              message: 'Settings tables not initialized. Please contact administrator.' 
+            })
+          }
+        }
         break
 
       case 'appearance':
         const appearanceData = AppearanceSettingsSchema.parse(data)
+        
+        // Check if table exists
+        if (!(await tableExists('UserAppearanceSettings'))) {
+          console.warn('UserAppearanceSettings table does not exist')
+          return NextResponse.json({ 
+            success: false, 
+            message: 'Settings tables not initialized. Please contact administrator.' 
+          })
+        }
         
         // Upsert appearance settings
         await query(
