@@ -10,6 +10,15 @@ const loginSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Log environment check in production
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Login attempt - Environment check:', {
+        hasDB: !!process.env.DATABASE_URL,
+        hasJWT: !!process.env.JWT_SECRET,
+        nodeEnv: process.env.NODE_ENV
+      })
+    }
+
     const body = await request.json()
     const { email, password } = loginSchema.parse(body)
 
@@ -89,7 +98,21 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    console.error('Login error:', error)
+    console.error('Login error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      type: error?.constructor?.name,
+      details: error
+    })
+    
+    // In production, check for specific database errors
+    if (error instanceof Error && error.message.includes('Database')) {
+      return NextResponse.json(
+        { error: 'Database connection error. Please check server logs.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
