@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material'
 import CreateUserDialog from './CreateUserDialog'
 import EditUserDialog from './EditUserDialog'
+import UserReassignDialog from './UserReassignDialog'
 import { useAuth } from '@/hooks/useAuth'
 
 interface User {
@@ -50,6 +51,7 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
   useEffect(() => {
@@ -83,27 +85,15 @@ export default function UserManagement() {
     setEditDialogOpen(true)
   }
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to deactivate this user?')) {
-      return
-    }
+  const handleDeleteUser = (user: User) => {
+    setSelectedUser(user)
+    setReassignDialogOpen(true)
+  }
 
-    try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: false })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to deactivate user')
-      }
-
-      await fetchUsers()
-    } catch (err) {
-      console.error('Error deactivating user:', err)
-      alert('Failed to deactivate user')
-    }
+  const handleReassignSuccess = () => {
+    setReassignDialogOpen(false)
+    setSelectedUser(null)
+    fetchUsers()
   }
 
   const handleUserCreated = () => {
@@ -266,8 +256,9 @@ export default function UserManagement() {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDeleteUser(user.id)}
+                        onClick={() => handleDeleteUser(user)}
                         disabled={user.id === currentUser?.id || !user.active}
+                        title={user.id === currentUser?.id ? "Cannot delete your own account" : !user.active ? "User already inactive" : "Deactivate user"}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -287,15 +278,26 @@ export default function UserManagement() {
       />
 
       {selectedUser && (
-        <EditUserDialog
-          open={editDialogOpen}
-          user={selectedUser}
-          onClose={() => {
-            setEditDialogOpen(false)
-            setSelectedUser(null)
-          }}
-          onUserUpdated={handleUserUpdated}
-        />
+        <>
+          <EditUserDialog
+            open={editDialogOpen}
+            user={selectedUser}
+            onClose={() => {
+              setEditDialogOpen(false)
+              setSelectedUser(null)
+            }}
+            onUserUpdated={handleUserUpdated}
+          />
+          <UserReassignDialog
+            open={reassignDialogOpen}
+            user={selectedUser}
+            onClose={() => {
+              setReassignDialogOpen(false)
+              setSelectedUser(null)
+            }}
+            onSuccess={handleReassignSuccess}
+          />
+        </>
       )}
     </Box>
   )

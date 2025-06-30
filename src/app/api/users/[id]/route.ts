@@ -185,6 +185,93 @@ export async function DELETE(
       )
     }
 
+    // Check if user exists and get their info
+    const userResult = await query(
+      'SELECT id, name, email, active FROM "User" WHERE id = $1',
+      [userId]
+    )
+
+    if (userResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    const user = userResult.rows[0]
+
+    // If already inactive, just return success
+    if (!user.active) {
+      return NextResponse.json({
+        success: true,
+        message: 'User is already deactivated'
+      })
+    }
+
+    // Check for blocking dependencies
+    const blockingDependencies = []
+
+    // Check for pending purchase orders
+    const pendingPOResult = await query(
+      'SELECT COUNT(*) as count FROM "PurchaseOrder" WHERE "currentApprover" = $1 AND status = \'PENDING\'',
+      [userId]
+    )
+    const pendingPOCount = parseInt(pendingPOResult.rows[0].count)
+    if (pendingPOCount > 0) {
+      blockingDependencies.push(`${pendingPOCount} pending purchase order(s) awaiting approval`)
+    }
+
+    // Check for active service calls
+    const activeServiceCallsResult = await query(
+      'SELECT COUNT(*) as count FROM "ServiceCall" WHERE "assignedTechnicianId" = $1 AND status IN (\'OPEN\', \'IN_PROGRESS\')',
+      [userId]
+    )
+    const activeServiceCalls = parseInt(activeServiceCallsResult.rows[0].count)
+    if (activeServiceCalls > 0) {
+      blockingDependencies.push(`${activeServiceCalls} active service call(s) assigned`)
+    }
+
+    // Check for approval rules
+    const approvalRulesResult = await query(
+      `SELECT COUNT(*) as count FROM "POApprovalRule" 
+       WHERE "level1Approver" = $1 OR "level2Approver" = $1 OR "level3Approver" = $1`,
+      [userId]
+    )
+    const approvalRules = parseInt(approvalRulesResult.rows[0].count)
+    if (approvalRules > 0) {
+      blockingDependencies.push(`${approvalRules} purchase order approval rule(s)`)
+    }
+
+    // Check if they're the last active OWNER_ADMIN
+    if (currentUser.role === 'OWNER_ADMIN') {
+      const activeAdminResult = await query(
+        'SELECT COUNT(*) as count FROM "User" WHERE role = \'OWNER_ADMIN\' AND active = true AND id != $1',
+        [userId]
+      )
+      const activeAdminCount = parseInt(activeAdminResult.rows[0].count)
+      if (activeAdminCount === 0) {
+        return NextResponse.json(
+          { 
+            error: 'Cannot deactivate the last active admin user',
+            details: 'At least one OWNER_ADMIN must remain active in the system'
+          },
+          { status: 400 }
+        )
+      }
+    }
+
+    // If there are blocking dependencies, return detailed error
+    if (blockingDependencies.length > 0) {
+      return NextResponse.json(
+        { 
+          error: 'Cannot deactivate user due to active dependencies',
+          details: blockingDependencies,
+          suggestion: 'Please reassign or resolve these items before deactivating the user'
+        },
+        { status: 400 }
+      )
+    }
+
     // Soft delete by setting active to false
     const result = await query(
       `UPDATE "User" 
@@ -194,20 +281,34 @@ export async function DELETE(
       [userId]
     )
 
-    if (result.rows.length === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
+    // Log the deactivation
+    console.log(`User ${user.name} (${user.email}) deactivated by ${currentUser.name}`)
 
     return NextResponse.json({
       success: true,
-      message: 'User deactivated successfully'
+      message: `User ${user.name} has been successfully deactivated`,
+      deactivatedUser: {
+        id: user.id,
+        name: user.name,
+        email: user.email
+      }
     })
 
   } catch (error) {
     console.error('Error deleting user:', error)
+    
+    // Check for database constraint violations
+    if (error instanceof Error && error.message.includes('violates foreign key constraint')) {
+      return NextResponse.json(
+        { 
+          error: 'Cannot deactivate user due to database constraints',
+          details: 'This user has associated records that prevent deactivation',
+          suggestion: 'Please contact support for assistance'
+        },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to delete user' },
       { status: 500 }
