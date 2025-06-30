@@ -20,11 +20,15 @@ import {
   Alert,
   TextField,
   InputAdornment,
+  FormControlLabel,
+  Switch,
+  Tooltip,
 } from '@mui/material'
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  DeleteForever as DeleteForeverIcon,
   Search as SearchIcon,
   Person as PersonIcon,
 } from '@mui/icons-material'
@@ -53,6 +57,7 @@ export default function UserManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
     fetchUsers()
@@ -96,6 +101,40 @@ export default function UserManagement() {
     fetchUsers()
   }
 
+  const handlePermanentDelete = async (userId: string) => {
+    const user = users.find(u => u.id === userId)
+    if (!user) return
+
+    const confirmMessage = `Are you sure you want to PERMANENTLY delete ${user.name}? This action cannot be undone and will remove all associated records.`
+    
+    if (!confirm(confirmMessage)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/users/${userId}?permanent=true`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (data.details) {
+          alert(`Error: ${data.error}\n\nDetails:\n${data.details.join ? data.details.join('\n') : data.details}`)
+        } else {
+          alert(`Error: ${data.error || 'Failed to permanently delete user'}`)
+        }
+        return
+      }
+
+      alert(`User ${user.name} has been permanently deleted.`)
+      await fetchUsers()
+    } catch (err) {
+      console.error('Error permanently deleting user:', err)
+      alert('Failed to permanently delete user')
+    }
+  }
+
   const handleUserCreated = () => {
     setCreateDialogOpen(false)
     fetchUsers()
@@ -131,11 +170,19 @@ export default function UserManagement() {
     }
   }
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredUsers = users.filter(user => {
+    // First filter by active status
+    if (!showInactive && !user.active) {
+      return false
+    }
+    
+    // Then filter by search term
+    return (
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  })
 
   if (currentUser?.role !== 'OWNER_ADMIN') {
     return (
@@ -173,19 +220,30 @@ export default function UserManagement() {
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <TextField
-            fullWidth
-            placeholder="Search users by name, email, or role..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <TextField
+              sx={{ flex: 1, minWidth: 300 }}
+              placeholder="Search users by name, email, or role..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showInactive}
+                  onChange={(e) => setShowInactive(e.target.checked)}
+                />
+              }
+              label={`Show inactive users (${users.filter(u => !u.active).length})`}
+            />
+          </Box>
         </CardContent>
       </Card>
 
@@ -254,14 +312,28 @@ export default function UserManagement() {
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteUser(user)}
-                        disabled={user.id === currentUser?.id || !user.active}
-                        title={user.id === currentUser?.id ? "Cannot delete your own account" : !user.active ? "User already inactive" : "Deactivate user"}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+                      {user.active ? (
+                        <Tooltip title="Deactivate user">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteUser(user)}
+                            disabled={user.id === currentUser?.id}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip title="Permanently delete user">
+                          <IconButton
+                            size="small"
+                            onClick={() => handlePermanentDelete(user.id)}
+                            disabled={user.id === currentUser?.id}
+                            sx={{ color: 'error.main' }}
+                          >
+                            <DeleteForeverIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

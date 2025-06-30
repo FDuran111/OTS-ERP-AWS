@@ -176,6 +176,10 @@ export async function DELETE(
     }
 
     const userId = resolvedParams.id
+    
+    // Check if this is a permanent delete request
+    const url = new URL(request.url)
+    const isPermanentDelete = url.searchParams.get('permanent') === 'true'
 
     // Prevent self-deletion
     if (userId === currentUser.id) {
@@ -200,7 +204,75 @@ export async function DELETE(
 
     const user = userResult.rows[0]
 
-    // If already inactive, just return success
+    // If permanent delete requested
+    if (isPermanentDelete) {
+      // Only allow permanent deletion of inactive users
+      if (user.active) {
+        return NextResponse.json(
+          { 
+            error: 'Cannot permanently delete an active user',
+            details: 'Please deactivate the user first before permanent deletion'
+          },
+          { status: 400 }
+        )
+      }
+
+      // Start transaction for cascading deletes
+      await query('BEGIN')
+
+      try {
+        // Delete related records first (in order of dependencies)
+        // Delete time entries
+        await query('DELETE FROM "TimeEntry" WHERE "userId" = $1', [userId])
+        
+        // Delete employee schedules
+        await query('DELETE FROM "EmployeeSchedule" WHERE "userId" = $1', [userId])
+        
+        // Clear user references in purchase orders (set to NULL)
+        await query('UPDATE "PurchaseOrder" SET "createdBy" = NULL WHERE "createdBy" = $1', [userId])
+        await query('UPDATE "PurchaseOrder" SET "currentApprover" = NULL WHERE "currentApprover" = $1', [userId])
+        await query('UPDATE "PurchaseOrder" SET "approvedBy" = NULL WHERE "approvedBy" = $1', [userId])
+        await query('UPDATE "PurchaseOrder" SET "rejectedBy" = NULL WHERE "rejectedBy" = $1', [userId])
+        
+        // Clear user references in service calls
+        await query('UPDATE "ServiceCall" SET "assignedTechnicianId" = NULL WHERE "assignedTechnicianId" = $1', [userId])
+        await query('UPDATE "ServiceCall" SET "dispatchedBy" = NULL WHERE "dispatchedBy" = $1', [userId])
+        
+        // Delete from approval history
+        await query('DELETE FROM "POApprovalHistory" WHERE "approverId" = $1', [userId])
+        
+        // Delete from receiving records
+        await query('DELETE FROM "POReceiving" WHERE "receivedBy" = $1', [userId])
+        
+        // Clear from approval rules
+        await query('UPDATE "POApprovalRule" SET "level1Approver" = NULL WHERE "level1Approver" = $1', [userId])
+        await query('UPDATE "POApprovalRule" SET "level2Approver" = NULL WHERE "level2Approver" = $1', [userId])
+        await query('UPDATE "POApprovalRule" SET "level3Approver" = NULL WHERE "level3Approver" = $1', [userId])
+        
+        // Finally delete the user
+        await query('DELETE FROM "User" WHERE id = $1', [userId])
+        
+        await query('COMMIT')
+        
+        console.log(`User ${user.name} (${user.email}) permanently deleted by ${currentUser.name}`)
+        
+        return NextResponse.json({
+          success: true,
+          message: `User ${user.name} has been permanently deleted`,
+          deletedUser: {
+            id: user.id,
+            name: user.name,
+            email: user.email
+          }
+        })
+        
+      } catch (error) {
+        await query('ROLLBACK')
+        throw error
+      }
+    }
+
+    // If already inactive (and not permanent delete), just return success
     if (!user.active) {
       return NextResponse.json({
         success: true,
