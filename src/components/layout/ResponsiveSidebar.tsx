@@ -14,6 +14,9 @@ import {
   Avatar,
   Chip,
   useTheme,
+  IconButton,
+  Menu,
+  MenuItem,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -32,6 +35,7 @@ import {
   Photo as PhotoIcon,
   AccountBalance as QuickBooksIcon,
   Person as CustomerPortalIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material'
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
@@ -141,6 +145,7 @@ export default function ResponsiveSidebar({
   user
 }: ResponsiveSidebarProps) {
   const [expandedItems, setExpandedItems] = useState<string[]>([])
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const theme = useTheme()
   const router = useRouter()
   const pathname = usePathname()
@@ -158,6 +163,37 @@ export default function ResponsiveSidebar({
     router.push(path)
     if (isMobile) {
       onClose()
+    }
+  }
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleMenuClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleLogout = async () => {
+    handleMenuClose()
+    try {
+      // Call logout API
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+      })
+      
+      // Clear localStorage
+      localStorage.removeItem('auth-token')
+      localStorage.removeItem('user')
+      
+      // Redirect to login
+      router.push('/login')
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Even if API fails, still clear local data and redirect
+      localStorage.removeItem('auth-token')
+      localStorage.removeItem('user')
+      router.push('/login')
     }
   }
 
@@ -281,12 +317,18 @@ export default function ResponsiveSidebar({
       {/* Footer */}
       <Box className="p-4 border-t border-gray-200 dark:border-gray-700">
         <Box className="flex items-center mb-3">
-          <Avatar
-            className="w-8 h-8 mr-2 bg-blue-500"
-            sx={{ width: 32, height: 32 }}
+          <IconButton
+            onClick={handleMenuOpen}
+            className="p-0 mr-2"
+            sx={{ padding: 0 }}
           >
-            {user.name.charAt(0).toUpperCase()}
-          </Avatar>
+            <Avatar
+              className="w-8 h-8 bg-blue-500 cursor-pointer hover:bg-blue-600 transition-colors"
+              sx={{ width: 32, height: 32 }}
+            >
+              {user.name.charAt(0).toUpperCase()}
+            </Avatar>
+          </IconButton>
           <Box className="flex-1 min-w-0">
             <Typography
               variant="body2"
@@ -302,6 +344,26 @@ export default function ResponsiveSidebar({
             </Typography>
           </Box>
         </Box>
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+        >
+          <MenuItem onClick={handleLogout}>
+            <ListItemIcon>
+              <LogoutIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Logout</ListItemText>
+          </MenuItem>
+        </Menu>
         <Chip
           icon={<CustomerPortalIcon />}
           label="Customer Portal"
