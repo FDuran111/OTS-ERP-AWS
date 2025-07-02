@@ -53,16 +53,11 @@ export default function ResponsiveContainer({
   return (
     <Box
       className={`
-        w-full flex flex-col mx-auto
+        w-full flex flex-col
         ${className}
       `}
       sx={{
-        maxWidth: maxWidth === false ? '100%' : 
-                 maxWidth === 'xs' ? '100%' :
-                 maxWidth === 'sm' ? { xs: '100%', sm: '640px' } :
-                 maxWidth === 'md' ? { xs: '100%', md: '768px' } :
-                 maxWidth === 'lg' ? { xs: '100%', lg: '1024px' } :
-                 maxWidth === 'xl' ? { xs: '100%', xl: '1280px' } : '100%',
+        maxWidth: '100%',
         px: { xs: 2, sm: 3, md: 4 },
       }}
     >

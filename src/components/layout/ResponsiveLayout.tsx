@@ -107,7 +107,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
       >
         {/* Scrollable Content Container */}
         <Box
-          className="flex-1 w-full overflow-y-auto overflow-x-hidden px-2 sm:px-4 md:px-6 lg:px-8 py-2 sm:py-4"
+          className="flex-1 w-full overflow-y-auto overflow-x-hidden"
         >
           {children}
         </Box>
