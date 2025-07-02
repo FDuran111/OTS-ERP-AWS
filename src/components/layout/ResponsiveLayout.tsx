@@ -96,12 +96,14 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
       <Box
         component="main"
         className={`flex-1 flex flex-col transition-all duration-300 ease-in-out w-full ${
-          isMobile ? 'pt-16 pb-16' : 'pt-4'
+          isMobile ? 'pt-16 pb-16' : ''
         }`}
         sx={{
           minHeight: '100vh',
           backgroundColor: 'background.default',
           marginLeft: !isMobile && sidebarOpen ? '256px' : 0,
+          marginRight: 0,
+          paddingTop: !isMobile ? '60px' : 0, // Space for toggle button
           transition: 'margin-left 0.3s ease-in-out',
         }}
       >
@@ -113,6 +115,8 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
             pl: 0,
             pr: 0,
             transition: 'padding 0.3s ease-in-out',
+            width: '100%',
+            maxWidth: '100%',
           }}
         >
           {children}

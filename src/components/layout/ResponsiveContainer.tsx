@@ -37,7 +37,7 @@ export default function ResponsiveContainer({
   subtitle,
   breadcrumbs,
   actions,
-  maxWidth = 'xl',
+  maxWidth = false,
   className = ''
 }: ResponsiveContainerProps) {
   const theme = useTheme()
@@ -52,18 +52,23 @@ export default function ResponsiveContainer({
 
   return (
     <Box
-      className={`
-        w-full flex flex-col
-        ${className}
-      `}
       sx={{
+        width: '100%',
         maxWidth: '100%',
-        // Much smaller padding to reduce empty space
-        px: { 
+        display: 'flex',
+        flexDirection: 'column',
+        // Symmetrical padding on desktop
+        pl: { 
           xs: 2,      // mobile: 16px (unchanged)
           sm: 2,      // tablet: 16px  
-          md: 1,      // desktop: 8px
-          lg: 1       // large desktop: 8px
+          md: 2,      // desktop: 16px (symmetrical)
+          lg: 2       // large desktop: 16px (symmetrical)
+        },
+        pr: {
+          xs: 2,      // mobile: 16px (unchanged)
+          sm: 2,      // tablet: 16px
+          md: 2,      // desktop: 16px (symmetrical)
+          lg: 2       // large desktop: 16px (symmetrical)
         },
       }}
     >
