@@ -67,7 +67,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
             onClick={handleSidebarToggle}
             sx={{
               position: 'fixed',
-              left: sidebarOpen ? 268 : 16,
+              left: sidebarOpen ? 268 : 8,
               top: 16,
               zIndex: theme.zIndex.drawer + 1,
               backgroundColor: 'background.paper',
@@ -109,8 +109,10 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         <Box
           className="flex-1 w-full overflow-y-auto overflow-x-hidden"
           sx={{
-            pl: !isMobile && !sidebarOpen ? 7 : 0,
-            transition: 'padding-left 0.3s ease-in-out',
+            // Only apply padding adjustments on desktop when sidebar is hidden
+            pl: !isMobile && !sidebarOpen ? 2 : 0,
+            pr: !isMobile && !sidebarOpen ? 2 : 0,
+            transition: 'padding 0.3s ease-in-out',
           }}
         >
           {children}

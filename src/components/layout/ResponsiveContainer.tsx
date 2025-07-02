@@ -58,7 +58,13 @@ export default function ResponsiveContainer({
       `}
       sx={{
         maxWidth: '100%',
-        px: { xs: 2, sm: 3, md: 4 },
+        // Mobile keeps normal padding, desktop gets reduced padding
+        px: { 
+          xs: 2,      // mobile: 16px
+          sm: 3,      // tablet: 24px  
+          md: 3,      // desktop: 24px
+          lg: 4       // large desktop: 32px
+        },
       }}
     >
       {/* Header Section */}
