@@ -51,7 +51,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   }
 
   return (
-    <Box className="flex min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden">
+    <Box className="flex min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden" sx={{ width: '100vw', maxWidth: '100vw' }}>
       {/* Responsive App Bar - Only shows on mobile */}
       {isMobile && (
         <ResponsiveAppBar
@@ -105,6 +105,8 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           marginRight: 0,
           paddingTop: !isMobile ? '60px' : 0, // Space for toggle button
           transition: 'margin-left 0.3s ease-in-out',
+          width: '100%',
+          maxWidth: '100%',
         }}
       >
         {/* Scrollable Content Container */}
@@ -117,6 +119,13 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
             transition: 'padding 0.3s ease-in-out',
             width: '100%',
             maxWidth: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            '& > *': {
+              width: '100%',
+              maxWidth: '100%',
+            }
           }}
         >
           {children}
