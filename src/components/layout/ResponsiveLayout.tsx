@@ -108,6 +108,10 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         {/* Scrollable Content Container */}
         <Box
           className="flex-1 w-full overflow-y-auto overflow-x-hidden"
+          sx={{
+            pl: !isMobile && !sidebarOpen ? 7 : 0,
+            transition: 'padding-left 0.3s ease-in-out',
+          }}
         >
           {children}
         </Box>
