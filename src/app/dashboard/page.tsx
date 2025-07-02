@@ -250,6 +250,48 @@ export default function DashboardPage() {
 
   return (
     <ResponsiveLayout>
+      {/* Debug Grid Overlay - Remove this in production */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: 'none',
+          zIndex: 9999,
+          display: 'flex',
+        }}
+      >
+        {Array.from({ length: 20 }, (_, i) => (
+          <Box
+            key={i}
+            sx={{
+              width: '100px',
+              height: '100%',
+              borderRight: '1px dashed rgba(255, 0, 0, 0.3)',
+              position: 'relative',
+            }}
+          >
+            <Typography
+              sx={{
+                position: 'absolute',
+                top: '50px',
+                left: '2px',
+                fontSize: '12px',
+                color: 'red',
+                fontWeight: 'bold',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                padding: '2px 4px',
+                borderRadius: '2px',
+              }}
+            >
+              {i * 100}px
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+      
       <ResponsiveContainer
         title={`Welcome back, ${user.name}`}
         subtitle="Here's what's happening with your jobs today"
