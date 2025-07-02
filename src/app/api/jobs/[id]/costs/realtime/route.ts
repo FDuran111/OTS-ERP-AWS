@@ -44,7 +44,7 @@ export async function GET(
           FROM "TimeEntry" te
           JOIN "User" u ON te."userId" = u.id
           LEFT JOIN "Job" j ON te."jobId" = j.id
-          WHERE te."jobId" = $1 AND te.status = 'ACTIVE'
+          WHERE te."jobId" = $1 AND te."endTime" IS NULL
           ORDER BY te."startTime" ASC
         `, [resolvedParams.id]),
         
@@ -58,7 +58,7 @@ export async function GET(
             75.00 as "avgRate"
           FROM "TimeEntry"
           WHERE "jobId" = $1 
-            AND status = 'COMPLETED'
+            AND "endTime" IS NOT NULL
             AND DATE("startTime") = CURRENT_DATE
         `, [resolvedParams.id]),
         
@@ -67,12 +67,19 @@ export async function GET(
           SELECT 
             j."estimatedValue",
             j."billedAmount",
-            COALESCE(jc."totalJobCost", 0) as "actualCosts",
-            COALESCE(jc."totalLaborCost", 0) as "laborCosts",
-            COALESCE(jc."totalMaterialCost", 0) as "materialCosts",
-            COALESCE(jc."totalEquipmentCost", 0) as "equipmentCosts"
+            -- Calculate actual costs from time entries and material usage
+            COALESCE((
+              SELECT SUM(te."hours" * 75.00) 
+              FROM "TimeEntry" te 
+              WHERE te."jobId" = j.id
+            ), 0) as "laborCosts",
+            COALESCE((
+              SELECT SUM(mu."totalCost") 
+              FROM "MaterialUsage" mu 
+              WHERE mu."jobId" = j.id
+            ), 0) as "materialCosts",
+            0 as "equipmentCosts"
           FROM "Job" j
-          LEFT JOIN "JobCost" jc ON j.id = jc."jobId"
           WHERE j.id = $1
         `, [resolvedParams.id]),
         
@@ -91,7 +98,7 @@ export async function GET(
           FROM "TimeEntry" te
           JOIN "User" u ON te."userId" = u.id
           WHERE te."jobId" = $1 
-            AND te.status = 'COMPLETED'
+            AND te."endTime" IS NOT NULL
             AND te."endTime" >= NOW() - INTERVAL '24 hours'
           ORDER BY te."endTime" DESC
           LIMIT 10
@@ -136,13 +143,13 @@ export async function GET(
       const budgetData = budget ? {
         estimatedValue: parseFloat(budget.estimatedValue || 0),
         billedAmount: parseFloat(budget.billedAmount || 0),
-        actualCosts: parseFloat(budget.actualCosts || 0),
         laborCosts: parseFloat(budget.laborCosts || 0),
         materialCosts: parseFloat(budget.materialCosts || 0),
         equipmentCosts: parseFloat(budget.equipmentCosts || 0),
-        remainingBudget: parseFloat(budget.estimatedValue || 0) - parseFloat(budget.actualCosts || 0),
+        actualCosts: parseFloat(budget.laborCosts || 0) + parseFloat(budget.materialCosts || 0),
+        remainingBudget: parseFloat(budget.estimatedValue || 0) - (parseFloat(budget.laborCosts || 0) + parseFloat(budget.materialCosts || 0)),
         costPercentage: budget.estimatedValue > 0 ? 
-          (parseFloat(budget.actualCosts || 0) / parseFloat(budget.estimatedValue)) * 100 : 0
+          ((parseFloat(budget.laborCosts || 0) + parseFloat(budget.materialCosts || 0)) / parseFloat(budget.estimatedValue)) * 100 : 0
       } : null
 
       // Recent activity
@@ -167,7 +174,7 @@ export async function GET(
           COALESCE(SUM("hours" * 75.00), 0) as "weeklyTotal"
         FROM "TimeEntry"
         WHERE "jobId" = $1 
-          AND status = 'COMPLETED'
+          AND "endTime" IS NOT NULL
           AND "endTime" >= NOW() - INTERVAL '7 days'
       `, [resolvedParams.id])
 
