@@ -130,7 +130,9 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
       
       if (usersRes && usersRes.ok) {
         const usersData = await usersRes.json()
-        setUsers(usersData.filter((u: User) => u.role !== 'OWNER_ADMIN' || u.id === currentUser?.id))
+        // Handle both response formats (with and without 'users' wrapper)
+        const usersList = Array.isArray(usersData) ? usersData : (usersData.users || [])
+        setUsers(usersList.filter((u: User) => u.role !== 'OWNER_ADMIN' || u.id === currentUser?.id))
       }
     } catch (error) {
       console.error('Error fetching data:', error)
