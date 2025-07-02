@@ -57,8 +57,9 @@ export async function GET(request: NextRequest) {
         m.unit as "materialUnit",
         m.cost as "materialCost",
         m."inStock" as "materialInStock",
-        j.title as "jobTitle",
-        j."customerName",
+        j."jobNumber" as "jobNumber",
+        j.description as "jobTitle",
+        c."companyName" as "customerName",
         jp.name as "phaseName",
         u.name as "userName",
         -- Calculate remaining quantity to reserve
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
       FROM "MaterialReservation" mr
       INNER JOIN "Material" m ON mr."materialId" = m.id
       INNER JOIN "Job" j ON mr."jobId" = j.id
+      INNER JOIN "Customer" c ON j."customerId" = c.id
       LEFT JOIN "JobPhase" jp ON mr."phaseId" = jp.id
       LEFT JOIN "User" u ON mr."userId" = u.id
       LEFT JOIN "MaterialAvailability" ma ON mr."materialId" = ma.id
@@ -87,6 +89,7 @@ export async function GET(request: NextRequest) {
     const reservations = result.rows.map(row => ({
       id: row.id,
       jobId: row.jobId,
+      jobNumber: row.jobNumber,
       jobTitle: row.jobTitle,
       customerName: row.customerName,
       materialId: row.materialId,
@@ -188,7 +191,8 @@ export async function POST(request: NextRequest) {
         m.code as "materialCode",
         m.name as "materialName",
         m.unit as "materialUnit",
-        j.title as "jobTitle"
+        j."jobNumber" as "jobNumber",
+        j.description as "jobTitle"
       FROM "MaterialReservation" mr
       INNER JOIN "Material" m ON mr."materialId" = m.id
       INNER JOIN "Job" j ON mr."jobId" = j.id
