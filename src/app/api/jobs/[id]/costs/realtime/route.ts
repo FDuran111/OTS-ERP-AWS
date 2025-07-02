@@ -27,38 +27,38 @@ export async function GET(
           SELECT 
             te.id,
             te."userId",
-            te."clockInTime",
-            te."appliedRegularRate",
+            te."startTime",
+            te."regularRate",
             u.name as "userName",
             j."jobNumber",
-            j.title as "jobTitle",
-            EXTRACT(EPOCH FROM (NOW() - te."clockInTime")) / 3600 as "currentHours",
+            j.description as "jobTitle",
+            EXTRACT(EPOCH FROM (NOW() - te."startTime")) / 3600 as "currentHours",
             CASE 
-              WHEN EXTRACT(EPOCH FROM (NOW() - te."clockInTime")) / 3600 > 8 
-              THEN (8 * COALESCE(te."appliedRegularRate", 25.00)) + 
-                   ((EXTRACT(EPOCH FROM (NOW() - te."clockInTime")) / 3600 - 8) * COALESCE(te."appliedRegularRate", 25.00) * 1.5)
-              ELSE (EXTRACT(EPOCH FROM (NOW() - te."clockInTime")) / 3600) * COALESCE(te."appliedRegularRate", 25.00)
+              WHEN EXTRACT(EPOCH FROM (NOW() - te."startTime")) / 3600 > 8 
+              THEN (8 * COALESCE(te."regularRate", 25.00)) + 
+                   ((EXTRACT(EPOCH FROM (NOW() - te."startTime")) / 3600 - 8) * COALESCE(te."regularRate", 25.00) * 1.5)
+              ELSE (EXTRACT(EPOCH FROM (NOW() - te."startTime")) / 3600) * COALESCE(te."regularRate", 25.00)
             END as "estimatedCost",
-            te."clockInLatitude",
-            te."clockInLongitude"
+            NULL as "clockInLatitude",
+            NULL as "clockInLongitude"
           FROM "TimeEntry" te
           JOIN "User" u ON te."userId" = u.id
           LEFT JOIN "Job" j ON te."jobId" = j.id
           WHERE te."jobId" = $1 AND te.status = 'ACTIVE'
-          ORDER BY te."clockInTime" ASC
+          ORDER BY te."startTime" ASC
         `, [resolvedParams.id]),
         
         // Today's completed costs
         client.query(`
           SELECT 
             COUNT(*) as "completedEntries",
-            COALESCE(SUM("totalHours"), 0) as "totalHours",
-            COALESCE(SUM("totalPay"), 0) as "totalCost",
-            COALESCE(AVG("appliedRegularRate"), 0) as "avgRate"
+            COALESCE(SUM("hours"), 0) as "totalHours",
+            COALESCE(SUM("totalCost"), 0) as "totalCost",
+            COALESCE(AVG("regularRate"), 0) as "avgRate"
           FROM "TimeEntry"
           WHERE "jobId" = $1 
             AND status = 'COMPLETED'
-            AND DATE("clockInTime") = CURRENT_DATE
+            AND DATE("startTime") = CURRENT_DATE
         `, [resolvedParams.id]),
         
         // Budget comparison
@@ -81,18 +81,18 @@ export async function GET(
             te.id,
             te."userId",
             u.name as "userName",
-            te."clockInTime",
-            te."clockOutTime",
-            te."totalHours",
-            te."totalPay",
-            te."appliedRegularRate",
-            te."workDescription"
+            te."startTime",
+            te."endTime",
+            te."hours",
+            te."totalCost",
+            te."regularRate",
+            te."description"
           FROM "TimeEntry" te
           JOIN "User" u ON te."userId" = u.id
           WHERE te."jobId" = $1 
             AND te.status = 'COMPLETED'
-            AND te."clockOutTime" >= NOW() - INTERVAL '24 hours'
-          ORDER BY te."clockOutTime" DESC
+            AND te."endTime" >= NOW() - INTERVAL '24 hours'
+          ORDER BY te."endTime" DESC
           LIMIT 10
         `, [resolvedParams.id])
       ])
@@ -104,10 +104,10 @@ export async function GET(
         userName: row.userName,
         jobNumber: row.jobNumber,
         jobTitle: row.jobTitle,
-        clockInTime: row.clockInTime,
+        startTime: row.startTime,
         currentHours: parseFloat(row.currentHours || 0),
         estimatedCost: parseFloat(row.estimatedCost || 0),
-        hourlyRate: parseFloat(row.appliedRegularRate || 0),
+        hourlyRate: parseFloat(row.regularRate || 0),
         location: row.clockInLatitude && row.clockInLongitude ? {
           latitude: parseFloat(row.clockInLatitude),
           longitude: parseFloat(row.clockInLongitude)
@@ -149,24 +149,24 @@ export async function GET(
         id: row.id,
         userId: row.userId,
         userName: row.userName,
-        clockInTime: row.clockInTime,
-        clockOutTime: row.clockOutTime,
-        totalHours: parseFloat(row.totalHours || 0),
-        totalCost: parseFloat(row.totalPay || 0),
-        hourlyRate: parseFloat(row.appliedRegularRate || 0),
-        workDescription: row.workDescription
+        startTime: row.startTime,
+        endTime: row.endTime,
+        totalHours: parseFloat(row.hours || 0),
+        totalCost: parseFloat(row.totalCost || 0),
+        hourlyRate: parseFloat(row.regularRate || 0),
+        workDescription: row.description
       }))
 
       // Calculate burn rate (cost per hour over last week)
       const burnRateResult = await client.query(`
         SELECT 
-          COALESCE(AVG("totalPay" / NULLIF("totalHours", 0)), 0) as "avgCostPerHour",
+          COALESCE(AVG("totalCost" / NULLIF("hours", 0)), 0) as "avgCostPerHour",
           COUNT(*) as "weeklyEntries",
-          COALESCE(SUM("totalPay"), 0) as "weeklyTotal"
+          COALESCE(SUM("totalCost"), 0) as "weeklyTotal"
         FROM "TimeEntry"
         WHERE "jobId" = $1 
           AND status = 'COMPLETED'
-          AND "clockOutTime" >= NOW() - INTERVAL '7 days'
+          AND "endTime" >= NOW() - INTERVAL '7 days'
       `, [resolvedParams.id])
 
       const burnRate = burnRateResult.rows[0]
