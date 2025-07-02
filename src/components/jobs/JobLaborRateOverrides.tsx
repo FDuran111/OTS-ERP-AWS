@@ -110,7 +110,9 @@ export default function JobLaborRateOverrides({ jobId }: JobLaborRateOverridesPr
         throw new Error('Failed to load users')
       }
       const usersData = await usersResponse.json()
-      setUsers(usersData)
+      // Handle both array and object response formats
+      const usersList = Array.isArray(usersData) ? usersData : (usersData.users || [])
+      setUsers(usersList)
 
       // Load default labor rates to show comparison
       const ratesResponse = await fetch('/api/labor-rates')
