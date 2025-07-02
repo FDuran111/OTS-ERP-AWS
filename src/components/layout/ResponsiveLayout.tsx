@@ -67,14 +67,15 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
             onClick={handleSidebarToggle}
             sx={{
               position: 'fixed',
-              left: sidebarOpen ? 256 : 16,
+              left: sidebarOpen ? 268 : 16,
               top: 16,
               zIndex: theme.zIndex.drawer + 1,
               backgroundColor: 'background.paper',
               boxShadow: 2,
-              transition: 'all 0.3s ease-in-out',
+              transition: 'left 0.3s ease-in-out',
               '&:hover': {
                 backgroundColor: 'action.hover',
+                transform: 'scale(1.05)',
               },
             }}
           >
@@ -96,10 +97,12 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         component="main"
         className={`flex-1 flex flex-col transition-all duration-300 ease-in-out w-full ${
           isMobile ? 'pt-16 pb-16' : 'pt-4'
-        } ${!isMobile && sidebarOpen ? 'lg:ml-64' : ''}`}
+        }`}
         sx={{
           minHeight: '100vh',
           backgroundColor: 'background.default',
+          marginLeft: !isMobile && sidebarOpen ? '256px' : 0,
+          transition: 'margin-left 0.3s ease-in-out',
         }}
       >
         {/* Scrollable Content Container */}

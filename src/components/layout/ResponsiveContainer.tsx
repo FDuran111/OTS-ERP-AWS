@@ -53,7 +53,7 @@ export default function ResponsiveContainer({
   return (
     <Box
       className={`
-        w-full flex flex-col container mx-auto
+        w-full flex flex-col mx-auto
         ${className}
       `}
       sx={{
@@ -63,6 +63,7 @@ export default function ResponsiveContainer({
                  maxWidth === 'md' ? { xs: '100%', md: '768px' } :
                  maxWidth === 'lg' ? { xs: '100%', lg: '1024px' } :
                  maxWidth === 'xl' ? { xs: '100%', xl: '1280px' } : '100%',
+        px: { xs: 2, sm: 3, md: 4 },
       }}
     >
       {/* Header Section */}
