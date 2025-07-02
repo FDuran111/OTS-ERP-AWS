@@ -83,45 +83,57 @@ export function CalendarGrid({
                   </Typography>
                   {jobsOnDay.length > 0 && (
                     <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      {jobsOnDay.slice(0, 3).map((entry) => (
-                        <Box 
-                          key={entry.id} 
-                          sx={{ 
-                            p: 1,
-                            borderRadius: 1,
-                            bgcolor: entry.job.type === 'INSTALLATION' ? '#4caf50' : '#2196f3',
-                            color: 'white',
-                            cursor: 'pointer',
-                            fontSize: '0.8rem',
-                            transition: 'all 0.2s',
-                            '&:hover': {
-                              transform: 'scale(1.02)',
-                              boxShadow: 2
-                            }
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onCrewAssignment(entry)
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>
-                              {entry.job.jobNumber}
-                            </Typography>
-                            {entry.estimatedHours && (
-                              <Typography sx={{ fontSize: '0.7rem', opacity: 0.9 }}>
-                                {entry.estimatedHours}h
+                      {jobsOnDay.slice(0, 3).map((entry) => {
+                        const jobTypeColor = entry.job.division === 'LOW_VOLTAGE' 
+                          ? { bg: '#e3f2fd', text: '#1565c0', border: '#42a5f5' }
+                          : entry.job.type === 'INSTALLATION' 
+                            ? { bg: '#e8f5e9', text: '#2e7d32', border: '#66bb6a' }
+                            : { bg: '#fff3e0', text: '#e65100', border: '#ff9800' }
+                        
+                        return (
+                          <Paper
+                            key={entry.id} 
+                            elevation={1}
+                            sx={{ 
+                              p: 1,
+                              borderRadius: 1,
+                              bgcolor: jobTypeColor.bg,
+                              color: jobTypeColor.text,
+                              border: 1,
+                              borderColor: jobTypeColor.border,
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                transform: 'scale(1.02)',
+                                boxShadow: 3,
+                                borderColor: jobTypeColor.text
+                              }
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onCrewAssignment(entry)
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: jobTypeColor.text }}>
+                                {entry.job.jobNumber}
                               </Typography>
-                            )}
-                          </Box>
-                          <Typography sx={{ fontSize: '0.75rem', fontWeight: 500, mb: 0.5 }}>
-                            {entry.job.customer}
-                          </Typography>
-                          <Typography sx={{ fontSize: '0.7rem', opacity: 0.9 }}>
-                            {entry.job.title || entry.job.description || 'No description'}
-                          </Typography>
-                        </Box>
-                      ))}
+                              {entry.estimatedHours && (
+                                <Typography sx={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                  {entry.estimatedHours}h
+                                </Typography>
+                              )}
+                            </Box>
+                            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 0.5 }}>
+                              {entry.job.customer}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                              {entry.job.title || entry.job.description || 'No description'}
+                            </Typography>
+                          </Paper>
+                        )
+                      })}
                       {jobsOnDay.length > 3 && (
                         <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', mt: 0.5 }}>
                           +{jobsOnDay.length - 3} more job{jobsOnDay.length - 3 > 1 ? 's' : ''}
