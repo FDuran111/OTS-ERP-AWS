@@ -15,7 +15,7 @@ import {
   ListItem,
   ListItemText,
   Stack,
-  Grid2 as Grid,
+  Grid,
   Button,
   useTheme,
   useMediaQuery,
@@ -265,7 +265,7 @@ export default function DashboardPage() {
         <Grid container spacing={3} sx={{ margin: 0, width: '100%' }}>
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
-              <Grid key={index} size={{ xs: 12, sm: 6, md: 3 }}>
+              <Grid key={index} item xs={12} sm={6} md={3}>
                 <Card sx={{ height: '100%' }}>
                   <CardContent>
                     <Typography>Loading...</Typography>
@@ -275,7 +275,7 @@ export default function DashboardPage() {
             ))
           ) : (
             stats.map((stat) => (
-              <Grid key={stat.title} size={{ xs: 12, sm: 6, md: 3 }}>
+              <Grid key={stat.title} item xs={12} sm={6} md={3}>
                 <Card sx={{ height: '100%' }}>
                   <CardContent>
                     <Box sx={{ 
@@ -363,7 +363,7 @@ export default function DashboardPage() {
 
         {/* Recent Jobs and Phases - Responsive Layout */}
         <Grid container spacing={3} sx={{ mt: 2 }}>
-          <Grid size={{ xs: 12, lg: 6 }}>
+          <Grid item xs={12} lg={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -432,7 +432,7 @@ export default function DashboardPage() {
             </Card>
           </Grid>
 
-          <Grid size={{ xs: 12, lg: 6 }}>
+          <Grid item xs={12} lg={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -444,7 +444,7 @@ export default function DashboardPage() {
                   <Box>
                     {/* Phase Summary - Responsive Grid */}
                     <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid size={{ xs: 12, sm: 4 }}>
+                      <Grid item xs={12} sm={4}>
                         <Paper sx={{ p: 2, textAlign: 'center' }}>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                             Underground
@@ -468,7 +468,7 @@ export default function DashboardPage() {
                           </Stack>
                         </Paper>
                       </Grid>
-                      <Grid size={{ xs: 12, sm: 4 }}>
+                      <Grid item xs={12} sm={4}>
                         <Paper sx={{ p: 2, textAlign: 'center' }}>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                             Rough-in
@@ -492,7 +492,7 @@ export default function DashboardPage() {
                           </Stack>
                         </Paper>
                       </Grid>
-                      <Grid size={{ xs: 12, sm: 4 }}>
+                      <Grid item xs={12} sm={4}>
                         <Paper sx={{ p: 2, textAlign: 'center' }}>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                             Finish
