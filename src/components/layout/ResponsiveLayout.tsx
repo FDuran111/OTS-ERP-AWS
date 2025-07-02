@@ -109,9 +109,9 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         <Box
           className="flex-1 w-full overflow-y-auto overflow-x-hidden"
           sx={{
-            // Only apply padding adjustments on desktop when sidebar is hidden
-            pl: !isMobile && !sidebarOpen ? 2 : 0,
-            pr: !isMobile && !sidebarOpen ? 2 : 0,
+            // Remove all padding when sidebar is hidden on desktop
+            pl: 0,
+            pr: 0,
             transition: 'padding 0.3s ease-in-out',
           }}
         >

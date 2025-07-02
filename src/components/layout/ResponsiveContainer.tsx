@@ -58,12 +58,12 @@ export default function ResponsiveContainer({
       `}
       sx={{
         maxWidth: '100%',
-        // Mobile keeps normal padding, desktop gets reduced padding
+        // Much smaller padding to reduce empty space
         px: { 
-          xs: 2,      // mobile: 16px
-          sm: 3,      // tablet: 24px  
-          md: 3,      // desktop: 24px
-          lg: 4       // large desktop: 32px
+          xs: 2,      // mobile: 16px (unchanged)
+          sm: 2,      // tablet: 16px  
+          md: 1,      // desktop: 8px
+          lg: 1       // large desktop: 8px
         },
       }}
     >
