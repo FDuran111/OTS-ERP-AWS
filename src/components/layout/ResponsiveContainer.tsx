@@ -54,7 +54,7 @@ export default function ResponsiveContainer({
     <Box
       sx={{
         width: '100%',
-        maxWidth: '100%',
+        maxWidth: maxWidth || '100%',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',

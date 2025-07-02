@@ -15,7 +15,7 @@ import {
   ListItem,
   ListItemText,
   Stack,
-  Grid,
+  Grid2 as Grid,
   Button,
   useTheme,
   useMediaQuery,
@@ -256,14 +256,13 @@ export default function DashboardPage() {
         breadcrumbs={breadcrumbs}
         actions={quickActions}
       >
-        <Box sx={{ width: '100%', maxWidth: '100%' }}>
-          {/* Low Stock Notification */}
-          <Box className="mb-6">
-            <LowStockNotification refreshTrigger={loading ? 0 : 1} />
-          </Box>
+        {/* Low Stock Notification */}
+        <Box className="mb-6">
+          <LowStockNotification refreshTrigger={loading ? 0 : 1} />
+        </Box>
 
-          {/* Stats Cards - Responsive Grid */}
-          <Grid container spacing={3} sx={{ margin: 0, width: '100%' }}>
+        {/* Stats Cards - Responsive Grid */}
+        <Grid container spacing={3} sx={{ margin: 0, width: '100%' }}>
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
               <Grid key={index} size={{ xs: 12, sm: 6, md: 3 }}>
@@ -560,7 +559,6 @@ export default function DashboardPage() {
             </Card>
           </Grid>
         </Grid>
-        </Box>
       </ResponsiveContainer>
     </ResponsiveLayout>
   )
