@@ -11,6 +11,9 @@ import {
   Chip,
   LinearProgress,
   Tooltip,
+  IconButton,
+  Collapse,
+  Paper,
 } from '@mui/material'
 
 // Temporary Grid component for compatibility
@@ -36,6 +39,9 @@ import {
   Schedule as ScheduleIcon,
   Warning as WarningIcon,
   CheckCircle as CheckIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Groups as GroupsIcon,
 } from '@mui/icons-material'
 import { format, startOfWeek, endOfWeek } from 'date-fns'
 
@@ -54,6 +60,7 @@ export default function CrewAvailabilityWidget() {
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([])
   const [loading, setLoading] = useState(true)
   const [weekRange, setWeekRange] = useState({ start: '', end: '' })
+  const [expanded, setExpanded] = useState(true)
 
   useEffect(() => {
     const now = new Date()
@@ -130,33 +137,96 @@ export default function CrewAvailabilityWidget() {
     )
   }
 
+  // Calculate summary stats
+  const availableCount = crewMembers.filter(m => getAvailabilityStatus(m).status === 'available').length
+  const busyCount = crewMembers.filter(m => getAvailabilityStatus(m).status === 'busy').length
+  const overbookedCount = crewMembers.filter(m => getAvailabilityStatus(m).status === 'overbooked').length
+
   return (
-    <Card elevation={2} sx={{ borderRadius: 2 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-          <ScheduleIcon color="primary" sx={{ fontSize: 28 }} />
-          <Typography variant="h5" sx={{ fontWeight: 600, flexGrow: 1 }}>
-            Crew Availability
-          </Typography>
-          <Chip 
-            label={`This Week`} 
-            size="medium" 
-            variant="outlined"
-            color="primary"
-            sx={{ fontWeight: 500 }}
-          />
-        </Box>
-        
-        <Typography 
-          variant="body1" 
-          sx={{ 
-            color: 'text.secondary', 
-            mb: 4,
-            fontSize: '0.95rem'
+    <Paper elevation={2} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          p: 2.5,
+          bgcolor: 'grey.50',
+          borderBottom: 1,
+          borderColor: 'divider',
+          cursor: 'pointer',
+          '&:hover': {
+            bgcolor: 'grey.100'
+          }
+        }}
+        onClick={() => setExpanded(!expanded)}
+      >
+        <IconButton
+          size="small"
+          sx={{ mr: 1 }}
+          onClick={(e) => {
+            e.stopPropagation()
+            setExpanded(!expanded)
           }}
         >
-          Current week utilization and availability for all crew members
+          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </IconButton>
+        <GroupsIcon sx={{ mr: 1.5, fontSize: 28, color: 'primary.main' }} />
+        <Typography variant="h5" sx={{ fontWeight: 600, flexGrow: 1 }}>
+          Crew Availability
         </Typography>
+        
+        {!expanded && crewMembers.length > 0 && (
+          <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
+            {availableCount > 0 && (
+              <Chip 
+                icon={<CheckIcon />}
+                label={`${availableCount} available`}
+                size="small"
+                color="success"
+                variant="outlined"
+              />
+            )}
+            {busyCount > 0 && (
+              <Chip 
+                icon={<WarningIcon />}
+                label={`${busyCount} busy`}
+                size="small"
+                color="warning"
+                variant="outlined"
+              />
+            )}
+            {overbookedCount > 0 && (
+              <Chip 
+                icon={<WarningIcon />}
+                label={`${overbookedCount} overbooked`}
+                size="small"
+                color="error"
+                variant="outlined"
+              />
+            )}
+          </Stack>
+        )}
+        
+        <Chip 
+          label={`This Week`} 
+          size="medium" 
+          variant="outlined"
+          color="primary"
+          sx={{ fontWeight: 500 }}
+        />
+      </Box>
+      
+      <Collapse in={expanded}>
+        <CardContent sx={{ p: 3 }}>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: 'text.secondary', 
+              mb: 4,
+              fontSize: '0.95rem'
+            }}
+          >
+            Current week utilization and availability for all crew members
+          </Typography>
 
         {crewMembers.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 6 }}>
@@ -281,7 +351,8 @@ export default function CrewAvailabilityWidget() {
             })}
           </Grid>
         )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Collapse>
+    </Paper>
   )
 }
