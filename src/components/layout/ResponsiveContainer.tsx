@@ -55,23 +55,16 @@ export default function ResponsiveContainer({
       sx={{
         width: '100%',
         maxWidth: '100%',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        // Symmetrical padding on desktop
-        pl: { 
-          xs: 2,      // mobile: 16px (unchanged)
-          sm: 2,      // tablet: 16px  
-          md: 2,      // desktop: 16px (symmetrical)
-          lg: 2       // large desktop: 16px (symmetrical)
+        // Padding for content breathing room
+        p: { 
+          xs: 2,      // mobile: 16px
+          sm: 3,      // tablet: 24px  
+          md: 4,      // desktop: 32px
+          lg: 4       // large desktop: 32px
         },
-        pr: {
-          xs: 2,      // mobile: 16px (unchanged)
-          sm: 2,      // tablet: 16px
-          md: 2,      // desktop: 16px (symmetrical)
-          lg: 2       // large desktop: 16px (symmetrical)
-        },
-        border: '3px solid orange',
-        backgroundColor: 'rgba(255, 165, 0, 0.1)',
       }}
     >
       {/* Header Section */}

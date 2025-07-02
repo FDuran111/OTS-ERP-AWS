@@ -51,7 +51,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   }
 
   return (
-    <Box className="flex min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden" sx={{ width: '100vw', maxWidth: '100vw', border: '5px solid purple', boxSizing: 'border-box' }}>
+    <Box className="flex min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden" sx={{ width: '100vw', maxWidth: '100vw' }}>
       {/* Responsive App Bar - Only shows on mobile */}
       {isMobile && (
         <ResponsiveAppBar
@@ -95,20 +95,19 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
       {/* Main Content Area */}
       <Box
         component="main"
-        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out w-full ${
+        className={`flex flex-col transition-all duration-300 ease-in-out ${
           isMobile ? 'pt-16 pb-16' : ''
         }`}
         sx={{
+          flexGrow: 1,
           minHeight: '100vh',
           backgroundColor: 'background.default',
           marginLeft: !isMobile && sidebarOpen ? '256px' : 0,
           marginRight: 0,
           paddingTop: !isMobile ? '60px' : 0, // Space for toggle button
           transition: 'margin-left 0.3s ease-in-out',
-          width: '100%',
+          width: !isMobile && sidebarOpen ? 'calc(100% - 256px)' : '100%',
           maxWidth: '100%',
-          border: '5px solid yellow',
-          boxSizing: 'border-box',
         }}
       >
         {/* Scrollable Content Container */}
@@ -124,8 +123,6 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'stretch',
-            border: '5px solid pink',
-            boxSizing: 'border-box',
             '& > *': {
               width: '100%',
               maxWidth: '100%',

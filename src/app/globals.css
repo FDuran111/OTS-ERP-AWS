@@ -2,17 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Debug styles - REMOVE AFTER DEBUGGING */
-body {
-  border: 5px solid cyan !important;
-  box-sizing: border-box !important;
-}
-
-html {
-  border: 5px solid lime !important;
-  box-sizing: border-box !important;
-}
-
 @layer base {
   :root {
     --background: 0 0% 100%;
