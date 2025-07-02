@@ -46,6 +46,13 @@ interface ScheduledJob {
   crew: any[]
 }
 
+interface User {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
 interface SimpleTimeEntryProps {
   onTimeEntryCreated: () => void
 }
@@ -66,21 +73,50 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // User state
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [users, setUsers] = useState<User[]>([])
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    fetchData()
+    // Get current user from localStorage
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      const user = JSON.parse(storedUser)
+      setCurrentUser(user)
+      setSelectedUser(user) // Default to current user
+      setIsAdmin(user.role === 'OWNER_ADMIN')
+    }
   }, [])
+  
+  useEffect(() => {
+    fetchData()
+  }, [isAdmin])
 
   const fetchData = async () => {
     try {
-      const [jobsRes, scheduleRes] = await Promise.all([
+      const requests: Promise<Response>[] = [
         fetch('/api/jobs?status=estimate,scheduled,dispatched,in_progress', {
           credentials: 'include'
         }),
         fetch(`/api/schedule?startDate=${format(startOfDay(new Date()), 'yyyy-MM-dd')}&endDate=${format(startOfDay(new Date()), 'yyyy-MM-dd')}`, {
           credentials: 'include'
         })
-      ])
+      ]
+      
+      // If admin, fetch all users
+      if (isAdmin) {
+        requests.push(
+          fetch('/api/users', {
+            credentials: 'include'
+          })
+        )
+      }
+      
+      const responses = await Promise.all(requests)
+      const [jobsRes, scheduleRes, usersRes] = responses
 
       if (jobsRes.ok) {
         const jobsData = await jobsRes.json()
@@ -90,6 +126,11 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
       if (scheduleRes.ok) {
         const scheduleData = await scheduleRes.json()
         setScheduledJobs(scheduleData)
+      }
+      
+      if (usersRes && usersRes.ok) {
+        const usersData = await usersRes.json()
+        setUsers(usersData.filter((u: User) => u.role !== 'OWNER_ADMIN' || u.id === currentUser?.id))
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -156,35 +197,39 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
       setSubmitting(true)
       setError(null)
 
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      
       // Create the time entry directly (no timer needed)
+      const timeData: any = {
+        userId: selectedUser?.id || currentUser?.id,
+        jobId: selectedJob.id,
+        date: format(date, 'yyyy-MM-dd'),
+        hours: calculateHours(),
+        description: description || undefined,
+        scheduleId: selectedSchedule?.id,
+      }
+      
+      // Only include time range if using time range method
+      if (useTimeRange) {
+        timeData.startTime = new Date(
+          date.getFullYear(),
+          date.getMonth(), 
+          date.getDate(),
+          startTime.getHours(),
+          startTime.getMinutes()
+        ).toISOString()
+        timeData.endTime = new Date(
+          date.getFullYear(),
+          date.getMonth(), 
+          date.getDate(),
+          endTime.getHours(),
+          endTime.getMinutes()
+        ).toISOString()
+      }
+      
       const response = await fetch('/api/time-entries/direct', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          userId: user.id,
-          jobId: selectedJob.id,
-          date: format(date, 'yyyy-MM-dd'),
-          startTime: new Date(
-            date.getFullYear(),
-            date.getMonth(), 
-            date.getDate(),
-            startTime.getHours(),
-            startTime.getMinutes()
-          ).toISOString(),
-          endTime: new Date(
-            date.getFullYear(),
-            date.getMonth(), 
-            date.getDate(),
-            endTime.getHours(),
-            endTime.getMinutes()
-          ).toISOString(),
-          hours: calculateHours(),
-          description: description || undefined,
-          scheduleId: selectedSchedule?.id,
-        }),
+        body: JSON.stringify(timeData),
       })
 
       if (!response.ok) {
@@ -251,6 +296,41 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
           </Box>
 
           <Grid container spacing={2}>
+            {/* Employee Selection (Admin Only) */}
+            {isAdmin && users.length > 0 && (
+              <Grid size={{ xs: 12 }}>
+                <Autocomplete
+                  options={users}
+                  getOptionLabel={(option) => `${option.name} (${option.email})`}
+                  value={selectedUser}
+                  onChange={(_, value) => setSelectedUser(value)}
+                  renderOption={(props, option) => {
+                    const { key, ...otherProps } = props as any
+                    return (
+                      <li key={key} {...otherProps}>
+                        <Box>
+                          <Typography variant="body2">
+                            {option.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {option.email} • {option.role}
+                          </Typography>
+                        </Box>
+                      </li>
+                    )
+                  }}
+                  renderInput={(params) => (
+                    <TextField 
+                      {...params} 
+                      label="Select Employee" 
+                      required 
+                      helperText="As an admin, you can enter time for any employee"
+                    />
+                  )}
+                />
+              </Grid>
+            )}
+            
             {/* Job Selection */}
             {entryMode === 'scheduled' ? (
               <Grid size={{ xs: 12 }}>
@@ -259,18 +339,21 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
                   getOptionLabel={(option) => `${option.job.jobNumber} - ${option.job.title} (${option.job.customer})`}
                   value={selectedSchedule}
                   onChange={(_, value) => handleScheduleSelect(value)}
-                  renderOption={(props, option) => (
-                    <li {...props}>
-                      <Box>
-                        <Typography variant="body2">
-                          {option.job.jobNumber} - {option.job.title}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {option.job.customer} • {option.estimatedHours}h estimated • {format(new Date(option.startDate), 'MMM d')}
-                        </Typography>
-                      </Box>
-                    </li>
-                  )}
+                  renderOption={(props, option) => {
+                    const { key, ...otherProps } = props as any
+                    return (
+                      <li key={key} {...otherProps}>
+                        <Box>
+                          <Typography variant="body2">
+                            {option.job.jobNumber} - {option.job.title}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {option.job.customer} • {option.estimatedHours}h estimated • {format(new Date(option.startDate), 'MMM d')}
+                          </Typography>
+                        </Box>
+                      </li>
+                    )
+                  }}
                   renderInput={(params) => (
                     <TextField {...params} label="Select Scheduled Job" required />
                   )}
@@ -283,18 +366,21 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
                   getOptionLabel={(option) => `${option.jobNumber} - ${option.title} (${option.customer})`}
                   value={selectedJob}
                   onChange={(_, value) => handleJobSelect(value)}
-                  renderOption={(props, option) => (
-                    <li {...props}>
-                      <Box>
-                        <Typography variant="body2">
-                          {option.jobNumber} - {option.title}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {option.customer} • {option.type}
-                        </Typography>
-                      </Box>
-                    </li>
-                  )}
+                  renderOption={(props, option) => {
+                    const { key, ...otherProps } = props as any
+                    return (
+                      <li key={key} {...otherProps}>
+                        <Box>
+                          <Typography variant="body2">
+                            {option.jobNumber} - {option.title}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {option.customer} • {option.type}
+                          </Typography>
+                        </Box>
+                      </li>
+                    )
+                  }}
                   renderInput={(params) => (
                     <TextField {...params} label="Select Job" required />
                   )}
