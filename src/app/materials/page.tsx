@@ -25,7 +25,6 @@ import {
   InputAdornment,
   CircularProgress,
   Alert,
-  Grid,
   FormControl,
   InputLabel,
   Select,
@@ -66,7 +65,6 @@ import MaterialActionsMenu from '@/components/materials/MaterialActionsMenu'
 import MaterialReservationDialog from '@/components/materials/MaterialReservationDialog'
 import StorageLocationDialog from '@/components/materials/StorageLocationDialog'
 import StockMovementHistory from '@/components/materials/StockMovementHistory'
-import LowStockNotification from '@/components/notifications/LowStockNotification'
 import StockAnalyticsDashboard from '@/components/analytics/StockAnalyticsDashboard'
 import ReorderSuggestions from '@/components/materials/ReorderSuggestions'
 
@@ -517,44 +515,61 @@ export default function MaterialsPage() {
               </Button>
             </Box>
 
-          <Grid container spacing={3} sx={{ mb: 3 }}>
+          {/* Stats Cards - More Compact */}
+          <Box sx={{ 
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, 1fr)',
+              md: 'repeat(4, 1fr)'
+            },
+            gap: 2,
+            mb: 3
+          }}>
             {stats.map((stat) => {
               const IconComponent = getStatsIconComponent(stat.icon)
               return (
-                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
-                  <Card>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 48,
-                            height: 48,
-                            borderRadius: '12px',
-                            backgroundColor: `${stat.color}20`,
-                            mr: 2,
-                          }}
-                        >
-                          {React.createElement(IconComponent, { sx: { color: stat.color } })}
-                        </Box>
-                        <Box>
-                          <Typography color="text.secondary" variant="caption">
-                            {stat.title}
-                          </Typography>
-                          <Typography variant="h5">{stat.value}</Typography>
-                        </Box>
+                <Card key={stat.title} sx={{ position: 'relative', overflow: 'visible' }}>
+                  <CardContent sx={{ p: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 40,
+                          height: 40,
+                          borderRadius: '10px',
+                          backgroundColor: `${stat.color}15`,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {React.createElement(IconComponent, { 
+                          sx: { color: stat.color, fontSize: 20 } 
+                        })}
                       </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography 
+                          color="text.secondary" 
+                          variant="caption"
+                          sx={{ display: 'block', lineHeight: 1.2 }}
+                        >
+                          {stat.title}
+                        </Typography>
+                        <Typography 
+                          variant="h6" 
+                          sx={{ fontWeight: 600, lineHeight: 1.2 }}
+                        >
+                          {stat.value}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
               )
             })}
-          </Grid>
+          </Box>
 
-          {/* Low Stock Notification */}
-          <LowStockNotification refreshTrigger={refreshTrigger} />
 
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -679,121 +694,26 @@ export default function MaterialsPage() {
             </Alert>
           )}
 
-          {/* Low Stock Summary */}
-          {materials.length > 0 && (
-            <Alert 
-              severity={materials.filter(m => m.inStock <= m.minStock).length > 0 ? "warning" : "success"} 
-              sx={{ 
-                mb: 3,
-                '& .MuiAlert-message': {
-                  width: '100%',
-                  overflow: 'hidden'
-                }
-              }}
-              icon={<Warning />}
-            >
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: { xs: 'column', sm: 'row' },
-                alignItems: { xs: 'flex-start', sm: 'center' }, 
-                justifyContent: 'space-between',
-                gap: { xs: 1, sm: 2 },
-                width: '100%'
-              }}>
-                <Typography 
-                  variant="body2"
-                  sx={{
-                    fontSize: { xs: '0.875rem', sm: '1rem' },
-                    lineHeight: 1.4,
-                    wordBreak: 'break-word',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    flex: 1,
-                    minWidth: 0
-                  }}
-                >
-                  {materials.filter(m => m.inStock <= m.minStock).length > 0 
-                    ? `${materials.filter(m => m.inStock <= m.minStock).length} item(s) need restocking`
-                    : "All items are adequately stocked"
-                  }
-                </Typography>
-                {materials.filter(m => m.inStock <= m.minStock).length > 0 && !showOnlyLowStock && (
-                  <Button 
-                    size="small" 
-                    variant="contained" 
-                    color="warning"
-                    onClick={() => setShowOnlyLowStock(true)}
-                    sx={{
-                      minWidth: 'auto',
-                      whiteSpace: 'nowrap',
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                      px: { xs: 2, sm: 3 },
-                      flexShrink: 0
-                    }}
-                  >
-                    {isMobile ? 'View' : 'View Low Stock Items'}
-                  </Button>
-                )}
-              </Box>
-            </Alert>
-          )}
 
-          {/* Stock Status Legend */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Stock Status Legend
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>🚨</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Critical - Out of stock or &lt;5% of target
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>⚠️</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Low Stock - At or below minimum level
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>📦</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Adequate - Above minimum, normal stock
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>✅</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Well Stocked - 50% or more above minimum
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
 
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
               <CircularProgress />
             </Box>
           ) : (
-            <TableContainer component={Paper} className="w-full overflow-x-auto">
-              <Table>
+            <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+              <Table size="small">
                 <TableHead>
-                  <TableRow>
-                    <TableCell>Code</TableCell>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Brand</TableCell>
-                    <TableCell>Category</TableCell>
-                    <TableCell>Total Stock</TableCell>
-                    <TableCell>Reserved</TableCell>
-                    <TableCell>Available</TableCell>
-                    <TableCell>Min Stock</TableCell>
-                    <TableCell>Location</TableCell>
-                    <TableCell>Cost</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell align="right">Actions</TableCell>
+                  <TableRow sx={{ bgcolor: 'background.default' }}>
+                    <TableCell sx={{ fontWeight: 600 }}>Item</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Brand/Category</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>Stock</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>Reserved</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>Available</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Location</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cost</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -821,85 +741,95 @@ export default function MaterialsPage() {
                       
                       return matchesSearch && matchesCategory && matchesManufacturer && matchesStockFilter
                     })
-                    .map((material) => (
-                      <TableRow key={material.id} hover>
-                        <TableCell>{material.code}</TableCell>
-                        <TableCell>
-                          <Box>
-                            <Typography variant="body2">{material.name}</Typography>
-                            {material.description && (
-                              <Typography variant="caption" color="text.secondary">
-                                {material.description}
+                    .map((material) => {
+                      const stockPercentage = material.minStock > 0 ? (material.availableStock / material.minStock) * 100 : 0
+                      const stockIcon = 
+                        material.inStock === 0 || stockPercentage < 5 ? '🚨' :
+                        material.availableStock <= material.minStock ? '⚠️' :
+                        stockPercentage >= 150 ? '✅' : '📦'
+                      
+                      return (
+                        <TableRow key={material.id} hover>
+                          <TableCell>
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {material.code} - {material.name}
                               </Typography>
-                            )}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={material.manufacturer ? "medium" : "normal"}>
-                            {material.manufacturer || '-'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>{material.category}</TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>
-                              {(() => {
-                                const stockPercentage = material.minStock > 0 ? (material.availableStock / material.minStock) * 100 : 0
-                                if (material.inStock === 0 || stockPercentage < 5) return '🚨'
-                                if (material.availableStock <= material.minStock) return '⚠️'
-                                if (stockPercentage >= 150) return '✅'
-                                return '📦'
-                              })()}
+                              {material.description && (
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                  {material.description}
+                                </Typography>
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {material.manufacturer || 'No Brand'}
                             </Typography>
-                            <Typography variant="body2" fontWeight="medium">
-                              {material.inStock} {material.unit}
+                            <Typography variant="caption" color="text.secondary">
+                              {material.category}
                             </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Typography 
-                            variant="body2" 
-                            color={material.totalReserved > 0 ? 'primary.main' : 'text.secondary'}
-                            fontWeight={material.totalReserved > 0 ? 'medium' : 'normal'}
-                          >
-                            {material.totalReserved || 0} {material.unit}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography 
-                            variant="body2" 
-                            color={material.availableStock <= 0 ? 'error.main' : 'text.primary'}
-                            fontWeight="medium"
-                          >
-                            {material.availableStock || 0} {material.unit}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {material.minStock} {material.unit}
-                        </TableCell>
-                        <TableCell>{material.location || '-'}</TableCell>
-                        <TableCell>${material.cost.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={material.status}
-                            color={getStatusColor(material.status)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <MaterialActionsMenu
-                            material={material}
-                            onEdit={handleEditMaterial}
-                            onDelete={handleDeleteMaterial}
-                            onStockUpdated={handleStockUpdated}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell align="center">
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                              <span style={{ fontSize: '1rem' }}>{stockIcon}</span>
+                              <Typography variant="body2">
+                                {material.inStock}/{material.minStock}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography 
+                              variant="body2" 
+                              color={material.totalReserved > 0 ? 'primary.main' : 'text.secondary'}
+                            >
+                              {material.totalReserved || 0}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography 
+                              variant="body2" 
+                              color={material.availableStock <= 0 ? 'error.main' : 'text.primary'}
+                              sx={{ fontWeight: material.availableStock <= 0 ? 600 : 400 }}
+                            >
+                              {material.availableStock || 0}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" noWrap sx={{ maxWidth: 120 }}>
+                              {material.location || '-'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2">
+                              ${material.cost.toFixed(2)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip
+                              label={material.status}
+                              color={getStatusColor(material.status)}
+                              size="small"
+                              sx={{ fontSize: '0.75rem' }}
+                            />
+                          </TableCell>
+                          <TableCell align="center">
+                            <MaterialActionsMenu
+                              material={material}
+                              onEdit={handleEditMaterial}
+                              onDelete={handleDeleteMaterial}
+                              onStockUpdated={handleStockUpdated}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   {materials.length === 0 && !loading && (
                     <TableRow>
-                      <TableCell colSpan={11} align="center">
-                        <Typography color="text.secondary">No materials found</Typography>
+                      <TableCell colSpan={9} align="center">
+                        <Typography color="text.secondary" sx={{ py: 4 }}>
+                          No materials found
+                        </Typography>
                       </TableCell>
                     </TableRow>
                   )}

@@ -5,7 +5,13 @@ import {
   Box,
   useTheme,
   useMediaQuery,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
+import {
+  Menu as MenuIcon,
+  MenuOpen as MenuOpenIcon,
+} from '@mui/icons-material'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter, usePathname } from 'next/navigation'
 import ResponsiveSidebar from './ResponsiveSidebar'
@@ -31,11 +37,9 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
     }
   }, [pathname, isMobile])
 
-  // Auto-open sidebar on desktop
+  // Keep sidebar closed by default on all screen sizes
   useEffect(() => {
-    if (!isMobile) {
-      setSidebarOpen(true)
-    }
+    setSidebarOpen(false)
   }, [isMobile])
 
   const handleSidebarToggle = () => {
@@ -56,6 +60,29 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         />
       )}
 
+      {/* Desktop Sidebar Toggle Button */}
+      {!isMobile && (
+        <Tooltip title={sidebarOpen ? "Hide sidebar" : "Show sidebar"} placement="right">
+          <IconButton
+            onClick={handleSidebarToggle}
+            sx={{
+              position: 'fixed',
+              left: sidebarOpen ? 256 : 16,
+              top: 16,
+              zIndex: theme.zIndex.drawer + 1,
+              backgroundColor: 'background.paper',
+              boxShadow: 2,
+              transition: 'all 0.3s ease-in-out',
+              '&:hover': {
+                backgroundColor: 'action.hover',
+              },
+            }}
+          >
+            {sidebarOpen ? <MenuOpenIcon /> : <MenuIcon />}
+          </IconButton>
+        </Tooltip>
+      )}
+
       {/* Responsive Sidebar */}
       <ResponsiveSidebar
         open={sidebarOpen}
@@ -68,7 +95,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
       <Box
         component="main"
         className={`flex-1 flex flex-col transition-all duration-300 ease-in-out w-full ${
-          isMobile ? 'pt-16 pb-16' : ''
+          isMobile ? 'pt-16 pb-16' : 'pt-4'
         } ${!isMobile && sidebarOpen ? 'lg:ml-64' : ''}`}
         sx={{
           minHeight: '100vh',
