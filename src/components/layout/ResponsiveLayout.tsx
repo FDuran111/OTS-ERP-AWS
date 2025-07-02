@@ -51,7 +51,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   }
 
   return (
-    <Box className="flex min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden" sx={{ width: '100vw', maxWidth: '100vw' }}>
+    <Box className="flex min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden" sx={{ width: '100vw', maxWidth: '100vw', border: '5px solid purple', boxSizing: 'border-box' }}>
       {/* Responsive App Bar - Only shows on mobile */}
       {isMobile && (
         <ResponsiveAppBar
@@ -107,6 +107,8 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           transition: 'margin-left 0.3s ease-in-out',
           width: '100%',
           maxWidth: '100%',
+          border: '5px solid yellow',
+          boxSizing: 'border-box',
         }}
       >
         {/* Scrollable Content Container */}
@@ -122,6 +124,8 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'stretch',
+            border: '5px solid pink',
+            boxSizing: 'border-box',
             '& > *': {
               width: '100%',
               maxWidth: '100%',
