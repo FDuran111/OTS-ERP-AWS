@@ -105,7 +105,7 @@ export async function POST(
         const assignedSCResult = await query(
           `UPDATE "ServiceCall" 
            SET "assignedTechnicianId" = $2, "updatedAt" = CURRENT_TIMESTAMP
-           WHERE "assignedTechnicianId" = $1 AND status IN ('OPEN', 'IN_PROGRESS')
+           WHERE "assignedTechnicianId" = $1 AND status IN ('NEW', 'ASSIGNED', 'DISPATCHED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS')
            RETURNING id`,
           [userId, data.newUserId]
         )

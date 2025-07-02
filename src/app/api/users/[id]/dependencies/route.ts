@@ -131,7 +131,7 @@ export async function GET(
       const activeSCs = await query(
         `SELECT id, "ticketNumber", "customerName" 
          FROM "ServiceCall" 
-         WHERE "assignedTechnicianId" = $1 AND status IN ('OPEN', 'IN_PROGRESS') 
+         WHERE "assignedTechnicianId" = $1 AND status IN ('NEW', 'ASSIGNED', 'DISPATCHED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS') 
          LIMIT 5`,
         [userId]
       )

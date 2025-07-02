@@ -286,7 +286,7 @@ export async function DELETE(
 
     // Check for active service calls
     const activeServiceCallsResult = await query(
-      'SELECT COUNT(*) as count FROM "ServiceCall" WHERE "assignedTechnicianId" = $1 AND status IN (\'OPEN\', \'IN_PROGRESS\')',
+      'SELECT COUNT(*) as count FROM "ServiceCall" WHERE "assignedTechnicianId" = $1 AND status IN (\'NEW\', \'ASSIGNED\', \'DISPATCHED\', \'EN_ROUTE\', \'ON_SITE\', \'IN_PROGRESS\')',
       [userId]
     )
     const activeServiceCalls = parseInt(activeServiceCallsResult.rows[0].count)
