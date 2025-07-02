@@ -128,7 +128,7 @@ interface JobSchedulingCalendarProps {
 
 export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [view, setView] = useState<'month' | 'week'>('month')
+  const [view, setView] = useState<'month' | 'week'>('week')
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([])
   const [unscheduledJobs, setUnscheduledJobs] = useState<Job[]>([])
   const [crew, setCrew] = useState<User[]>([])
