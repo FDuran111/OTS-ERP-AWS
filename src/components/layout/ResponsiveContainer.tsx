@@ -70,6 +70,8 @@ export default function ResponsiveContainer({
           md: 2,      // desktop: 16px (symmetrical)
           lg: 2       // large desktop: 16px (symmetrical)
         },
+        border: '3px solid orange',
+        backgroundColor: 'rgba(255, 165, 0, 0.1)',
       }}
     >
       {/* Header Section */}

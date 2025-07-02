@@ -256,13 +256,14 @@ export default function DashboardPage() {
         breadcrumbs={breadcrumbs}
         actions={quickActions}
       >
-        {/* Low Stock Notification */}
-        <Box className="mb-6">
-          <LowStockNotification refreshTrigger={loading ? 0 : 1} />
-        </Box>
+        <Box sx={{ width: '100%', maxWidth: '100%', border: '3px solid red', backgroundColor: 'rgba(255, 0, 0, 0.1)' }}>
+          {/* Low Stock Notification */}
+          <Box className="mb-6" sx={{ border: '3px solid blue', backgroundColor: 'rgba(0, 0, 255, 0.1)' }}>
+            <LowStockNotification refreshTrigger={loading ? 0 : 1} />
+          </Box>
 
-        {/* Stats Cards - Responsive Grid */}
-        <Grid container spacing={3} sx={{ margin: 0, width: '100%' }}>
+          {/* Stats Cards - Responsive Grid */}
+          <Grid container spacing={3} sx={{ margin: 0, width: '100%', border: '3px solid green', backgroundColor: 'rgba(0, 255, 0, 0.1)' }}>
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
               <Grid key={index} size={{ xs: 12, sm: 6, md: 3 }}>
@@ -559,6 +560,7 @@ export default function DashboardPage() {
             </Card>
           </Grid>
         </Grid>
+        </Box>
       </ResponsiveContainer>
     </ResponsiveLayout>
   )
