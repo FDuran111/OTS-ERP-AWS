@@ -8,34 +8,58 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
     const includeInactive = searchParams.get('includeInactive') === 'true'
 
-    let whereClause = includeInactive ? '' : 'WHERE u.active = true'
+    // Note: The EmployeeCostSummary view already filters by u.active = true
+    // TODO: If includeInactive support is needed, we'll need to query the tables directly
+    // rather than using the view, or modify the view to include inactive users
+    let whereClause = ''
     const params: any[] = []
 
     if (userId) {
-      whereClause = whereClause ? `${whereClause} AND u.id = $1` : 'WHERE u.id = $1'
+      whereClause = 'WHERE "userId" = $1'
       params.push(userId)
     }
 
     // Get comprehensive employee cost data
+    // First, let's check what columns exist in the view
+    let orderByClause = ''
+    try {
+      // Try to query with common column names
+      const testResult = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'EmployeeCostSummary'
+        AND column_name IN ('name', 'user_name', 'userName')
+        LIMIT 1
+      `)
+      
+      if (testResult.rows.length > 0) {
+        orderByClause = `ORDER BY "${testResult.rows[0].column_name}"`
+      }
+    } catch (e) {
+      // If we can't determine the column, just skip ordering
+      console.log('Could not determine sort column for EmployeeCostSummary')
+    }
+
     const result = await query(`
       SELECT * FROM "EmployeeCostSummary"
       ${whereClause}
-      ORDER BY "name"
+      ${orderByClause}
     `, params)
 
     const employeeCosts = result.rows.map(row => ({
-      userId: row.userId,
-      name: row.name,
-      email: row.email,
-      role: row.role,
-      baseHourlyRate: parseFloat(row.baseHourlyRate || 0),
-      baseAnnualSalary: parseFloat(row.baseAnnualSalary || 0),
-      totalOverheadCost: parseFloat(row.totalOverheadCost || 0),
-      totalOverheadHourly: parseFloat(row.totalOverheadHourly || 0),
-      totalAssetCost: parseFloat(row.totalAssetCost || 0),
-      totalAssetHourly: parseFloat(row.totalAssetHourly || 0),
-      totalHourlyCost: parseFloat(row.totalHourlyCost || 0),
-      totalAnnualCost: parseFloat(row.totalAnnualCost || 0)
+      userId: row.userId || row.user_id,
+      name: row.name || row.user_name || row.userName || 'Unknown',
+      email: row.email || row.user_email || '',
+      role: row.role || row.user_role || '',
+      baseHourlyRate: parseFloat(row.baseHourlyRate || row.base_hourly_rate || row.hourly_rate || 0),
+      baseAnnualSalary: parseFloat(row.baseAnnualSalary || row.base_annual_salary || 0),
+      totalOverheadCost: parseFloat(row.totalOverheadCost || row.total_overhead_cost || 0),
+      totalOverheadHourly: parseFloat(row.totalOverheadHourly || row.total_overhead_hourly || 0),
+      totalAssetCost: parseFloat(row.totalAssetCost || row.total_asset_cost || 0),
+      totalAssetHourly: parseFloat(row.totalAssetHourly || row.total_asset_hourly || 0),
+      totalHourlyCost: parseFloat(row.totalHourlyCost || row.total_hourly_cost || row.hourly_rate || 0),
+      totalAnnualCost: parseFloat(row.totalAnnualCost || row.total_annual_cost || 0)
     }))
 
     // Get detailed breakdown for specific user if requested

@@ -4,7 +4,7 @@ import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { withRBAC } from '@/lib/rbac-middleware'
 
 export const GET = withRBAC({ requiredRoles: ['OWNER_ADMIN', 'FOREMAN'] })(
-async function GET(request) {
+async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period') || 'month' // month, quarter, year
@@ -85,9 +85,17 @@ async function GET(request) {
 
     // Get new vs returning customers
     const customerTypeResult = await query(`
+      WITH customer_first_job AS (
+        SELECT 
+          c.id as customer_id,
+          MIN(j."createdAt") as first_job_date
+        FROM "Customer" c
+        INNER JOIN "Job" j ON c.id = j."customerId"
+        GROUP BY c.id
+      )
       SELECT 
         CASE 
-          WHEN MIN(j."createdAt") >= $1 THEN 'new'
+          WHEN cfj.first_job_date >= $1 THEN 'new'
           ELSE 'returning'
         END as customer_type,
         COUNT(DISTINCT c.id) as customer_count,
@@ -95,8 +103,9 @@ async function GET(request) {
         SUM(CASE WHEN j."createdAt" >= $1 AND j."createdAt" <= $2 THEN COALESCE(j."billedAmount", j."estimatedCost", 0) ELSE 0 END) as total_revenue
       FROM "Customer" c
       INNER JOIN "Job" j ON c.id = j."customerId"
+      INNER JOIN customer_first_job cfj ON c.id = cfj.customer_id
       GROUP BY CASE 
-        WHEN MIN(j."createdAt") >= $1 THEN 'new'
+        WHEN cfj.first_job_date >= $1 THEN 'new'
         ELSE 'returning'
       END
     `, [dateStart, dateEnd])

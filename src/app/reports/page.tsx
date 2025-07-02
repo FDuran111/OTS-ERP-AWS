@@ -201,24 +201,50 @@ export default function ReportsPage() {
       if (response.ok) {
         const data = await response.json()
         
-        // Generate PDF for Revenue Report
-        if (reportType === 'Revenue Report') {
-          const { generateRevenueReportPDF } = await import('@/lib/pdf/revenue-report')
-          generateRevenueReportPDF(data)
-          setSnackbar({
-            open: true,
-            message: `${reportType} PDF downloaded successfully!`,
-            severity: 'success'
-          })
-        } else {
-          // For other reports, show the data in console and alert for now
-          console.log(`${reportType} Data:`, data)
-          setSnackbar({
-            open: true,
-            message: `${reportType} generated! PDF generation for this report type coming soon.`,
-            severity: 'success'
-          })
+        // Generate PDF based on report type
+        let pdfGenerated = true
+        
+        switch (reportType) {
+          case 'Revenue Report': {
+            const { generateRevenueReportPDF } = await import('@/lib/pdf/revenue-report')
+            generateRevenueReportPDF(data)
+            break
+          }
+          case 'Job Performance': {
+            const { generateJobPerformanceReportPDF } = await import('@/lib/pdf/job-performance-report')
+            generateJobPerformanceReportPDF(data)
+            break
+          }
+          case 'Crew Productivity': {
+            const { generateCrewProductivityReportPDF } = await import('@/lib/pdf/crew-productivity-report')
+            generateCrewProductivityReportPDF(data)
+            break
+          }
+          case 'Material Usage': {
+            const { generateMaterialUsageReportPDF } = await import('@/lib/pdf/material-usage-report')
+            generateMaterialUsageReportPDF(data)
+            break
+          }
+          case 'Customer Report': {
+            const { generateCustomerReportPDF } = await import('@/lib/pdf/customer-report')
+            generateCustomerReportPDF(data)
+            break
+          }
+          case 'Invoice Summary': {
+            const { generateInvoiceSummaryReportPDF } = await import('@/lib/pdf/invoice-summary-report')
+            generateInvoiceSummaryReportPDF(data)
+            break
+          }
+          default:
+            pdfGenerated = false
+            console.log(`${reportType} Data:`, data)
         }
+        
+        setSnackbar({
+          open: true,
+          message: pdfGenerated ? `${reportType} PDF downloaded successfully!` : `${reportType} generated!`,
+          severity: 'success'
+        })
       } else {
         throw new Error('Failed to generate report')
       }

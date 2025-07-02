@@ -4,7 +4,7 @@ import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns'
 import { withRBAC } from '@/lib/rbac-middleware'
 
 export const GET = withRBAC({ requiredRoles: ['OWNER_ADMIN', 'FOREMAN'] })(
-async function GET(request) {
+async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period') || 'month' // month, quarter, year

@@ -115,9 +115,9 @@ export function generateRevenueReportPDF(data: RevenueReportData) {
   ]
   
   const summaryRight = [
-    ['Total Estimated:', formatCurrency(data.summary.totalEstimated)],
-    ['Average Job Value:', formatCurrency(data.summary.avgJobValue)],
-    ['Profit Margin:', `${data.summary.profitMargin.toFixed(1)}%`]
+    ['Total Estimated:', formatCurrency(data.summary.totalEstimated || 0)],
+    ['Average Job Value:', formatCurrency(data.summary.avgJobValue || 0)],
+    ['Profit Margin:', data.summary.profitMargin !== undefined ? `${data.summary.profitMargin.toFixed(1)}%` : 'N/A']
   ]
 
   // Left column
@@ -287,7 +287,7 @@ export function generateRevenueReportPDF(data: RevenueReportData) {
   }
 
   // Add footer on last page
-  const pageCount = doc.getNumberOfPages()
+  const pageCount = (doc as any).getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     doc.setFontSize(8)

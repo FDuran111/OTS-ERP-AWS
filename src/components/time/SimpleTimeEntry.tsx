@@ -55,12 +55,14 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
   const [scheduledJobs, setScheduledJobs] = useState<ScheduledJob[]>([])
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduledJob | null>(null)
-  const [entryMode, setEntryMode] = useState<'scheduled' | 'manual'>('scheduled')
+  const [entryMode, setEntryMode] = useState<'scheduled' | 'manual'>('manual') // Default to manual
   
   // Form state
   const [date, setDate] = useState<Date>(new Date())
   const [startTime, setStartTime] = useState<Date>(new Date())
   const [endTime, setEndTime] = useState<Date>(addHours(new Date(), 8))
+  const [hours, setHours] = useState<string>('8.0') // Direct hours input
+  const [useTimeRange, setUseTimeRange] = useState<boolean>(false) // Toggle between hours input and time range
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -119,6 +121,9 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
   }
 
   const calculateHours = () => {
+    if (!useTimeRange) {
+      return parseFloat(hours) || 0
+    }
     if (!startTime || !endTime) return 0
     const diffMs = endTime.getTime() - startTime.getTime()
     return Math.max(0, diffMs / (1000 * 60 * 60))
@@ -130,14 +135,21 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
       return
     }
 
-    if (!startTime || !endTime) {
-      setError('Please set start and end times')
+    if (!useTimeRange && (!hours || parseFloat(hours) <= 0)) {
+      setError('Please enter valid hours')
       return
     }
 
-    if (endTime <= startTime) {
-      setError('End time must be after start time')
-      return
+    if (useTimeRange) {
+      if (!startTime || !endTime) {
+        setError('Please set start and end times')
+        return
+      }
+
+      if (endTime <= startTime) {
+        setError('End time must be after start time')
+        return
+      }
     }
 
     try {
@@ -201,10 +213,10 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            📝 Quick Time Entry
+            📝 Manual Time Entry
           </Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            Log time worked on jobs - no timers needed!
+            Enter hours worked manually - perfect for field crews logging time at the end of the day
           </Typography>
 
           {error && (
@@ -291,7 +303,7 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
             )}
 
             {/* Date */}
-            <Grid size={{ xs: 12, sm: 4 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <DatePicker
                 label="Date"
                 value={date}
@@ -300,39 +312,68 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
               />
             </Grid>
 
-            {/* Start Time */}
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <TimePicker
-                label="Start Time"
-                value={startTime}
-                onChange={(newValue) => setStartTime(newValue || new Date())}
-                slotProps={{ textField: { fullWidth: true, required: true } }}
-              />
+            {/* Hours Entry Method Toggle */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel>Time Entry Method</InputLabel>
+                <Select
+                  value={useTimeRange ? 'range' : 'hours'}
+                  onChange={(e) => setUseTimeRange(e.target.value === 'range')}
+                  label="Time Entry Method"
+                >
+                  <MenuItem value="hours">Direct Hours Input</MenuItem>
+                  <MenuItem value="range">Start/End Time Range</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
 
-            {/* End Time */}
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <TimePicker
-                label="End Time"
-                value={endTime}
-                onChange={(newValue) => setEndTime(newValue || new Date())}
-                slotProps={{ textField: { fullWidth: true, required: true } }}
-              />
-            </Grid>
-
-            {/* Hours Display */}
-            <Grid size={{ xs: 12 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Total Hours:
-                </Typography>
-                <Chip 
-                  label={`${calculateHours().toFixed(2)}h`} 
-                  color="primary" 
-                  size="small" 
+            {!useTimeRange ? (
+              /* Direct Hours Input */
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  fullWidth
+                  label="Hours Worked"
+                  type="number"
+                  value={hours}
+                  onChange={(e) => setHours(e.target.value)}
+                  inputProps={{ min: 0, max: 24, step: 0.25 }}
+                  helperText="Enter the total hours worked (e.g., 8.5)"
+                  required
                 />
-              </Box>
-            </Grid>
+              </Grid>
+            ) : (
+              /* Time Range Input */
+              <>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TimePicker
+                    label="Start Time"
+                    value={startTime}
+                    onChange={(newValue) => setStartTime(newValue || new Date())}
+                    slotProps={{ textField: { fullWidth: true, required: true } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TimePicker
+                    label="End Time"
+                    value={endTime}
+                    onChange={(newValue) => setEndTime(newValue || new Date())}
+                    slotProps={{ textField: { fullWidth: true, required: true } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Calculated Hours:
+                    </Typography>
+                    <Chip 
+                      label={`${calculateHours().toFixed(2)}h`} 
+                      color="primary" 
+                      size="small" 
+                    />
+                  </Box>
+                </Grid>
+              </>
+            )}
 
             {/* Description */}
             <Grid size={{ xs: 12 }}>

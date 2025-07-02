@@ -18,9 +18,9 @@ export interface AuthenticatedRequest extends NextRequest {
 // Middleware function to check authentication and authorization
 export function withRBAC(config: RBACConfig = {}) {
   return function rbacMiddleware(
-    handler: (request: AuthenticatedRequest) => Promise<Response> | Response
+    handler: (request: AuthenticatedRequest, context?: any) => Promise<Response> | Response
   ) {
-    return async function(request: NextRequest): Promise<Response> {
+    return async function(request: NextRequest, context?: any): Promise<Response> {
       try {
         // Get auth token from cookies
         const cookieStore = await cookies()
@@ -100,7 +100,7 @@ export function withRBAC(config: RBACConfig = {}) {
         const authenticatedRequest = request as AuthenticatedRequest
         authenticatedRequest.user = user
 
-        return await handler(authenticatedRequest)
+        return await handler(authenticatedRequest, context)
 
       } catch (error) {
         console.error('RBAC middleware error:', error)

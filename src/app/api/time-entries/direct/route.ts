@@ -7,10 +7,11 @@ const directTimeEntrySchema = z.object({
   jobId: z.string().min(1, 'Job ID is required'),
   phaseId: z.string().optional(),
   date: z.string().min(1, 'Date is required'),
-  startTime: z.string().min(1, 'Start time is required'),
-  endTime: z.string().min(1, 'End time is required'),
+  startTime: z.string().optional(), // Made optional for direct hours entry
+  endTime: z.string().optional(), // Made optional for direct hours entry
   hours: z.number()
     .positive('Hours must be positive')
+    .max(24, 'Hours cannot exceed 24 per day')
     .refine(
       (hours) => {
         // Check if hours is in 0.25 increments (15-minute intervals)
@@ -29,39 +30,50 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = directTimeEntrySchema.parse(body)
 
-    // Validate that end time is after start time
-    const startTime = new Date(data.startTime)
-    const endTime = new Date(data.endTime)
-    
-    if (endTime <= startTime) {
-      return NextResponse.json(
-        { error: 'End time must be after start time' },
-        { status: 400 }
-      )
-    }
+    let startTime: Date
+    let endTime: Date
+    let finalHours = data.hours
 
-    // Calculate hours based on actual time difference
-    const calculatedHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
-    
-    // Round to nearest 15-minute (0.25 hour) increment
-    const roundedHours = Math.round(calculatedHours * 4) / 4
-    
-    // Validate that the provided hours match the calculated hours
-    if (Math.abs(data.hours - roundedHours) > 0.01) {
-      return NextResponse.json(
-        { 
-          error: 'Provided hours do not match the time range', 
-          details: {
-            provided: data.hours,
-            calculated: roundedHours,
-            message: 'Hours must match the time difference rounded to 15-minute increments'
-          }
-        },
-        { status: 400 }
-      )
+    if (data.startTime && data.endTime) {
+      // Time range provided - validate times
+      startTime = new Date(data.startTime)
+      endTime = new Date(data.endTime)
+      
+      if (endTime <= startTime) {
+        return NextResponse.json(
+          { error: 'End time must be after start time' },
+          { status: 400 }
+        )
+      }
+
+      // Calculate hours based on actual time difference
+      const calculatedHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
+      
+      // Round to nearest 15-minute (0.25 hour) increment
+      const roundedHours = Math.round(calculatedHours * 4) / 4
+      
+      // Validate that the provided hours match the calculated hours
+      if (Math.abs(data.hours - roundedHours) > 0.01) {
+        return NextResponse.json(
+          { 
+            error: 'Provided hours do not match the time range', 
+            details: {
+              provided: data.hours,
+              calculated: roundedHours,
+              message: 'Hours must match the time difference rounded to 15-minute increments'
+            }
+          },
+          { status: 400 }
+        )
+      }
+    } else {
+      // Direct hours entry - create synthetic start/end times
+      const dateObj = new Date(data.date)
+      // Default to 8 AM start time
+      startTime = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), 8, 0)
+      // Calculate end time based on hours
+      endTime = new Date(startTime.getTime() + (data.hours * 60 * 60 * 1000))
     }
-    
-    const finalHours = data.hours
 
     // Check for overlapping time entries for the same user on the same day
     const overlapCheck = await query(`

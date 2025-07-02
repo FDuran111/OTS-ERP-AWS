@@ -4,7 +4,7 @@ import { startOfMonth, endOfMonth, subMonths, differenceInDays } from 'date-fns'
 import { withRBAC } from '@/lib/rbac-middleware'
 
 export const GET = withRBAC({ requiredRoles: ['OWNER_ADMIN', 'FOREMAN'] })(
-async function GET(request) {
+async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period') || 'month' // month, quarter, year
@@ -54,18 +54,23 @@ async function GET(request) {
     // Get aging report for unpaid invoices
     const agingResult = await query(`
       SELECT 
-        CASE 
-          WHEN CURRENT_DATE - i."dueDate" <= 0 THEN 'current'
-          WHEN CURRENT_DATE - i."dueDate" BETWEEN 1 AND 30 THEN '1-30'
-          WHEN CURRENT_DATE - i."dueDate" BETWEEN 31 AND 60 THEN '31-60'
-          WHEN CURRENT_DATE - i."dueDate" BETWEEN 61 AND 90 THEN '61-90'
-          ELSE '90+'
-        END as age_bucket,
+        age_bucket,
         COUNT(*) as count,
-        SUM(i."totalAmount") as total_amount
-      FROM "Invoice" i
-      WHERE i.status IN ('SENT', 'OVERDUE')
-        AND i."createdAt" >= $1 AND i."createdAt" <= $2
+        SUM(total_amount) as total_amount
+      FROM (
+        SELECT 
+          i."totalAmount" as total_amount,
+          CASE 
+            WHEN CURRENT_DATE - i."dueDate"::date <= 0 THEN 'current'
+            WHEN CURRENT_DATE - i."dueDate"::date BETWEEN 1 AND 30 THEN '1-30'
+            WHEN CURRENT_DATE - i."dueDate"::date BETWEEN 31 AND 60 THEN '31-60'
+            WHEN CURRENT_DATE - i."dueDate"::date BETWEEN 61 AND 90 THEN '61-90'
+            ELSE '90+'
+          END as age_bucket
+        FROM "Invoice" i
+        WHERE i.status IN ('SENT', 'OVERDUE')
+          AND i."createdAt" >= $1 AND i."createdAt" <= $2
+      ) as aged_invoices
       GROUP BY age_bucket
       ORDER BY 
         CASE age_bucket
@@ -85,7 +90,7 @@ async function GET(request) {
         i."totalAmount",
         i."dueDate",
         i.status,
-        CURRENT_DATE - i."dueDate" as days_overdue,
+        CURRENT_DATE - i."dueDate"::date as days_overdue,
         c.id as customer_id,
         COALESCE(c."companyName", CONCAT(c."firstName", ' ', c."lastName")) as customer_name,
         j."jobNumber",

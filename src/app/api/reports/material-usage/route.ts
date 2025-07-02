@@ -4,7 +4,7 @@ import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns'
 import { withRBAC } from '@/lib/rbac-middleware'
 
 export const GET = withRBAC({ requiredRoles: ['OWNER_ADMIN', 'FOREMAN'] })(
-async function GET(request) {
+async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period') || 'month' // month, quarter, year
@@ -81,7 +81,7 @@ async function GET(request) {
         COUNT(DISTINCT mu."materialId") as material_types_used,
         SUM(mu.quantity * COALESCE(mu."unitCost", m.cost)) as total_cost,
         COUNT(DISTINCT mu."jobId") as job_count,
-        AVG(mu.quantity * m."unitCost") as avg_material_cost_per_job
+        AVG(mu.quantity * COALESCE(mu."unitCost", m.cost)) as avg_material_cost_per_job
       FROM "Job" j
       INNER JOIN "MaterialUsage" mu ON j.id = mu."jobId"
       INNER JOIN "Material" m ON mu."materialId" = m.id
@@ -159,7 +159,7 @@ async function GET(request) {
         COUNT(DISTINCT mu."materialId") as materials_used,
         SUM(mu.quantity * COALESCE(mu."unitCost", m.cost)) as total_cost,
         COUNT(DISTINCT mu."jobId") as jobs_with_materials,
-        AVG(mu.quantity * m."unitCost") as avg_cost_per_usage
+        AVG(mu.quantity * COALESCE(mu."unitCost", m.cost)) as avg_cost_per_usage
       FROM "Material" m
       LEFT JOIN "MaterialUsage" mu ON m.id = mu."materialId"
       WHERE mu."usedAt" >= $1 AND mu."usedAt" <= $2

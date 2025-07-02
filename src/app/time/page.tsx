@@ -149,32 +149,8 @@ export default function TimePage() {
 
   if (!user) return null
 
-  // Action buttons for the page header
-  const actionButtons = (
-    <Stack 
-      direction={{ xs: 'column', sm: 'row' }} 
-      spacing={1} 
-      sx={{ 
-        width: { xs: '100%', sm: 'auto' },
-        alignItems: { xs: 'stretch', sm: 'center' }
-      }}
-    >
-      <Button
-        variant="contained"
-        startIcon={<TimeIcon />}
-        onClick={() => router.push('/time/mobile')}
-        sx={{ 
-          bgcolor: 'success.main', 
-          '&:hover': { bgcolor: 'success.dark' },
-          flex: { xs: 1, sm: 'none' },
-          minWidth: { xs: 'auto', sm: '140px' }
-        }}
-        size={isMobile ? 'small' : 'medium'}
-      >
-        {isMobile ? 'Mobile Clock' : 'Mobile Clock'}
-      </Button>
-    </Stack>
-  )
+  // Action buttons for the page header - removed clock functionality
+  const actionButtons = null
 
   // Breadcrumbs for navigation
   const breadcrumbs = [
@@ -194,7 +170,7 @@ export default function TimePage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Time Tracking"
-        subtitle="Log time worked on jobs - simplified workflow, no timers needed"
+        subtitle="Manually log hours worked on jobs - perfect for field crews"
         breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >

@@ -137,21 +137,21 @@ export const GET = withRBAC({
       summary: {
         totalJobs: parseInt(overallStats.total_jobs),
         totalCustomers: parseInt(overallStats.total_customers),
-        totalRevenue,
+        totalBilled: parseFloat(overallStats.total_billed) || 0,
+        totalEstimated: parseFloat(overallStats.total_estimated) || 0,
         totalCost,
-        netProfit: totalRevenue - totalCost,
-        profitMargin: profitMargin.toFixed(2),
+        profitMargin,
         avgJobValue: parseFloat(overallStats.avg_job_value) || 0
       },
       revenueByStatus: revenueByStatusResult.rows.map(row => ({
         status: row.status,
         jobCount: parseInt(row.job_count),
-        revenue: parseFloat(row.total_revenue) || 0
+        totalRevenue: parseFloat(row.total_revenue) || 0
       })),
       revenueByType: revenueByTypeResult.rows.map(row => ({
         type: row.type,
         jobCount: parseInt(row.job_count),
-        revenue: parseFloat(row.total_revenue) || 0
+        totalRevenue: parseFloat(row.total_revenue) || 0
       })),
       monthlyTrend: monthlyTrendResult.rows.reverse().map(row => ({
         month: row.month,
@@ -159,18 +159,15 @@ export const GET = withRBAC({
         revenue: parseFloat(row.revenue) || 0
       })),
       topCustomers: topCustomersResult.rows.map(row => ({
-        id: row.id,
-        name: row.customer_name,
+        customerName: row.customer_name,
         jobCount: parseInt(row.job_count),
-        revenue: parseFloat(row.total_revenue) || 0
+        totalRevenue: parseFloat(row.total_revenue) || 0
       })),
-      invoiceStats: invoiceStatsResult.rows.reduce((acc, row) => {
-        acc[row.status.toLowerCase()] = {
-          count: parseInt(row.count),
-          amount: parseFloat(row.total_amount) || 0
-        }
-        return acc
-      }, {} as Record<string, { count: number; amount: number }>)
+      invoiceStatus: invoiceStatsResult.rows.map(row => ({
+        status: row.status,
+        count: parseInt(row.count),
+        totalAmount: parseFloat(row.total_amount) || 0
+      }))
     })
   } catch (error) {
     console.error('Error generating revenue report:', error)

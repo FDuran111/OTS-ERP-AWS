@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   Box,
   Card,
@@ -309,14 +311,19 @@ export default function CostManagementPage() {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
-      </Box>
+      <ResponsiveLayout>
+        <ResponsiveContainer>
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
+        </ResponsiveContainer>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <ResponsiveLayout>
+      <ResponsiveContainer>
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" gutterBottom>
@@ -823,6 +830,7 @@ export default function CostManagementPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }
