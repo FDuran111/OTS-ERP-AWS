@@ -64,17 +64,11 @@ export async function GET(
     )
     dependencies.purchaseOrders.approved = parseInt(poApprovedResult.rows[0].count)
 
-    const poReceivedResult = await query(
-      'SELECT COUNT(*) as count FROM "POReceiving" WHERE "receivedBy" = $1',
-      [userId]
-    )
-    dependencies.purchaseOrders.received = parseInt(poReceivedResult.rows[0].count)
+    // Skip POReceiving since table doesn't exist
+    dependencies.purchaseOrders.received = 0
 
-    const poPendingResult = await query(
-      'SELECT COUNT(*) as count FROM "PurchaseOrder" WHERE "currentApprover" = $1 AND status = \'PENDING\'',
-      [userId]
-    )
-    dependencies.purchaseOrders.pending = parseInt(poPendingResult.rows[0].count)
+    // Skip pending PO check since currentApprover column doesn't exist
+    dependencies.purchaseOrders.pending = 0
 
     // Check Service Calls
     const scAssignedResult = await query(
@@ -109,13 +103,8 @@ export async function GET(
     )
     dependencies.activeSchedules = parseInt(schedulesResult.rows[0].count)
 
-    // Check Approval Rules
-    const approvalRulesResult = await query(
-      `SELECT COUNT(*) as count FROM "POApprovalRule" 
-       WHERE "level1Approver" = $1 OR "level2Approver" = $1 OR "level3Approver" = $1`,
-      [userId]
-    )
-    dependencies.approvalRules = parseInt(approvalRulesResult.rows[0].count)
+    // Skip approval rules since POApprovalRule table doesn't exist
+    dependencies.approvalRules = 0
 
     // Calculate total dependencies
     dependencies.totalDependencies = 
@@ -136,16 +125,7 @@ export async function GET(
       approvalRules: [] as any[]
     }
 
-    if (dependencies.purchaseOrders.pending > 0) {
-      const pendingPOs = await query(
-        `SELECT id, "orderNumber", "totalAmount" 
-         FROM "PurchaseOrder" 
-         WHERE "currentApprover" = $1 AND status = 'PENDING' 
-         LIMIT 5`,
-        [userId]
-      )
-      reassignmentNeeded.pendingPurchaseOrders = pendingPOs.rows
-    }
+    // Skip pending POs since currentApprover column doesn't exist
 
     if (dependencies.serviceCalls.assigned > 0) {
       const activeSCs = await query(
@@ -158,16 +138,7 @@ export async function GET(
       reassignmentNeeded.activeServiceCalls = activeSCs.rows
     }
 
-    if (dependencies.approvalRules > 0) {
-      const rules = await query(
-        `SELECT id, "categoryId", "minAmount", "maxAmount" 
-         FROM "POApprovalRule" 
-         WHERE "level1Approver" = $1 OR "level2Approver" = $1 OR "level3Approver" = $1 
-         LIMIT 5`,
-        [userId]
-      )
-      reassignmentNeeded.approvalRules = rules.rows
-    }
+    // Skip approval rules since table doesn't exist
 
     return NextResponse.json({
       userId,

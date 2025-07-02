@@ -112,15 +112,31 @@ export default function UserManagement() {
     }
 
     try {
-      const response = await fetch(`/api/users/${userId}?permanent=true`, {
-        method: 'DELETE'
+      // Ensure proper URL encoding for the user ID
+      const encodedUserId = encodeURIComponent(userId)
+      const response = await fetch(`/api/users/${encodedUserId}?permanent=true`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
 
-      const data = await response.json()
+      // Check if response is JSON
+      let data
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json()
+      } else {
+        // If not JSON, try to get text
+        const text = await response.text()
+        console.error('Non-JSON response:', text)
+        data = { error: 'Server returned non-JSON response' }
+      }
 
       if (!response.ok) {
+        console.error('Delete failed:', response.status, data)
         if (data.details) {
-          alert(`Error: ${data.error}\n\nDetails:\n${data.details.join ? data.details.join('\n') : data.details}`)
+          alert(`Error: ${data.error}\n\nDetails:\n${Array.isArray(data.details) ? data.details.join('\n') : data.details}`)
         } else {
           alert(`Error: ${data.error || 'Failed to permanently delete user'}`)
         }
@@ -131,7 +147,10 @@ export default function UserManagement() {
       await fetchUsers()
     } catch (err) {
       console.error('Error permanently deleting user:', err)
-      alert('Failed to permanently delete user')
+      if (err instanceof Error) {
+        console.error('Error details:', err.message, err.stack)
+      }
+      alert('Failed to permanently delete user - check console for details')
     }
   }
 
@@ -171,9 +190,13 @@ export default function UserManagement() {
   }
 
   const filteredUsers = users.filter(user => {
-    // First filter by active status
-    if (!showInactive && !user.active) {
-      return false
+    // Filter by active/inactive status
+    if (showInactive) {
+      // When toggle is ON, show ONLY inactive users
+      if (user.active) return false
+    } else {
+      // When toggle is OFF, show ONLY active users
+      if (!user.active) return false
     }
     
     // Then filter by search term
@@ -305,33 +328,41 @@ export default function UserManagement() {
                       {new Date(user.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditUser(user)}
-                        disabled={user.id === currentUser?.id}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      {user.active ? (
-                        <Tooltip title="Deactivate user">
+                      <Tooltip title={user.id === currentUser?.id ? "Cannot edit your own account" : "Edit user"}>
+                        <span>
                           <IconButton
                             size="small"
-                            onClick={() => handleDeleteUser(user)}
+                            onClick={() => handleEditUser(user)}
                             disabled={user.id === currentUser?.id}
                           >
-                            <DeleteIcon fontSize="small" />
+                            <EditIcon fontSize="small" />
                           </IconButton>
+                        </span>
+                      </Tooltip>
+                      {user.active ? (
+                        <Tooltip title={user.id === currentUser?.id ? "Cannot delete your own account" : "Deactivate user"}>
+                          <span>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteUser(user)}
+                              disabled={user.id === currentUser?.id}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                       ) : (
-                        <Tooltip title="Permanently delete user">
-                          <IconButton
-                            size="small"
-                            onClick={() => handlePermanentDelete(user.id)}
-                            disabled={user.id === currentUser?.id}
-                            sx={{ color: 'error.main' }}
-                          >
-                            <DeleteForeverIcon fontSize="small" />
-                          </IconButton>
+                        <Tooltip title={user.id === currentUser?.id ? "Cannot delete your own account" : "Permanently delete user"}>
+                          <span>
+                            <IconButton
+                              size="small"
+                              onClick={() => handlePermanentDelete(user.id)}
+                              disabled={user.id === currentUser?.id}
+                              sx={{ color: 'error.main' }}
+                            >
+                              <DeleteForeverIcon fontSize="small" />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                       )}
                     </TableCell>

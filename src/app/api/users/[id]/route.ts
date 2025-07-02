@@ -221,37 +221,35 @@ export async function DELETE(
       await query('BEGIN')
 
       try {
+        console.log('Starting permanent deletion for user:', userId)
+        
         // Delete related records first (in order of dependencies)
         // Delete time entries
+        console.log('Deleting time entries...')
         await query('DELETE FROM "TimeEntry" WHERE "userId" = $1', [userId])
         
         // Delete employee schedules
         await query('DELETE FROM "EmployeeSchedule" WHERE "userId" = $1', [userId])
         
         // Clear user references in purchase orders (set to NULL)
+        console.log('Clearing purchase order references...')
         await query('UPDATE "PurchaseOrder" SET "createdBy" = NULL WHERE "createdBy" = $1', [userId])
-        await query('UPDATE "PurchaseOrder" SET "currentApprover" = NULL WHERE "currentApprover" = $1', [userId])
         await query('UPDATE "PurchaseOrder" SET "approvedBy" = NULL WHERE "approvedBy" = $1', [userId])
-        await query('UPDATE "PurchaseOrder" SET "rejectedBy" = NULL WHERE "rejectedBy" = $1', [userId])
+        // Note: currentApprover and rejectedBy columns don't exist
         
         // Clear user references in service calls
         await query('UPDATE "ServiceCall" SET "assignedTechnicianId" = NULL WHERE "assignedTechnicianId" = $1', [userId])
         await query('UPDATE "ServiceCall" SET "dispatchedBy" = NULL WHERE "dispatchedBy" = $1', [userId])
         
-        // Delete from approval history
-        await query('DELETE FROM "POApprovalHistory" WHERE "approverId" = $1', [userId])
-        
-        // Delete from receiving records
-        await query('DELETE FROM "POReceiving" WHERE "receivedBy" = $1', [userId])
-        
-        // Clear from approval rules
-        await query('UPDATE "POApprovalRule" SET "level1Approver" = NULL WHERE "level1Approver" = $1', [userId])
-        await query('UPDATE "POApprovalRule" SET "level2Approver" = NULL WHERE "level2Approver" = $1', [userId])
-        await query('UPDATE "POApprovalRule" SET "level3Approver" = NULL WHERE "level3Approver" = $1', [userId])
+        // Note: POApprovalHistory, POReceiving, and POApprovalRule tables don't exist
+        // so we skip those operations
+        console.log('Skipping non-existent tables (POApprovalHistory, POReceiving, POApprovalRule)')
         
         // Finally delete the user
+        console.log('Deleting user record...')
         await query('DELETE FROM "User" WHERE id = $1', [userId])
         
+        console.log('Committing transaction...')
         await query('COMMIT')
         
         console.log(`User ${user.name} (${user.email}) permanently deleted by ${currentUser.name}`)
@@ -267,6 +265,7 @@ export async function DELETE(
         })
         
       } catch (error) {
+        console.error('Error during permanent deletion:', error)
         await query('ROLLBACK')
         throw error
       }
@@ -283,15 +282,7 @@ export async function DELETE(
     // Check for blocking dependencies
     const blockingDependencies = []
 
-    // Check for pending purchase orders
-    const pendingPOResult = await query(
-      'SELECT COUNT(*) as count FROM "PurchaseOrder" WHERE "currentApprover" = $1 AND status = \'PENDING\'',
-      [userId]
-    )
-    const pendingPOCount = parseInt(pendingPOResult.rows[0].count)
-    if (pendingPOCount > 0) {
-      blockingDependencies.push(`${pendingPOCount} pending purchase order(s) awaiting approval`)
-    }
+    // Skip pending PO check since currentApprover column doesn't exist
 
     // Check for active service calls
     const activeServiceCallsResult = await query(
@@ -303,16 +294,7 @@ export async function DELETE(
       blockingDependencies.push(`${activeServiceCalls} active service call(s) assigned`)
     }
 
-    // Check for approval rules
-    const approvalRulesResult = await query(
-      `SELECT COUNT(*) as count FROM "POApprovalRule" 
-       WHERE "level1Approver" = $1 OR "level2Approver" = $1 OR "level3Approver" = $1`,
-      [userId]
-    )
-    const approvalRules = parseInt(approvalRulesResult.rows[0].count)
-    if (approvalRules > 0) {
-      blockingDependencies.push(`${approvalRules} purchase order approval rule(s)`)
-    }
+    // Skip approval rules check since POApprovalRule table doesn't exist
 
     // Check if they're the last active OWNER_ADMIN
     if (currentUser.role === 'OWNER_ADMIN') {

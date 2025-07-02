@@ -85,15 +85,8 @@ export async function POST(
     try {
       // Reassign Purchase Orders
       if (data.reassignPurchaseOrders) {
-        // Reassign pending approvals
-        const pendingPOResult = await query(
-          `UPDATE "PurchaseOrder" 
-           SET "currentApprover" = $2, "updatedAt" = CURRENT_TIMESTAMP
-           WHERE "currentApprover" = $1 AND status = 'PENDING'
-           RETURNING id`,
-          [userId, data.newUserId]
-        )
-        reassignmentResults.purchaseOrders.pending = pendingPOResult.rows.length
+        // Skip pending approvals since currentApprover column doesn't exist
+        reassignmentResults.purchaseOrders.pending = 0
 
         // Reassign created by (for historical tracking)
         const createdPOResult = await query(
@@ -129,44 +122,10 @@ export async function POST(
         reassignmentResults.serviceCalls.dispatched = dispatchedSCResult.rows.length
       }
 
-      // Reassign Approval Rules
+      // Skip approval rules since POApprovalRule table doesn't exist
       if (data.reassignApprovalRules) {
-        // Check if new user has appropriate role for approval rules
-        if (userInfo.new_role !== 'OWNER_ADMIN' && userInfo.new_role !== 'FOREMAN') {
-          await query('ROLLBACK')
-          return NextResponse.json(
-            { error: 'New user must be OWNER_ADMIN or FOREMAN to be assigned approval rules' },
-            { status: 400 }
-          )
-        }
-
-        // Update all approval levels
-        const level1Result = await query(
-          `UPDATE "POApprovalRule" 
-           SET "level1Approver" = $2, "updatedAt" = CURRENT_TIMESTAMP
-           WHERE "level1Approver" = $1
-           RETURNING id`,
-          [userId, data.newUserId]
-        )
-
-        const level2Result = await query(
-          `UPDATE "POApprovalRule" 
-           SET "level2Approver" = $2, "updatedAt" = CURRENT_TIMESTAMP
-           WHERE "level2Approver" = $1
-           RETURNING id`,
-          [userId, data.newUserId]
-        )
-
-        const level3Result = await query(
-          `UPDATE "POApprovalRule" 
-           SET "level3Approver" = $2, "updatedAt" = CURRENT_TIMESTAMP
-           WHERE "level3Approver" = $1
-           RETURNING id`,
-          [userId, data.newUserId]
-        )
-
-        reassignmentResults.approvalRules.reassigned = 
-          level1Result.rows.length + level2Result.rows.length + level3Result.rows.length
+        console.log('Skipping approval rules reassignment - POApprovalRule table does not exist')
+        reassignmentResults.approvalRules.reassigned = 0
       }
 
       // Commit transaction

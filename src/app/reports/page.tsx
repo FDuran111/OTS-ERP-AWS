@@ -20,6 +20,9 @@ import {
   List,
   ListItemText,
   Divider,
+  CircularProgress,
+  Snackbar,
+  Alert,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -104,6 +107,12 @@ export default function ReportsPage() {
   const [timeRange, setTimeRange] = useState('month')
   const [quickStats, setQuickStats] = useState<QuickStat[]>([])
   const [loading, setLoading] = useState(true)
+  const [generatingReport, setGeneratingReport] = useState<string | null>(null)
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean
+    message: string
+    severity: 'success' | 'error'
+  }>({ open: false, message: '', severity: 'success' })
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -167,6 +176,8 @@ export default function ReportsPage() {
 
   const handleGenerateReport = async (reportType: string) => {
     try {
+      setGeneratingReport(reportType)
+      
       const apiEndpoints: Record<string, string> = {
         'Revenue Report': '/api/reports/revenue',
         'Job Performance': '/api/reports/job-performance',
@@ -178,7 +189,11 @@ export default function ReportsPage() {
 
       const endpoint = apiEndpoints[reportType]
       if (!endpoint) {
-        alert('Report type not implemented yet')
+        setSnackbar({
+          open: true,
+          message: 'Report type not implemented yet',
+          severity: 'error'
+        })
         return
       }
 
@@ -186,15 +201,36 @@ export default function ReportsPage() {
       if (response.ok) {
         const data = await response.json()
         
-        // For now, show the data in console and alert
-        console.log(`${reportType} Data:`, data)
-        alert(`${reportType} generated successfully! Check console for data. In a real app, this would download a PDF or open a detailed report view.`)
+        // Generate PDF for Revenue Report
+        if (reportType === 'Revenue Report') {
+          const { generateRevenueReportPDF } = await import('@/lib/pdf/revenue-report')
+          generateRevenueReportPDF(data)
+          setSnackbar({
+            open: true,
+            message: `${reportType} PDF downloaded successfully!`,
+            severity: 'success'
+          })
+        } else {
+          // For other reports, show the data in console and alert for now
+          console.log(`${reportType} Data:`, data)
+          setSnackbar({
+            open: true,
+            message: `${reportType} generated! PDF generation for this report type coming soon.`,
+            severity: 'success'
+          })
+        }
       } else {
         throw new Error('Failed to generate report')
       }
     } catch (error) {
       console.error('Error generating report:', error)
-      alert('Failed to generate report. Please try again.')
+      setSnackbar({
+        open: true,
+        message: 'Failed to generate report. Please try again.',
+        severity: 'error'
+      })
+    } finally {
+      setGeneratingReport(null)
     }
   }
 
@@ -288,11 +324,18 @@ export default function ReportsPage() {
                       </Typography>
                       <Button
                         size="small"
-                        startIcon={<DownloadIcon />}
+                        startIcon={
+                          generatingReport === report.title ? (
+                            <CircularProgress size={16} />
+                          ) : (
+                            <DownloadIcon />
+                          )
+                        }
                         sx={{ color: report.color }}
                         onClick={() => handleGenerateReport(report.title)}
+                        disabled={generatingReport !== null}
                       >
-                        Generate
+                        {generatingReport === report.title ? 'Generating...' : 'Generate'}
                       </Button>
                     </Box>
                   </CardContent>
@@ -324,6 +367,21 @@ export default function ReportsPage() {
               </List>
             </CardContent>
           </Card>
+
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={6000}
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <Alert
+              onClose={() => setSnackbar({ ...snackbar, open: false })}
+              severity={snackbar.severity}
+              sx={{ width: '100%' }}
+            >
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
       </ResponsiveContainer>
     </ResponsiveLayout>
   )
