@@ -191,17 +191,13 @@ export function CalendarGrid({
               const isCurrentMonth = isSameMonth(day, currentDate)
               const isToday = isSameDay(day, new Date())
 
-              // Skip days from other months to show only current month
-              if (!isCurrentMonth) {
-                return null
-              }
-
               return (
                 <CalendarDay
                   key={day.toISOString()}
                   date={day}
                   jobs={jobsOnDay}
                   isToday={isToday}
+                  isCurrentMonth={isCurrentMonth}
                   onDateClick={onDateClick}
                   onCrewAssignment={onCrewAssignment}
                   onMaterialReservation={onMaterialReservation}

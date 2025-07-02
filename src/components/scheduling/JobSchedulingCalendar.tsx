@@ -68,6 +68,10 @@ import {
   isSameMonth,
   addDays,
   subDays,
+  addMonths,
+  subMonths,
+  addWeeks,
+  subWeeks,
   parseISO
 } from 'date-fns'
 import CrewAssignmentDialog from './CrewAssignmentDialog'
@@ -385,7 +389,7 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
             }}>
               <Button 
                 variant="outlined"
-                onClick={() => setCurrentDate(subDays(currentDate, view === 'month' ? 30 : 7))}
+                onClick={() => setCurrentDate(view === 'month' ? subMonths(currentDate, 1) : subWeeks(currentDate, 1))}
                 sx={{ 
                   fontWeight: 500,
                   fontSize: { xs: '0.75rem', sm: '0.875rem' },
@@ -405,7 +409,7 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
               </Typography>
               <Button 
                 variant="outlined"
-                onClick={() => setCurrentDate(addDays(currentDate, view === 'month' ? 30 : 7))}
+                onClick={() => setCurrentDate(view === 'month' ? addMonths(currentDate, 1) : addWeeks(currentDate, 1))}
                 sx={{ 
                   fontWeight: 500,
                   fontSize: { xs: '0.75rem', sm: '0.875rem' },
@@ -440,6 +444,7 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
         <DualCalendarView
           schedules={scheduleEntries}
           currentDate={currentDate}
+          view={view}
           onDateClick={handleDateClick}
           onCrewAssignment={handleCrewAssignment}
           onMaterialReservation={handleMaterialReservation}

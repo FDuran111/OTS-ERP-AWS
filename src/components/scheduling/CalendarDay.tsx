@@ -16,6 +16,7 @@ interface CalendarDayProps {
   date: Date
   jobs: any[]
   isToday: boolean
+  isCurrentMonth?: boolean
   onDateClick: (date: Date) => void
   onCrewAssignment: (entry: any) => void
   onMaterialReservation: (entry: any) => void
@@ -44,6 +45,7 @@ export function CalendarDay({
   date,
   jobs,
   isToday,
+  isCurrentMonth = true,
   onDateClick,
   onCrewAssignment,
   onMaterialReservation
@@ -58,10 +60,13 @@ export function CalendarDay({
         cursor: 'pointer',
         position: 'relative',
         border: 2,
-        borderColor: isToday ? 'primary.main' : 'grey.200',
+        borderColor: isToday ? 'primary.main' : isCurrentMonth ? 'grey.200' : 'grey.100',
         bgcolor: isToday 
           ? alpha('#1976d2', 0.03) 
-          : 'background.paper',
+          : isCurrentMonth 
+            ? 'background.paper'
+            : 'grey.50',
+        opacity: isCurrentMonth ? 1 : 0.6,
         transition: 'all 0.2s ease-in-out',
         display: 'flex',
         flexDirection: 'column',
@@ -69,10 +74,13 @@ export function CalendarDay({
         '&:hover': {
           bgcolor: isToday 
             ? alpha('#1976d2', 0.06)
-            : 'grey.50',
+            : isCurrentMonth 
+              ? 'grey.50'
+              : 'grey.100',
           boxShadow: 2,
           borderColor: isToday ? 'primary.main' : 'grey.300',
-          transform: 'translateY(-1px)'
+          transform: 'translateY(-1px)',
+          opacity: 1
         },
       }}
       onClick={() => onDateClick(date)}
@@ -98,7 +106,11 @@ export function CalendarDay({
           variant="body2"
           sx={{
             fontWeight: isToday ? 700 : 600,
-            color: isToday ? 'primary.main' : 'text.primary',
+            color: isToday 
+              ? 'primary.main' 
+              : isCurrentMonth 
+                ? 'text.primary'
+                : 'text.secondary',
             fontSize: '1rem',
             lineHeight: 1
           }}

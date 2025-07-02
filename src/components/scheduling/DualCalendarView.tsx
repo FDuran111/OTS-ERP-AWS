@@ -19,7 +19,7 @@ import {
   SettingsInputComponent as LowVoltageIcon,
   ViewModule as DualViewIcon,
 } from '@mui/icons-material'
-import { format, startOfWeek, endOfWeek, addWeeks } from 'date-fns'
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks } from 'date-fns'
 import { CalendarGrid } from './CalendarGrid'
 import { DIVISIONS, divisionConfig, canAccessDivision, getAccessibleDivisions } from '@/lib/divisions'
 
@@ -62,6 +62,7 @@ interface ScheduleEntry {
 interface DualCalendarViewProps {
   schedules: ScheduleEntry[]
   currentDate: Date
+  view: 'month' | 'week'
   onDateClick: (date: Date) => void
   onCrewAssignment: (entry: ScheduleEntry) => void
   onMaterialReservation: (entry: ScheduleEntry) => void
@@ -73,6 +74,7 @@ type ViewMode = 'BOTH' | 'LOW_VOLTAGE' | 'LINE_VOLTAGE'
 export default function DualCalendarView({
   schedules,
   currentDate,
+  view,
   onDateClick,
   onCrewAssignment,
   onMaterialReservation,
@@ -125,12 +127,24 @@ export default function DualCalendarView({
     })
   }
 
-  // Get calendar days for the week
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
-  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 })
+  // Get calendar days based on view mode
   const days = []
-  for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
-    days.push(new Date(d))
+  if (view === 'week') {
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
+    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 })
+    for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+      days.push(new Date(d))
+    }
+  } else {
+    // Month view
+    const monthStart = startOfMonth(currentDate)
+    const monthEnd = endOfMonth(currentDate)
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 })
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 })
+    
+    for (let d = new Date(calendarStart); d <= calendarEnd; d.setDate(d.getDate() + 1)) {
+      days.push(new Date(d))
+    }
   }
 
   // Get jobs for a specific date and division
@@ -158,7 +172,10 @@ export default function DualCalendarView({
       {/* View Mode Toggle */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5">
-          Schedule Calendar - Week of {format(weekStart, 'MMM d, yyyy')}
+          Schedule Calendar - {view === 'week' 
+            ? `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 0 }), 'MMM d, yyyy')}`
+            : format(currentDate, 'MMMM yyyy')
+          }
         </Typography>
         
         <ToggleButtonGroup
