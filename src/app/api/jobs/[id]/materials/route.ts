@@ -8,7 +8,7 @@ const materialUsageSchema = z.object({
   quantity: z.number().positive(),
   usageType: z.enum(['CONSUMED', 'WASTED', 'RETURNED', 'TRANSFERRED']).default('CONSUMED'),
   notes: z.string().optional(),
-  userId: z.string().optional(),
+  usedBy: z.string().optional(),
 })
 
 // GET materials used on a job
@@ -30,7 +30,7 @@ export async function GET(
       FROM "MaterialUsage" mu
       INNER JOIN "Material" m ON mu."materialId" = m.id
       LEFT JOIN "JobPhase" jp ON mu."phaseId" = jp.id
-      LEFT JOIN "User" u ON mu."userId" = u.id
+      LEFT JOIN "User" u ON mu."usedBy" = u.id
       WHERE mu."jobId" = $1
       ORDER BY mu."usedAt" DESC`,
       [resolvedParams.id]
@@ -46,7 +46,7 @@ export async function GET(
       materialCategory: row.materialCategory,
       phaseId: row.phaseId,
       phaseName: row.phaseName,
-      userId: row.userId,
+      userId: row.usedBy,
       userName: row.userName,
       quantityUsed: parseFloat(row.quantity || 0),
       unitCost: parseFloat(row.unitCost || 0),
@@ -149,12 +149,12 @@ export async function POST(
       // Record material usage
       const usageResult = await query(
         `INSERT INTO "MaterialUsage" (
-          "jobId", "materialId", "phaseId", "userId",
+          "jobId", "materialId", "phaseId", "usedBy",
           "quantity", "unitCost", "totalCost", "usedAt"
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
         RETURNING *`,
         [
-          resolvedParams.id, data.materialId, data.phaseId, data.userId,
+          resolvedParams.id, data.materialId, data.phaseId, data.usedBy,
           data.quantity, unitCost, totalCost
         ]
       )
@@ -176,12 +176,12 @@ export async function POST(
         const movementType = data.usageType === 'RETURNED' ? 'RETURN' : 'JOB_USAGE'
         await query(
           `INSERT INTO "StockMovement" (
-            "materialId", "jobId", "userId", type,
+            "materialId", "jobId", "usedBy", type,
             "quantityBefore", "quantityChanged", "quantityAfter",
             "unitCost", "totalValue", reason
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
           [
-            data.materialId, resolvedParams.id, data.userId, movementType,
+            data.materialId, resolvedParams.id, data.usedBy, movementType,
             material.inStock, stockChange, newStock,
             unitCost, Math.abs(stockChange) * unitCost,
             `Material ${data.usageType.toLowerCase()} for job usage`
