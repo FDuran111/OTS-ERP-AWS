@@ -184,6 +184,11 @@ export function CalendarDay({
                       </Typography>
                     </>
                   )}
+                  <br />
+                  <br />
+                  <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'primary.main' }}>
+                    📷 Click to view job details and upload photos
+                  </Typography>
                 </Box>
               }
               arrow

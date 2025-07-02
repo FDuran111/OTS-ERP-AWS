@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Dialog,
   DialogTitle,
@@ -28,6 +29,8 @@ import {
   CheckCircle as CheckIcon,
   Schedule as ScheduleIcon,
   Close as CloseIcon,
+  Visibility as ViewIcon,
+  CameraAlt as CameraIcon,
 } from '@mui/icons-material'
 import { format, parseISO } from 'date-fns'
 
@@ -65,6 +68,7 @@ export default function CrewAssignmentDialog({
   schedule, 
   onAssignmentUpdate 
 }: CrewAssignmentDialogProps) {
+  const router = useRouter()
   const [availableCrew, setAvailableCrew] = useState<CrewMember[]>([])
   const [assignedCrew, setAssignedCrew] = useState<CrewMember[]>([])
   const [selectedCrew, setSelectedCrew] = useState<string[]>([])
@@ -184,7 +188,7 @@ export default function CrewAssignmentDialog({
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
+          <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h6">
               Crew Assignment
             </Typography>
@@ -192,9 +196,22 @@ export default function CrewAssignmentDialog({
               {schedule.job.jobNumber} - {schedule.job.title}
             </Typography>
           </Box>
-          <IconButton onClick={onClose}>
-            <CloseIcon />
-          </IconButton>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Tooltip title="View job details and upload photos">
+              <Button
+                startIcon={<ViewIcon />}
+                endIcon={<CameraIcon />}
+                size="small"
+                onClick={() => router.push(`/jobs/${schedule.jobId}`)}
+                sx={{ mr: 1 }}
+              >
+                View Job
+              </Button>
+            </Tooltip>
+            <IconButton onClick={onClose}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
         </Box>
       </DialogTitle>
 
