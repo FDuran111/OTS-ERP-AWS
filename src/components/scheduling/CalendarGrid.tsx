@@ -183,7 +183,7 @@ export function CalendarGrid({
               display: 'grid',
               gridTemplateColumns: 'repeat(7, 1fr)',
               gap: 1,
-              minHeight: { xs: '400px', sm: '500px', md: '600px' }
+              minHeight: { xs: '300px', sm: '400px', md: '500px' }
             }}
           >
             {days.map((day) => {

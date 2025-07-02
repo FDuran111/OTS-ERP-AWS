@@ -54,9 +54,9 @@ export function CalendarDay({
     <Paper
       elevation={isToday ? 3 : 0}
       sx={{
-        minHeight: 160,
+        minHeight: 120,
         height: '100%',
-        p: 1.5,
+        p: 1,
         cursor: 'pointer',
         position: 'relative',
         border: 2,
@@ -101,7 +101,7 @@ export function CalendarDay({
       )}
 
       {/* Date Number */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
         <Typography
           variant="body2"
           sx={{
@@ -111,7 +111,7 @@ export function CalendarDay({
               : isCurrentMonth 
                 ? 'text.primary'
                 : 'text.secondary',
-            fontSize: '1rem',
+            fontSize: '0.875rem',
             lineHeight: 1
           }}
         >
@@ -122,13 +122,13 @@ export function CalendarDay({
             label={jobs.length}
             size="small"
             sx={{
-              height: 20,
-              fontSize: '0.7rem',
+              height: 16,
+              fontSize: '0.65rem',
               fontWeight: 600,
               bgcolor: isToday ? 'primary.main' : 'grey.500',
               color: 'white',
               '& .MuiChip-label': {
-                px: 0.75
+                px: 0.5
               }
             }}
           />
@@ -139,11 +139,11 @@ export function CalendarDay({
       <Box sx={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        gap: 0.75, 
+        gap: 0.5, 
         flexGrow: 1, 
         overflow: 'auto',
         '&::-webkit-scrollbar': {
-          width: '4px',
+          width: '3px',
         },
         '&::-webkit-scrollbar-track': {
           background: 'transparent',
@@ -153,7 +153,7 @@ export function CalendarDay({
           borderRadius: '2px',
         }
       }}>
-        {jobs.slice(0, 3).map((entry) => {
+        {jobs.slice(0, 2).map((entry) => {
           const colors = getJobTypeColor(entry.job.type, entry.job.division)
           const priorityColor = getPriorityColor(entry.job.priority)
           
@@ -190,10 +190,10 @@ export function CalendarDay({
               placement="top"
             >
               <Paper
-                elevation={1}
+                elevation={0}
                 sx={{ 
-                  p: 1,
-                  borderRadius: 1,
+                  p: 0.75,
+                  borderRadius: 0.75,
                   bgcolor: colors.bg,
                   border: 1,
                   borderColor: colors.border,
@@ -203,7 +203,7 @@ export function CalendarDay({
                   overflow: 'hidden',
                   '&:hover': {
                     transform: 'translateY(-1px)',
-                    boxShadow: 3,
+                    boxShadow: 2,
                     borderColor: colors.text,
                   }
                 }}
@@ -225,35 +225,32 @@ export function CalendarDay({
                 />
                 
                 {/* Job Header */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.25 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
                     {entry.job.division === 'LOW_VOLTAGE' ? (
-                      <LowVoltageIcon sx={{ fontSize: '0.875rem', color: colors.text }} />
+                      <LowVoltageIcon sx={{ fontSize: '0.7rem', color: colors.text }} />
                     ) : entry.job.type === 'INSTALLATION' ? (
-                      <BuildIcon sx={{ fontSize: '0.875rem', color: colors.text }} />
+                      <BuildIcon sx={{ fontSize: '0.7rem', color: colors.text }} />
                     ) : (
-                      <ServiceIcon sx={{ fontSize: '0.875rem', color: colors.text }} />
+                      <ServiceIcon sx={{ fontSize: '0.7rem', color: colors.text }} />
                     )}
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: colors.text }}>
+                    <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: colors.text }}>
                       {entry.job.jobNumber}
                     </Typography>
                   </Box>
                   {entry.estimatedHours && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                      <ScheduleIcon sx={{ fontSize: '0.7rem', color: colors.text, opacity: 0.7 }} />
-                      <Typography sx={{ fontSize: '0.7rem', color: colors.text, opacity: 0.7 }}>
-                        {entry.estimatedHours}h
-                      </Typography>
-                    </Box>
+                    <Typography sx={{ fontSize: '0.6rem', color: colors.text, opacity: 0.7 }}>
+                      {entry.estimatedHours}h
+                    </Typography>
                   )}
                 </Box>
                 
                 {/* Customer Name */}
                 <Typography sx={{ 
-                  fontSize: '0.8rem', 
+                  fontSize: '0.7rem', 
                   fontWeight: 600,
                   color: colors.text,
-                  lineHeight: 1.2,
+                  lineHeight: 1.1,
                   mb: 0.25,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -262,33 +259,30 @@ export function CalendarDay({
                   {entry.job.customer}
                 </Typography>
                 
-                {/* Job Description */}
+                {/* Job Description - only 1 line */}
                 <Typography sx={{ 
-                  fontSize: '0.7rem', 
+                  fontSize: '0.65rem', 
                   color: colors.text,
                   opacity: 0.8,
-                  lineHeight: 1.2,
+                  lineHeight: 1.1,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical'
+                  whiteSpace: 'nowrap'
                 }}>
                   {entry.job.title || entry.job.description || 'No description'}
                 </Typography>
                 
-                {/* Crew Info */}
+                {/* Crew count only */}
                 {entry.crew && entry.crew.length > 0 && (
                   <Box sx={{ 
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 0.5,
-                    mt: 0.5
+                    gap: 0.25,
+                    mt: 0.25
                   }}>
-                    <GroupIcon sx={{ fontSize: '0.75rem', color: colors.text, opacity: 0.7 }} />
-                    <Typography sx={{ fontSize: '0.65rem', color: colors.text, opacity: 0.7 }}>
-                      {entry.crew.slice(0, 2).map((c: any) => c.name.split(' ')[0]).join(', ')}
-                      {entry.crew.length > 2 && ` +${entry.crew.length - 2}`}
+                    <GroupIcon sx={{ fontSize: '0.6rem', color: colors.text, opacity: 0.7 }} />
+                    <Typography sx={{ fontSize: '0.6rem', color: colors.text, opacity: 0.7 }}>
+                      {entry.crew.length} crew
                     </Typography>
                   </Box>
                 )}
@@ -297,21 +291,17 @@ export function CalendarDay({
           )
         })}
         
-        {jobs.length > 3 && (
-          <Paper
-            elevation={0}
+        {jobs.length > 2 && (
+          <Box
             sx={{
               textAlign: 'center',
-              py: 0.75,
-              px: 1,
+              py: 0.25,
+              px: 0.5,
               bgcolor: 'grey.100',
-              borderRadius: 1,
+              borderRadius: 0.5,
               cursor: 'pointer',
-              border: 1,
-              borderColor: 'grey.300',
               '&:hover': {
-                bgcolor: 'grey.200',
-                borderColor: 'grey.400'
+                bgcolor: 'grey.200'
               }
             }}
             onClick={(e) => {
@@ -323,13 +313,13 @@ export function CalendarDay({
               variant="caption" 
               sx={{ 
                 color: 'text.secondary',
-                fontSize: '0.7rem',
+                fontSize: '0.6rem',
                 fontWeight: 600
               }}
             >
-              +{jobs.length - 3} more job{jobs.length - 3 > 1 ? 's' : ''}
+              +{jobs.length - 2} more
             </Typography>
-          </Paper>
+          </Box>
         )}
       </Box>
     </Paper>
