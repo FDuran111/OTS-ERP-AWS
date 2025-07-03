@@ -417,7 +417,6 @@ export default function ServiceCallsPage() {
             New Service Call
           </Button>
         </Box>
-      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>

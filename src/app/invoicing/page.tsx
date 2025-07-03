@@ -64,15 +64,20 @@ interface Invoice {
   job: Job
   customer: Customer
   totalAmount: number
+  subtotalAmount: number
+  taxAmount: number
   dueDate: string
-  sentDate?: string
+  sentDate: string | null
+  paidDate: string | null
   status: string
   lineItems?: Array<{
     id: string
+    type: string
     description: string
     quantity: number
-    rate: number
-    total: number
+    unitPrice: number
+    totalPrice: number
+    materialId?: string
     laborRateId?: string
   }>
 }

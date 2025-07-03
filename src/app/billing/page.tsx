@@ -51,6 +51,8 @@ import {
   AttachMoney as MoneyIcon,
   TrendingUp,
   Clear as ClearIcon,
+  Work as WorkIcon,
+  People as PeopleIcon,
 } from '@mui/icons-material'
 import LaborRateDialog from '@/components/billing/LaborRateDialog'
 import LaborRateCard from '@/components/billing/LaborRateCard'
