@@ -211,7 +211,7 @@ export default function DashboardPage() {
       <Button
         variant="contained"
         startIcon={<AddIcon />}
-        onClick={() => handleQuickAction('/jobs/new')}
+        onClick={() => handleQuickAction('/jobs')}
         sx={{
           width: { xs: '100%', md: 'auto' },
           minWidth: { xs: 'auto', md: '120px' },
