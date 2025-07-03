@@ -252,7 +252,6 @@ export default function DashboardPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title={`Welcome back, ${user.name}`}
-        subtitle="Here's what's happening with your jobs today"
         breadcrumbs={breadcrumbs}
         actions={quickActions}
       >
