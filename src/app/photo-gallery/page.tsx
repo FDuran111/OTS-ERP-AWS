@@ -235,7 +235,6 @@ export default function PhotoGalleryPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="📸 Photo Gallery"
-        subtitle="Browse and manage all job photos, before/after shots, and documentation images"
         breadcrumbs={[
           { label: 'Home', path: '/dashboard' },
           { label: 'Photo Gallery' }
