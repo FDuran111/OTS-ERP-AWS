@@ -60,9 +60,15 @@ export default function ResponsiveContainer({
         display: 'flex',
         flexDirection: 'column',
         flexGrow: 1,
-        // Responsive padding
-        p: { 
-          xs: 2,      // mobile: 16px
+        // Responsive padding - reduced top padding for mobile to prevent header overlap
+        px: { 
+          xs: 2,      // mobile: 16px horizontal
+          sm: 3,      // tablet: 24px  
+          md: 4,      // desktop: 32px
+          lg: 4       // large desktop: 32px
+        },
+        py: {
+          xs: 1,      // mobile: 8px vertical (reduced from 16px)
           sm: 3,      // tablet: 24px  
           md: 4,      // desktop: 32px
           lg: 4       // large desktop: 32px
@@ -226,6 +232,12 @@ export const ResponsiveSpacing = {
     sm: 3,
     md: 4,
     lg: 6,
+  },
+  containerVertical: {
+    xs: 1,  // Reduced for mobile to prevent header overlap
+    sm: 3,
+    md: 4,
+    lg: 4,
   },
   section: {
     xs: 3,
