@@ -170,7 +170,6 @@ export default function TimePage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Time Tracking"
-        subtitle="Manually log hours worked on jobs - perfect for field crews"
         breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
