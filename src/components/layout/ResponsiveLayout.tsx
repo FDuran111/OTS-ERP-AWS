@@ -40,11 +40,14 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   // Keep sidebar closed by default on all screen sizes
   useEffect(() => {
     setSidebarOpen(false)
-  }, [isMobile])
+  }, [])
 
   const handleSidebarToggle = () => {
     setSidebarOpen(!sidebarOpen)
   }
+  
+  // Debug
+  console.log('Sidebar open:', sidebarOpen, 'Mobile:', isMobile)
 
   if (!user) {
     return null
@@ -88,6 +91,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           maxWidth: '100%',
           display: 'flex',
           flexDirection: 'column',
+          position: 'relative',
         }}
       >
         {/* Desktop Sidebar Toggle Button - Inside content */}
