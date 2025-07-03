@@ -448,7 +448,6 @@ export default function JobsPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Job Management"
-        subtitle="Manage and track all electrical jobs and projects"
         breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
