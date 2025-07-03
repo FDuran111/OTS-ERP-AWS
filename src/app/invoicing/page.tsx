@@ -30,6 +30,8 @@ import {
   CheckCircle,
   Warning,
   Receipt as ReceiptIcon,
+  Schedule,
+  Edit,
 } from '@mui/icons-material'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
@@ -150,7 +152,34 @@ export default function InvoicingPage() {
       const response = await fetch('/api/invoices/stats')
       if (response.ok) {
         const data = await response.json()
-        setStats(data)
+        // Transform the API response into an array of stats
+        const statsArray: Stats[] = [
+          {
+            title: 'Outstanding',
+            value: `$${data.outstanding?.outstanding_amount || 0}`,
+            icon: 'schedule',
+            color: '#ff9800'
+          },
+          {
+            title: 'Draft',
+            value: `$${data.outstanding?.draft_amount || 0}`,
+            icon: 'edit',
+            color: '#9e9e9e'
+          },
+          {
+            title: 'Paid This Month',
+            value: `$${data.paidThisMonth?.total_amount || 0}`,
+            icon: 'check_circle',
+            color: '#4caf50'
+          },
+          {
+            title: 'Overdue',
+            value: `$${data.overdue?.total_amount || 0}`,
+            icon: 'warning',
+            color: '#f44336'
+          }
+        ]
+        setStats(statsArray)
       }
     } catch (error) {
       console.error('Error fetching invoice stats:', error)
@@ -226,6 +255,8 @@ export default function InvoicingPage() {
       case 'pending_actions': return PendingActions
       case 'check_circle': return CheckCircle
       case 'warning': return Warning
+      case 'schedule': return Schedule
+      case 'edit': return Edit
       default: return AttachMoney
     }
   }
