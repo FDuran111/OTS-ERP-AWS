@@ -68,7 +68,7 @@ export default function ResponsiveContainer({
           lg: 4       // large desktop: 32px
         },
         py: {
-          xs: 1,      // mobile: 8px vertical (reduced from 16px)
+          xs: 2,      // mobile: 16px vertical (gives proper spacing from header)
           sm: 3,      // tablet: 24px  
           md: 4,      // desktop: 32px
           lg: 4       // large desktop: 32px
@@ -77,7 +77,7 @@ export default function ResponsiveContainer({
     >
       {/* Header Section */}
       {(title || breadcrumbs) && (
-        <Box className="mb-6">
+        <Box sx={{ mb: { xs: 3, sm: 4, md: 6 } }}>
           {/* Breadcrumbs */}
           {breadcrumbs && breadcrumbs.length > 0 && (
             <Breadcrumbs
@@ -234,7 +234,7 @@ export const ResponsiveSpacing = {
     lg: 6,
   },
   containerVertical: {
-    xs: 1,  // Reduced for mobile to prevent header overlap
+    xs: 2,  // Standard spacing for mobile
     sm: 3,
     md: 4,
     lg: 4,
