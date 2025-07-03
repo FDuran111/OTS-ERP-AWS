@@ -28,7 +28,6 @@ import {
   useMediaQuery,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
   People as PeopleIcon,
   PersonAdd as PersonAddIcon,
   Search as SearchIcon,
@@ -99,6 +98,77 @@ export default function CustomersPage() {
     }
   }
 
+  // Mobile CustomerCard component
+  const CustomerCard = ({ customer }: { customer: Customer }) => {
+    return (
+      <Card sx={{ 
+        mb: 2,
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: 3,
+          transform: 'translateY(-2px)',
+        },
+      }}>
+        <CardContent sx={{ p: 2.5 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                {customer.name}
+              </Typography>
+              {customer.companyName && (
+                <Typography variant="body2" color="text.secondary">
+                  {customer.companyName}
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+              <Chip
+                label={customer.type}
+                color={customer.type === 'Commercial' ? 'primary' : 'default'}
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={customer.status}
+                color={customer.status === 'active' ? 'success' : 'default'}
+                size="small"
+              />
+            </Box>
+          </Box>
+          
+          <Box sx={{ mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+              <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <Typography variant="body2">{customer.phone}</Typography>
+            </Box>
+            {customer.email && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                <Email sx={{ fontSize: 16, color: 'text.secondary' }} />
+                <Typography variant="body2">{customer.email}</Typography>
+              </Box>
+            )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <Typography variant="body2">{customer.address || 'No address'}</Typography>
+            </Box>
+          </Box>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Total Jobs: <strong>{customer.totalJobs}</strong>
+            </Typography>
+            <CustomerActionsMenu
+              customer={customer}
+              onEdit={handleEditCustomer}
+              onDelete={handleDeleteCustomer}
+              onView={handleViewCustomer}
+            />
+          </Box>
+        </CardContent>
+      </Card>
+    )
+  }
+
 
   const handleEditCustomer = (customer: Customer) => {
     setSelectedCustomer(customer)
@@ -136,7 +206,7 @@ export default function CustomersPage() {
   const actionButtons = (
     <Stack 
       direction={{ xs: 'column', sm: 'row' }} 
-      spacing={1} 
+      spacing={1.5} 
       sx={{ 
         width: { xs: '100%', sm: 'auto' },
         alignItems: { xs: 'stretch', sm: 'center' }
@@ -161,30 +231,22 @@ export default function CustomersPage() {
     </Stack>
   )
 
-  // Breadcrumbs for navigation
-  const breadcrumbs = [
-    {
-      label: 'Home',
-      path: '/dashboard',
-      icon: <DashboardIcon fontSize="small" />
-    },
-    {
-      label: 'Customers',
-      path: '/customers',
-      icon: <PeopleIcon fontSize="small" />
-    }
-  ]
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Customer Management"
-        breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
 
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
+          <Card sx={{ 
+            mb: 3,
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              boxShadow: 3,
+            },
+          }}>
+            <CardContent sx={{ p: 2.5 }}>
               <TextField
                 fullWidth
                 placeholder="Search customers by name, email, or phone..."
@@ -201,18 +263,48 @@ export default function CustomersPage() {
             </CardContent>
           </Card>
 
-          <TableContainer component={Paper}>
+          {isMobile ? (
+            <Box>
+              {loading ? (
+                <Typography align="center" sx={{ py: 4 }}>
+                  Loading customers...
+                </Typography>
+              ) : customers.length === 0 ? (
+                <Typography align="center" sx={{ py: 4 }} color="text.secondary">
+                  No customers found
+                </Typography>
+              ) : (
+                customers
+                  .filter(customer => 
+                    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                    customer.phone.includes(searchTerm)
+                  )
+                  .map((customer) => (
+                    <CustomerCard key={customer.id} customer={customer} />
+                  ))
+              )}
+            </Box>
+          ) : (
+          <TableContainer component={Paper} sx={{
+            borderRadius: 2,
+            overflow: 'hidden',
+            transition: 'box-shadow 0.2s',
+            '&:hover': {
+              boxShadow: 2,
+            },
+          }}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Contact</TableCell>
-                  <TableCell>Address</TableCell>
-                  <TableCell>Total Jobs</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>ID</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Type</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Contact</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Address</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Total Jobs</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Status</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -236,7 +328,11 @@ export default function CustomersPage() {
                       customer.phone.includes(searchTerm)
                     )
                     .map((customer) => (
-                      <TableRow key={customer.id} hover>
+                      <TableRow key={customer.id} hover sx={{ 
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}>
                         <TableCell>{customer.id.slice(0, 8)}</TableCell>
                         <TableCell>{customer.name}</TableCell>
                         <TableCell>
@@ -289,6 +385,7 @@ export default function CustomersPage() {
               </TableBody>
             </Table>
           </TableContainer>
+          )}
       </ResponsiveContainer>
 
       <CreateCustomerDialog

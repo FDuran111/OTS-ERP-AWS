@@ -25,7 +25,6 @@ import {
   Alert,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
   Work as WorkIcon,
   Schedule as ScheduleIcon,
   People as PeopleIcon,
@@ -262,27 +261,13 @@ export default function ReportsPage() {
 
   if (!user) return null
 
-  // Breadcrumbs for navigation
-  const breadcrumbs = [
-    {
-      label: 'Home',
-      path: '/dashboard',
-      icon: <DashboardIcon fontSize="small" />
-    },
-    {
-      label: 'Reports',
-      path: '/reports',
-      icon: <AssessmentIcon fontSize="small" />
-    }
-  ]
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Reports & Analytics"
-        breadcrumbs={breadcrumbs}
         actions={
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" spacing={1.5} alignItems="center">
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Time Range</InputLabel>
               <Select
@@ -300,10 +285,18 @@ export default function ReportsPage() {
         }
       >
 
-          <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
             {quickStats.map((stat) => (
               <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.label}>
-                <Paper sx={{ p: 2 }}>
+                <Paper sx={{ 
+                  p: 2.5,
+                  height: '100%',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    boxShadow: 3,
+                    transform: 'translateY(-2px)',
+                  },
+                }}>
                   <Typography color="text.secondary" variant="caption">
                     {stat.label}
                   </Typography>
@@ -316,11 +309,18 @@ export default function ReportsPage() {
           <Typography variant="h6" sx={{ mb: 2 }}>
             Available Reports
           </Typography>
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {reportTypes.map((report) => (
               <Grid size={{ xs: 12, md: 6, lg: 4 }} key={report.title}>
-                <Card>
-                  <CardContent>
+                <Card sx={{
+                  height: '100%',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    boxShadow: 3,
+                    transform: 'translateY(-2px)',
+                  },
+                }}>
+                  <CardContent sx={{ p: 2.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
                       <Box
                         sx={{
@@ -369,8 +369,14 @@ export default function ReportsPage() {
             ))}
           </Grid>
 
-          <Card sx={{ mt: 4 }}>
-            <CardContent>
+          <Card sx={{ 
+            mt: 3,
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              boxShadow: 3,
+            },
+          }}>
+            <CardContent sx={{ p: 2.5 }}>
               <Typography variant="h6" gutterBottom>
                 Recent Activity
               </Typography>

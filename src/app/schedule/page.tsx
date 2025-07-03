@@ -21,7 +21,6 @@ import {
   IconButton,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
   Schedule as ScheduleIcon,
   Notifications as NotificationsIcon,
   Event as EventIcon,
@@ -153,7 +152,7 @@ export default function SchedulePage() {
   const actionButtons = (
     <Stack 
       direction={{ xs: 'column', sm: 'row' }} 
-      spacing={1} 
+      spacing={1.5} 
       sx={{ 
         width: { xs: '100%', sm: 'auto' },
         alignItems: { xs: 'stretch', sm: 'center' }
@@ -175,33 +174,27 @@ export default function SchedulePage() {
     </Stack>
   )
 
-  // Breadcrumbs for navigation
-  const breadcrumbs = [
-    {
-      label: 'Home',
-      path: '/dashboard',
-      icon: <DashboardIcon fontSize="small" />
-    },
-    {
-      label: 'Schedule',
-      path: '/schedule',
-      icon: <ScheduleIcon fontSize="small" />
-    }
-  ]
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Schedule Management"
-        breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
 
 
           {/* Upcoming Reminders Section */}
           {showReminders && upcomingReminders.length > 0 && (
-            <Card sx={{ mb: 3, border: '2px solid', borderColor: 'warning.main' }}>
-              <CardContent>
+            <Card sx={{ 
+              mb: 3, 
+              border: '2px solid', 
+              borderColor: 'warning.main',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                boxShadow: 3,
+              },
+            }}>
+              <CardContent sx={{ p: 2.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <NotificationsIcon sx={{ mr: 1, color: 'warning.main' }} />
                   <Typography variant="h6" sx={{ flexGrow: 1 }}>
@@ -222,17 +215,25 @@ export default function SchedulePage() {
                     Dismiss
                   </Button>
                 </Box>
-                <Grid container spacing={2}>
+                <Grid container spacing={1.5}>
                   {upcomingReminders.map((reminder) => (
                     <Grid key={reminder.id} size={{ xs: 12, sm: 12, md: 6, lg: 4 }}>
-                      <Card sx={{ backgroundColor: 'background.default', height: '100%' }}>
-                        <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                      <Card sx={{ 
+                        backgroundColor: 'background.default', 
+                        height: '100%',
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          boxShadow: 2,
+                          transform: 'translateY(-2px)',
+                        },
+                      }}>
+                        <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2 }}>
                           <Box sx={{ 
                             display: 'flex', 
                             flexDirection: { xs: 'row', sm: 'row' },
                             alignItems: 'flex-start', 
-                            gap: 2,
-                            mb: 2
+                            gap: 1.5,
+                            mb: 1.5
                           }}>
                             <Box sx={{ 
                               color: getReminderPriorityColor(reminder.priority),
@@ -302,12 +303,12 @@ export default function SchedulePage() {
           )}
 
           {/* Job Scheduling Calendar */}
-          <Box sx={{ mb: 6 }}>
+          <Box sx={{ mb: 3 }}>
             <JobSchedulingCalendar onJobScheduled={handleJobScheduled} />
           </Box>
 
           {/* Crew Availability Widget */}
-          <Box sx={{ mb: 4 }}>
+          <Box sx={{ mb: 3 }}>
             <CrewAvailabilityWidget />
           </Box>
       </ResponsiveContainer>
@@ -333,7 +334,7 @@ export default function SchedulePage() {
             sx={{ 
               backgroundColor: 'background.paper', 
               borderRadius: 2, 
-              p: 3, 
+              p: 2.5, 
               maxWidth: '90vw', 
               maxHeight: '90vh', 
               overflow: 'auto',
@@ -341,7 +342,7 @@ export default function SchedulePage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h5">Reminder Management</Typography>
               <IconButton onClick={() => setReminderManagementOpen(false)}>
                 <CloseIcon />

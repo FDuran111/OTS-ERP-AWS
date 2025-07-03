@@ -35,7 +35,6 @@ import {
   Autocomplete,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
   Add as AddIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
@@ -284,25 +283,11 @@ export default function LeadsPage() {
   // Action buttons for the page header
   const actionButtons = null
 
-  // Breadcrumbs for navigation
-  const breadcrumbs = [
-    {
-      label: 'Home',
-      path: '/dashboard',
-      icon: <DashboardIcon fontSize="small" />
-    },
-    {
-      label: 'Leads',
-      path: '/leads',
-      icon: <LeadsIcon fontSize="small" />
-    }
-  ]
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Lead Management"
-        breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
           {error && (

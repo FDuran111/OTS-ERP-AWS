@@ -381,7 +381,7 @@ export default function MaterialsPage() {
   const actionButtons = (
     <Stack 
       direction={{ xs: 'column', sm: 'row' }} 
-      spacing={1} 
+      spacing={1.5} 
       sx={{ 
         width: { xs: '100%', sm: 'auto' },
         alignItems: { xs: 'stretch', sm: 'center' }
@@ -406,33 +406,20 @@ export default function MaterialsPage() {
     </Stack>
   )
 
-  // Breadcrumbs for navigation
-  const breadcrumbs = [
-    {
-      label: 'Home',
-      path: '/dashboard',
-      icon: <DashboardIcon fontSize="small" />
-    },
-    {
-      label: 'Materials',
-      path: '/materials',
-      icon: <InventoryIcon fontSize="small" />
-    }
-  ]
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Materials & Inventory"
-        breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
             <Box sx={{ 
               display: 'flex', 
               flexWrap: 'wrap',
-              gap: { xs: 1, sm: 1.5, md: 2 },
+              gap: 1.5,
               justifyContent: { xs: 'center', lg: 'flex-end' },
-              maxWidth: { xs: '100%', lg: 'none' }
+              maxWidth: { xs: '100%', lg: 'none' },
+              mb: 3
             }}>
               <Button
                 variant="outlined"
@@ -528,8 +515,16 @@ export default function MaterialsPage() {
             {stats.map((stat) => {
               const IconComponent = getStatsIconComponent(stat.icon)
               return (
-                <Card key={stat.title} sx={{ position: 'relative', overflow: 'visible' }}>
-                  <CardContent sx={{ p: 2 }}>
+                <Card key={stat.title} sx={{ 
+                  position: 'relative', 
+                  overflow: 'visible',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    boxShadow: 3,
+                    transform: 'translateY(-2px)',
+                  },
+                }}>
+                  <CardContent sx={{ p: 2.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Box
                         sx={{
@@ -570,14 +565,20 @@ export default function MaterialsPage() {
           </Box>
 
 
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
+          <Card sx={{ 
+            mb: 3,
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              boxShadow: 3,
+            },
+          }}>
+            <CardContent sx={{ p: 2.5 }}>
               <Typography variant="h6" gutterBottom>
                 🔍 Advanced Search & Filters
               </Typography>
               
               {/* Main Search Row */}
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 2 }}>
                 <TextField
                   fullWidth
                   placeholder="Search by keyword, brand, part number, description... (e.g., 'Square D', '60 amp disconnect')"
@@ -604,7 +605,7 @@ export default function MaterialsPage() {
               </Box>
 
               {/* Filter Row */}
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
                 <FormControl sx={{ minWidth: 200 }}>
                   <InputLabel>Filter by Brand</InputLabel>
                   <Select
@@ -700,19 +701,26 @@ export default function MaterialsPage() {
               <CircularProgress />
             </Box>
           ) : (
-            <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+            <TableContainer component={Paper} sx={{ 
+              borderRadius: 2,
+              overflow: 'hidden',
+              transition: 'box-shadow 0.2s',
+              '&:hover': {
+                boxShadow: 2,
+              },
+            }}>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: 'background.default' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Item</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Brand/Category</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600 }}>Stock</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600 }}>Reserved</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600 }}>Available</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Location</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cost</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600 }}>Actions</TableCell>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Item</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Brand/Category</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Stock</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Reserved</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Available</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Location</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Cost</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Status</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -748,7 +756,11 @@ export default function MaterialsPage() {
                         stockPercentage >= 150 ? '✅' : '📦'
                       
                       return (
-                        <TableRow key={material.id} hover>
+                        <TableRow key={material.id} hover sx={{ 
+                          '&:hover': {
+                            backgroundColor: 'action.hover',
+                          },
+                        }}>
                           <TableCell>
                             <Box>
                               <Typography variant="body2" sx={{ fontWeight: 500 }}>

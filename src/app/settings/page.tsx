@@ -80,7 +80,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`settings-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ py: 2 }}>{children}</Box>}
     </div>
   )
 }
@@ -288,14 +288,19 @@ export default function SettingsPage() {
 
   return (
     <ResponsiveLayout>
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: 2.5 }}>
         <Container maxWidth="xl">
           <Typography variant="h4" sx={{ mb: 4 }}>
             Settings
           </Typography>
 
-          <Card>
-            <CardContent>
+          <Card sx={{
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              boxShadow: 3,
+            },
+          }}>
+            <CardContent sx={{ p: 2.5 }}>
               <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <Tab icon={<Business />} label="Company" />
                 <Tab icon={<Notifications />} label="Notifications" />
@@ -308,7 +313,7 @@ export default function SettingsPage() {
 
               <TabPanel value={tabValue} index={0}>
                 <form onSubmit={companyForm.handleSubmit(onCompanySubmit)}>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                     <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px' }}>
                       <Controller
                         name="company_name"
@@ -466,7 +471,7 @@ export default function SettingsPage() {
                   Get text messages for urgent updates and reminders
                 </Typography>
 
-                <Divider sx={{ my: 3 }} />
+                <Divider sx={{ my: 2 }} />
                 
                 <Typography variant="h6" gutterBottom>
                   Notification Types
@@ -566,7 +571,7 @@ export default function SettingsPage() {
                   Add an extra layer of security to your account
                 </Typography>
 
-                <Divider sx={{ my: 3 }} />
+                <Divider sx={{ my: 2 }} />
 
                 <Typography variant="h6" gutterBottom>
                   Change Password
@@ -661,7 +666,7 @@ export default function SettingsPage() {
                   Use dark theme for better visibility in low light conditions
                 </Typography>
 
-                <Divider sx={{ my: 3 }} />
+                <Divider sx={{ my: 2 }} />
 
                 <Typography variant="h6" gutterBottom>
                   Display Options

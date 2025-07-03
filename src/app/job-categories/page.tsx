@@ -373,10 +373,6 @@ export default function JobCategoriesPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="🗂️ Job Categorization"
-        breadcrumbs={[
-          { label: 'Home', path: '/dashboard' },
-          { label: 'Job Categories' }
-        ]}
       >
 
       {error && (

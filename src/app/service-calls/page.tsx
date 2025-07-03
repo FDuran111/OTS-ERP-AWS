@@ -300,10 +300,6 @@ export default function ServiceCallsPage() {
       <ResponsiveContainer
         title="Service Calls"
         subtitle="Manage and track service calls"
-        breadcrumbs={[
-          { label: 'Home', path: '/dashboard' },
-          { label: 'Service Calls' }
-        ]}
       >
         
         {/* Stats Cards */}

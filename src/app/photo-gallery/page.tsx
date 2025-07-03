@@ -235,10 +235,6 @@ export default function PhotoGalleryPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="📸 Photo Gallery"
-        breadcrumbs={[
-          { label: 'Home', path: '/dashboard' },
-          { label: 'Photo Gallery' }
-        ]}
       >
 
       {error && (

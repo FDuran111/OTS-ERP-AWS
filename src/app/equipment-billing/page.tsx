@@ -428,10 +428,6 @@ export default function EquipmentBillingPage() {
       <ResponsiveContainer
         title="🚛 Equipment Billing"
         subtitle="Track equipment usage, manage billing rates, and analyze utilization"
-        breadcrumbs={[
-          { label: 'Home', path: '/dashboard' },
-          { label: 'Equipment Billing' }
-        ]}
       >
 
       {error && (

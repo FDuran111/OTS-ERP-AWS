@@ -242,10 +242,6 @@ export default function BillingPage() {
       <ResponsiveContainer
         title="💰 Billing & Rate Management"
         subtitle="Manage labor rates and billing categories"
-        breadcrumbs={[
-          { label: 'Home', path: '/dashboard' },
-          { label: 'Billing & Rates' }
-        ]}
         actions={
           <>
             <Button

@@ -265,23 +265,12 @@ export default function PurchaseOrdersPage() {
 
   if (!user) return null
 
-  const breadcrumbs = [
-    {
-      label: 'Dashboard',
-      path: '/dashboard',
-    },
-    {
-      label: 'Purchase Orders',
-      icon: <PurchaseOrderIcon fontSize="small" />
-    }
-  ]
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Purchase Orders"
         subtitle="Manage purchase orders and approvals"
-        breadcrumbs={breadcrumbs}
         actions={
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Badge badgeContent={stats.pendingApproval} color="warning">

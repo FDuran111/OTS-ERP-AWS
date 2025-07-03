@@ -189,11 +189,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       <ResponsiveContainer
         title={`${job.jobNumber} - ${job.title}`}
         subtitle={job.customerName || job.customer}
-        breadcrumbs={[
-          { label: 'Home', path: '/dashboard' },
-          { label: 'Jobs', path: '/jobs' },
-          { label: job.jobNumber }
-        ]}
         actions={
           <Button
             startIcon={<EditIcon />}

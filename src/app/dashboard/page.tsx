@@ -29,7 +29,6 @@ import {
   TrendingUp,
   ShoppingCart as PurchaseOrderIcon,
   Add as AddIcon,
-  Home as HomeIcon,
 } from '@mui/icons-material'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
@@ -240,33 +239,31 @@ export default function DashboardPage() {
     </Stack>
   )
 
-  const breadcrumbs = [
-    {
-      label: 'Home',
-      path: '/dashboard',
-      icon: <HomeIcon fontSize="small" />
-    }
-  ]
-
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title={`Welcome back, ${user.name}`}
-        breadcrumbs={breadcrumbs}
         actions={quickActions}
       >
         {/* Low Stock Notification */}
-        <Box className="mb-6">
+        <Box sx={{ mb: 3 }}>
           <LowStockNotification refreshTrigger={loading ? 0 : 1} />
         </Box>
 
         {/* Stats Cards - Responsive Grid */}
-        <Grid container spacing={3} sx={{ margin: 0, width: '100%' }}>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
               <Grid key={index} size={{ xs: 12, sm: 6, md: 3 }}>
-                <Card sx={{ height: '100%' }}>
-                  <CardContent>
+                <Card sx={{ 
+                  height: '100%',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    boxShadow: 3,
+                    transform: 'translateY(-2px)',
+                  },
+                }}>
+                  <CardContent sx={{ p: 2.5 }}>
                     <Typography>Loading...</Typography>
                   </CardContent>
                 </Card>
@@ -275,8 +272,15 @@ export default function DashboardPage() {
           ) : (
             stats.map((stat) => (
               <Grid key={stat.title} size={{ xs: 12, sm: 6, md: 3 }}>
-                <Card sx={{ height: '100%' }}>
-                  <CardContent>
+                <Card sx={{ 
+                  height: '100%',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    boxShadow: 3,
+                    transform: 'translateY(-2px)',
+                  },
+                }}>
+                  <CardContent sx={{ p: 2.5 }}>
                     <Box sx={{ 
                       display: 'flex', 
                       flexDirection: { xs: 'row', sm: 'column', md: 'row' },
@@ -361,20 +365,26 @@ export default function DashboardPage() {
         </Grid>
 
         {/* Recent Jobs and Phases - Responsive Layout */}
-        <Grid container spacing={3} sx={{ mt: 2 }}>
+        <Grid container spacing={2}>
           <Grid size={{ xs: 12, lg: 6 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
+            <Card sx={{ 
+              height: '100%',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                boxShadow: 3,
+              },
+            }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
                   Recent Jobs
                 </Typography>
-                <List>
+                <List sx={{ px: 0 }}>
                   {loading ? (
-                    <ListItem>
+                    <ListItem sx={{ px: 0 }}>
                       <ListItemText primary="Loading recent jobs..." />
                     </ListItem>
                   ) : recentJobs.length === 0 ? (
-                    <ListItem>
+                    <ListItem sx={{ px: 0 }}>
                       <ListItemText primary="No recent jobs" />
                     </ListItem>
                   ) : (
@@ -384,7 +394,13 @@ export default function DashboardPage() {
                         sx={{
                           flexDirection: { xs: 'column', sm: 'row' },
                           alignItems: { xs: 'stretch', sm: 'center' },
-                          py: { xs: 2, sm: 1 }
+                          py: { xs: 1.5, sm: 1 },
+                          px: 0,
+                          borderBottom: '1px solid',
+                          borderColor: 'divider',
+                          '&:last-child': {
+                            borderBottom: 'none',
+                          },
                         }}
                       >
                         <ListItemText
@@ -432,9 +448,15 @@ export default function DashboardPage() {
           </Grid>
 
           <Grid size={{ xs: 12, lg: 6 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
+            <Card sx={{ 
+              height: '100%',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                boxShadow: 3,
+              },
+            }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
                   Job Phases Progress
                 </Typography>
                 {loading ? (
@@ -442,9 +464,18 @@ export default function DashboardPage() {
                 ) : phaseData ? (
                   <Box>
                     {/* Phase Summary - Responsive Grid */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid container spacing={1.5} sx={{ mb: 2 }}>
                       <Grid size={{ xs: 12, sm: 4 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Paper sx={{ 
+                          p: 2, 
+                          textAlign: 'center',
+                          backgroundColor: 'background.paper',
+                          boxShadow: 1,
+                          transition: 'box-shadow 0.2s',
+                          '&:hover': {
+                            boxShadow: 2,
+                          },
+                        }}>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                             Underground
                           </Typography>
@@ -468,7 +499,16 @@ export default function DashboardPage() {
                         </Paper>
                       </Grid>
                       <Grid size={{ xs: 12, sm: 4 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Paper sx={{ 
+                          p: 2, 
+                          textAlign: 'center',
+                          backgroundColor: 'background.paper',
+                          boxShadow: 1,
+                          transition: 'box-shadow 0.2s',
+                          '&:hover': {
+                            boxShadow: 2,
+                          },
+                        }}>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                             Rough-in
                           </Typography>
@@ -492,7 +532,16 @@ export default function DashboardPage() {
                         </Paper>
                       </Grid>
                       <Grid size={{ xs: 12, sm: 4 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Paper sx={{ 
+                          p: 2, 
+                          textAlign: 'center',
+                          backgroundColor: 'background.paper',
+                          boxShadow: 1,
+                          transition: 'box-shadow 0.2s',
+                          '&:hover': {
+                            boxShadow: 2,
+                          },
+                        }}>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                             Finish
                           </Typography>
@@ -522,9 +571,9 @@ export default function DashboardPage() {
                     <Typography variant="subtitle2" gutterBottom>
                       Recent Updates
                     </Typography>
-                    <List dense>
+                    <List dense sx={{ px: 0 }}>
                       {(phaseData.recentUpdates || []).slice(0, 3).map((update) => (
-                        <ListItem key={update.id}>
+                        <ListItem key={update.id} sx={{ px: 0, py: 1 }}>
                           <ListItemText
                             primary={`${update.jobNumber} - ${update.phaseName}`}
                             secondary={

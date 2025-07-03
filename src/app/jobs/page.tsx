@@ -35,7 +35,6 @@ import {
   MenuItem,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
   Work as WorkIcon,
   Schedule as ScheduleIcon,
   People as PeopleIcon,
@@ -134,9 +133,16 @@ function JobCard({ job, onEdit, onDelete, onView }: {
   onView: (job: Job) => void
 }) {
   return (
-    <Card sx={{ mb: 2 }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+    <Card sx={{ 
+      mb: 2,
+      transition: 'all 0.2s ease-in-out',
+      '&:hover': {
+        boxShadow: 3,
+        transform: 'translateY(-2px)',
+      },
+    }}>
+      <CardContent sx={{ p: 2.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               {job.jobNumber}
@@ -173,7 +179,7 @@ function JobCard({ job, onEdit, onDelete, onView }: {
         </Typography>
         
         {job.jobPhases && job.jobPhases.length > 0 && (
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 1.5 }}>
             <Typography variant="body2" sx={{ mb: 0.5 }}>
               <strong>Phases:</strong>
             </Typography>
@@ -391,7 +397,7 @@ export default function JobsPage() {
   const actionButtons = (
     <Stack 
       direction={{ xs: 'column', sm: 'row' }} 
-      spacing={1} 
+      spacing={1.5} 
       sx={{ 
         width: { xs: '100%', sm: 'auto' },
         alignItems: { xs: 'stretch', sm: 'center' }
@@ -430,31 +436,23 @@ export default function JobsPage() {
     </Stack>
   )
 
-  // Breadcrumbs for navigation
-  const breadcrumbs = [
-    {
-      label: 'Home',
-      path: '/dashboard',
-      icon: <DashboardIcon fontSize="small" />
-    },
-    {
-      label: 'Jobs',
-      path: '/jobs',
-      icon: <WorkIcon fontSize="small" />
-    }
-  ]
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Job Management"
-        breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
 
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: filtersExpanded ? 2 : 0 }}>
+          <Card sx={{ 
+            mb: 3,
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              boxShadow: 3,
+            },
+          }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: filtersExpanded ? 2 : 0 }}>
                 <TextField
                   fullWidth
                   placeholder="Search jobs by ID, title, or customer..."
@@ -497,8 +495,13 @@ export default function JobsPage() {
               </Box>
 
               <Collapse in={filtersExpanded}>
-                <Box className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
-                  <Box className="flex-1 min-w-0">
+                <Box sx={{ 
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+                  gap: 2,
+                  width: '100%'
+                }}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Status</InputLabel>
                       <Select
@@ -518,7 +521,7 @@ export default function JobsPage() {
                     </FormControl>
                   </Box>
 
-                  <Box className="flex-1 min-w-0">
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Type</InputLabel>
                       <Select
@@ -533,7 +536,7 @@ export default function JobsPage() {
                     </FormControl>
                   </Box>
 
-                  <Box className="flex-1 min-w-0">
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Priority</InputLabel>
                       <Select
@@ -549,7 +552,7 @@ export default function JobsPage() {
                     </FormControl>
                   </Box>
 
-                  <Box className="flex-1 min-w-0">
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Phase</InputLabel>
                       <Select
@@ -592,19 +595,26 @@ export default function JobsPage() {
               )}
             </Box>
           ) : (
-            <TableContainer component={Paper}>
+            <TableContainer component={Paper} sx={{
+              borderRadius: 2,
+              overflow: 'hidden',
+              transition: 'box-shadow 0.2s',
+              '&:hover': {
+                boxShadow: 2,
+              },
+            }}>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Job ID</TableCell>
-                    <TableCell>Title</TableCell>
-                    <TableCell>Customer</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Priority</TableCell>
-                    <TableCell>Phases</TableCell>
-                    <TableCell>Due Date</TableCell>
-                    <TableCell>Crew</TableCell>
-                    <TableCell align="right">Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Job ID</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Title</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Customer</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Priority</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Phases</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Due Date</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Crew</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -622,7 +632,11 @@ export default function JobsPage() {
                     </TableRow>
                   ) : (
                     filteredJobs.map((job) => (
-                      <TableRow key={job.id} hover>
+                      <TableRow key={job.id} hover sx={{ 
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}>
                         <TableCell>{job.jobNumber}</TableCell>
                         <TableCell>{job.title}</TableCell>
                         <TableCell>{job.customer}</TableCell>

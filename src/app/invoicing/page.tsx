@@ -267,22 +267,11 @@ export default function InvoicingPage() {
 
   if (!user) return null
 
-  const breadcrumbs = [
-    {
-      label: 'Dashboard',
-      path: '/dashboard',
-    },
-    {
-      label: 'Invoicing',
-      icon: <ReceiptIcon fontSize="small" />
-    }
-  ]
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Invoicing"
-        breadcrumbs={breadcrumbs}
         actions={
           <Button
             variant="contained"
@@ -300,14 +289,21 @@ export default function InvoicingPage() {
         }
       >
         {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
           {stats.map((stat, index) => {
             const IconComponent = getStatsIconComponent(stat.icon)
             return (
               <Grid key={index} size={{ xs: 12, sm: 6, md: 3 }}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Card sx={{ 
+                  height: '100%',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    boxShadow: 3,
+                    transform: 'translateY(-2px)',
+                  },
+                }}>
+                  <CardContent sx={{ p: 2.5 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
                       <Box>
                         <Typography color="text.secondary" gutterBottom>
                           {stat.title}
@@ -332,8 +328,14 @@ export default function InvoicingPage() {
         </Grid>
 
         {/* Search and Filter */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
+        <Card sx={{ 
+          mb: 3,
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': {
+            boxShadow: 3,
+          },
+        }}>
+          <CardContent sx={{ p: 2.5 }}>
             <TextField
               fullWidth
               variant="outlined"
@@ -362,18 +364,25 @@ export default function InvoicingPage() {
             <CircularProgress />
           </Box>
         ) : (
-          <TableContainer component={Paper}>
+          <TableContainer component={Paper} sx={{
+            borderRadius: 2,
+            overflow: 'hidden',
+            transition: 'box-shadow 0.2s',
+            '&:hover': {
+              boxShadow: 2,
+            },
+          }}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Invoice #</TableCell>
-                  <TableCell>Job #</TableCell>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Due Date</TableCell>
-                  <TableCell>Sent Date</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Invoice #</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Job #</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Customer</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Amount</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Due Date</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Sent Date</TableCell>
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Status</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -390,7 +399,11 @@ export default function InvoicingPage() {
                     `${invoice.customer?.firstName || ''} ${invoice.customer?.lastName || ''}`.toLowerCase().includes(searchTerm.toLowerCase())
                   )
                   .map((invoice) => (
-                    <TableRow key={invoice.id} hover>
+                    <TableRow key={invoice.id} hover sx={{ 
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                      },
+                    }}>
                       <TableCell>{invoice.invoiceNumber}</TableCell>
                       <TableCell>
                         <Box>

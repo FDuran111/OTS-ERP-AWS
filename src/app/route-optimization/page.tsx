@@ -333,10 +333,6 @@ export default function RouteOptimizationPage() {
       <ResponsiveContainer
         title="🚛 Route Optimization"
         subtitle="Optimize crew routes, manage vehicles, and track performance"
-        breadcrumbs={[
-          { label: 'Home', path: '/dashboard' },
-          { label: 'Route Optimization' }
-        ]}
         actions={
           <Stack direction="row" spacing={2}>
           <TextField

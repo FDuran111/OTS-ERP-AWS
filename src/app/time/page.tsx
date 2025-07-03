@@ -28,7 +28,6 @@ import {
   CircularProgress,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
   AccessTime as TimeIcon,
   PlayArrow,
   Stop,
@@ -152,34 +151,27 @@ export default function TimePage() {
   // Action buttons for the page header - removed clock functionality
   const actionButtons = null
 
-  // Breadcrumbs for navigation
-  const breadcrumbs = [
-    {
-      label: 'Home',
-      path: '/dashboard',
-      icon: <DashboardIcon fontSize="small" />
-    },
-    {
-      label: 'Time Tracking',
-      path: '/time',
-      icon: <TimeIcon fontSize="small" />
-    }
-  ]
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Time Tracking"
-        breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
 
-        <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
               <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-                <Card>
-                  <CardContent>
+                <Card sx={{ 
+                  height: '100%',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    boxShadow: 3,
+                    transform: 'translateY(-2px)',
+                  },
+                }}>
+                  <CardContent sx={{ p: 2.5 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
                       <CircularProgress size={24} />
                     </Box>
@@ -190,8 +182,15 @@ export default function TimePage() {
           ) : (
             stats.map((stat) => (
               <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
-                <Card>
-                  <CardContent>
+                <Card sx={{ 
+                  height: '100%',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    boxShadow: 3,
+                    transform: 'translateY(-2px)',
+                  },
+                }}>
+                  <CardContent sx={{ p: 2.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Box
                         sx={{
@@ -237,8 +236,14 @@ export default function TimePage() {
 
         {/* Active Timers - Legacy Support */}
         {activeTimers.length > 0 && (
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
+          <Card sx={{ 
+            mb: 3,
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              boxShadow: 3,
+            },
+          }}>
+            <CardContent sx={{ p: 2.5 }}>
               <Typography variant="h6" gutterBottom>
                 ⏱️ Active Timers (Legacy)
               </Typography>
@@ -250,7 +255,7 @@ export default function TimePage() {
                   <CircularProgress />
                 </Box>
               ) : (
-                <Grid container spacing={2}>
+                <Grid container spacing={1.5}>
                   {activeTimers.map((timer) => (
                     <Grid size={{ xs: 12, md: 6 }} key={timer.id}>
                       <ActiveTimerCard
@@ -277,17 +282,24 @@ export default function TimePage() {
         <Typography variant="h6" sx={{ mb: 2 }}>
           📋 Recent Time Entries
         </Typography>
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={{
+          borderRadius: 2,
+          overflow: 'hidden',
+          transition: 'box-shadow 0.2s',
+          '&:hover': {
+            boxShadow: 2,
+          },
+        }}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Employee</TableCell>
-                <TableCell>Job</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Start Time</TableCell>
-                <TableCell>End Time</TableCell>
-                <TableCell>Hours</TableCell>
-                <TableCell>Phase</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Employee</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Job</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Start Time</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>End Time</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Hours</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Phase</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -308,7 +320,11 @@ export default function TimePage() {
                 </TableRow>
               ) : (
                 timeEntries.map((entry) => (
-                  <TableRow key={entry.id} hover>
+                  <TableRow key={entry.id} hover sx={{ 
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    },
+                  }}>
                     <TableCell>{entry.userName}</TableCell>
                     <TableCell>
                       <Stack>

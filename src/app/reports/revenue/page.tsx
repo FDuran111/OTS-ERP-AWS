@@ -25,7 +25,6 @@ import {
   useMediaQuery,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
   Assessment as AssessmentIcon,
   TrendingUp as TrendingUpIcon,
   AttachMoney as MoneyIcon,
@@ -193,17 +192,11 @@ export default function RevenueReportPage() {
 
   if (!user) return null
 
-  const breadcrumbs = [
-    { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon fontSize="small" /> },
-    { label: 'Reports', path: '/reports', icon: <AssessmentIcon fontSize="small" /> },
-    { label: 'Revenue', path: '/reports/revenue', icon: <MoneyIcon fontSize="small" /> },
-  ]
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Revenue Report"
-        breadcrumbs={breadcrumbs}
         actions={
           <Stack direction="row" spacing={2}>
             <FormControl size="small" sx={{ minWidth: 120 }}>
