@@ -329,9 +329,6 @@ export default function CostManagementPage() {
         <Typography variant="h4" gutterBottom>
           💰 Cost Management
         </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Manage employee overhead costs, company assets, and calculate true cost per employee
-        </Typography>
       </Box>
 
       {error && (

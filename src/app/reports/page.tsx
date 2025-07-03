@@ -280,7 +280,6 @@ export default function ReportsPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Reports & Analytics"
-        subtitle="Generate comprehensive reports and analytics for your electrical business"
         breadcrumbs={breadcrumbs}
         actions={
           <Stack direction="row" spacing={2} alignItems="center">
