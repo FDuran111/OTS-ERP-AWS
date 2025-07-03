@@ -78,8 +78,14 @@ const navigationItems: NavItem[] = [
     children: [
       { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] },
       { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories', roles: ['OWNER_ADMIN', 'FOREMAN'] },
-      { title: 'Photos', icon: <PhotoIcon />, path: '/job-photos', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] }
+      { title: 'Photos', icon: <PhotoIcon />, path: '/photo-gallery', roles: ['OWNER_ADMIN', 'FOREMAN'] }
     ]
+  },
+  {
+    title: 'Photo Gallery',
+    icon: <PhotoIcon />,
+    path: '/photo-gallery',
+    roles: ['EMPLOYEE'] // Only show as standalone for employees
   },
   {
     title: 'Customers',
@@ -125,7 +131,7 @@ const navigationItems: NavItem[] = [
 ]
 
 const quickActions = [
-  { title: 'Add Job', icon: <JobsIcon />, path: '/jobs/new', color: 'primary' as const, roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
+  { title: 'Add Job', icon: <JobsIcon />, path: '/jobs/new', color: 'primary' as const, roles: ['OWNER_ADMIN'] as UserRole[] },
   { title: 'Add Customer', icon: <CustomersIcon />, path: '/customers/new', color: 'secondary' as const, roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
   { title: 'Add Lead', icon: <LeadsIcon />, path: '/leads/new', color: 'success' as const, roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
   { title: 'Optimize Routes', icon: <OptimizeIcon />, path: '/route-optimization', color: 'warning' as const, roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] }
@@ -188,20 +194,21 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
       return null
     }
 
-    const hasChildren = item.children && item.children.length > 0
-    const isExpanded = expandedItems.includes(item.title)
-    const isActive = isActiveRoute(item.path)
-
     // Filter children based on user roles
     const visibleChildren = item.children?.filter(child => 
       user && hasRole(child.roles || [])
     )
 
+    // Check if there are visible children
+    const hasVisibleChildren = visibleChildren && visibleChildren.length > 0
+    const isExpanded = expandedItems.includes(item.title)
+    const isActive = isActiveRoute(item.path)
+
     return (
       <Box key={item.title}>
         <ListItemButton
           onClick={() => {
-            if (hasChildren) {
+            if (hasVisibleChildren) {
               handleExpandClick(item.title)
             } else {
               handleNavigation(item.path)
@@ -231,7 +238,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
               }
             }}
           />
-          {hasChildren && (isExpanded ? <ExpandLess /> : <ExpandMore />)}
+          {hasVisibleChildren && (isExpanded ? <ExpandLess /> : <ExpandMore />)}
         </ListItemButton>
         
         {visibleChildren && visibleChildren.length > 0 && (

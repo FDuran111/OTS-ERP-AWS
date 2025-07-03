@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import CreateJobDialog from '@/components/jobs/CreateJobDialog'
 import EditJobDialog from '@/components/jobs/EditJobDialog'
 import JobActionsMenu from '@/components/jobs/JobActionsMenu'
@@ -33,6 +34,7 @@ import {
   Collapse,
   IconButton,
   MenuItem,
+  Grid,
 } from '@mui/material'
 import {
   Work as WorkIcon,
@@ -54,6 +56,8 @@ import {
   ExpandLess as ExpandLessIcon,
   Download as DownloadIcon,
   TrendingUp,
+  ViewList as ViewListIcon,
+  ViewModule as ViewModuleIcon,
 } from '@mui/icons-material'
 
 interface User {
@@ -132,15 +136,25 @@ function JobCard({ job, onEdit, onDelete, onView }: {
   onDelete: (job: Job) => void,
   onView: (job: Job) => void
 }) {
+  const router = useRouter()
+  const { user } = useAuth()
+  
+  const handleCardClick = () => {
+    router.push(`/jobs/${job.id}`)
+  }
+  
   return (
     <Card sx={{ 
       mb: 2,
       transition: 'all 0.2s ease-in-out',
+      cursor: 'pointer',
       '&:hover': {
         boxShadow: 3,
         transform: 'translateY(-2px)',
       },
-    }}>
+    }}
+    onClick={handleCardClick}
+    >
       <CardContent sx={{ p: 2.5 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
           <Box>
@@ -200,7 +214,10 @@ function JobCard({ job, onEdit, onDelete, onView }: {
           </Box>
         )}
         
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Box 
+          sx={{ display: 'flex', justifyContent: 'flex-end' }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <JobActionsMenu
             job={job}
             onEdit={onEdit}
@@ -229,6 +246,7 @@ export default function JobsPage() {
   const [typeFilter, setTypeFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
   const [phaseFilter, setPhaseFilter] = useState('')
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -403,6 +421,26 @@ export default function JobsPage() {
         alignItems: { xs: 'stretch', sm: 'center' }
       }}
     >
+      {!isMobile && (
+        <Box sx={{ display: 'flex', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+          <IconButton
+            onClick={() => setViewMode('table')}
+            color={viewMode === 'table' ? 'primary' : 'default'}
+            size="small"
+            sx={{ borderRadius: 1 }}
+          >
+            <ViewListIcon />
+          </IconButton>
+          <IconButton
+            onClick={() => setViewMode('card')}
+            color={viewMode === 'card' ? 'primary' : 'default'}
+            size="small"
+            sx={{ borderRadius: 1 }}
+          >
+            <ViewModuleIcon />
+          </IconButton>
+        </Box>
+      )}
       <Button
         variant="outlined"
         startIcon={<DownloadIcon />}
@@ -416,23 +454,25 @@ export default function JobsPage() {
       >
         {isMobile ? 'Export' : 'Export CSV'}
       </Button>
-      <Button
-        variant="contained"
-        startIcon={<AddIcon />}
-        onClick={() => setCreateDialogOpen(true)}
-        size={isMobile ? 'small' : 'medium'}
-        sx={{
-          backgroundColor: '#e14eca',
-          '&:hover': {
-            backgroundColor: '#d236b8',
-          },
-          flex: { xs: 1, sm: 'none' },
-          minWidth: { xs: 'auto', sm: '100px' },
-          whiteSpace: 'nowrap'
-        }}
-      >
-        {isMobile ? 'New' : 'New Job'}
-      </Button>
+      {user?.role === 'OWNER_ADMIN' && (
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setCreateDialogOpen(true)}
+          size={isMobile ? 'small' : 'medium'}
+          sx={{
+            backgroundColor: '#e14eca',
+            '&:hover': {
+              backgroundColor: '#d236b8',
+            },
+            flex: { xs: 1, sm: 'none' },
+            minWidth: { xs: 'auto', sm: '100px' },
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {isMobile ? 'New' : 'New Job'}
+        </Button>
+      )}
     </Stack>
   )
 
@@ -594,6 +634,32 @@ export default function JobsPage() {
                 ))
               )}
             </Box>
+          ) : viewMode === 'card' ? (
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+              gap: 2
+            }}>
+              {loading ? (
+                <Typography align="center" sx={{ py: 4, gridColumn: '1 / -1' }}>
+                  Loading jobs...
+                </Typography>
+              ) : filteredJobs.length === 0 ? (
+                <Typography align="center" sx={{ py: 4, gridColumn: '1 / -1' }} color="text.secondary">
+                  No jobs found
+                </Typography>
+              ) : (
+                filteredJobs.map((job) => (
+                  <JobCard 
+                    key={job.id} 
+                    job={job} 
+                    onEdit={handleEditJob}
+                    onDelete={handleDeleteJob}
+                    onView={handleViewJob}
+                  />
+                ))
+              )}
+            </Box>
           ) : (
             <TableContainer component={Paper} sx={{
               borderRadius: 2,
@@ -632,11 +698,17 @@ export default function JobsPage() {
                     </TableRow>
                   ) : (
                     filteredJobs.map((job) => (
-                      <TableRow key={job.id} hover sx={{ 
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
-                        },
-                      }}>
+                      <TableRow 
+                        key={job.id} 
+                        hover 
+                        sx={{ 
+                          cursor: 'pointer',
+                          '&:hover': {
+                            backgroundColor: 'action.hover',
+                          },
+                        }}
+                        onClick={() => router.push(`/jobs/${job.id}`)}
+                      >
                         <TableCell>{job.jobNumber}</TableCell>
                         <TableCell>{job.title}</TableCell>
                         <TableCell>{job.customer}</TableCell>
@@ -675,7 +747,10 @@ export default function JobsPage() {
                           {job.dueDate ? new Date(job.dueDate).toLocaleDateString() : '-'}
                         </TableCell>
                         <TableCell>{job.crew.join(', ') || 'Unassigned'}</TableCell>
-                        <TableCell align="right">
+                        <TableCell 
+                          align="right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <JobActionsMenu
                             job={job}
                             onEdit={handleEditJob}

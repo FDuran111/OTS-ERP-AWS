@@ -152,7 +152,7 @@ const createJobSchema = z.object({
 
 // POST create a new job
 export const POST = withRBAC({
-  requiredRoles: ['OWNER_ADMIN', 'FOREMAN']
+  requiredRoles: ['OWNER_ADMIN']
 })(async (request: NextRequest) => {
   let body: any
   try {

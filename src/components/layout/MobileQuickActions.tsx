@@ -47,7 +47,7 @@ const quickActions: QuickAction[] = [
     icon: <JobsIcon />,
     path: '/jobs/new',
     color: 'primary',
-    roles: ['OWNER_ADMIN', 'FOREMAN']
+    roles: ['OWNER_ADMIN']
   },
   {
     title: 'New Customer',

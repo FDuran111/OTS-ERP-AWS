@@ -79,8 +79,14 @@ const navigationItems: NavItem[] = [
     children: [
       { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] },
       { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories', roles: ['OWNER_ADMIN', 'FOREMAN'] },
-      { title: 'Photos', icon: <PhotoIcon />, path: '/photo-gallery', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] }
+      { title: 'Photos', icon: <PhotoIcon />, path: '/photo-gallery', roles: ['OWNER_ADMIN', 'FOREMAN'] }
     ]
+  },
+  {
+    title: 'Photo Gallery',
+    icon: <PhotoIcon />,
+    path: '/photo-gallery',
+    roles: ['EMPLOYEE'] // Only show as standalone for employees
   },
   {
     title: 'Schedule',
@@ -206,20 +212,21 @@ export default function ResponsiveSidebar({
       return null
     }
 
-    const hasChildren = item.children && item.children.length > 0
-    const isExpanded = expandedItems.includes(item.title)
-    const isActive = isActiveRoute(item.path)
-
     // Filter children based on user roles
     const visibleChildren = item.children?.filter(child =>
       hasRole(child.roles || [])
     )
 
+    // Check if there are visible children
+    const hasVisibleChildren = visibleChildren && visibleChildren.length > 0
+    const isExpanded = expandedItems.includes(item.title)
+    const isActive = isActiveRoute(item.path)
+
     return (
       <Box key={item.title}>
         <ListItemButton
           onClick={() => {
-            if (hasChildren) {
+            if (hasVisibleChildren) {
               handleExpandClick(item.title)
             } else {
               handleNavigation(item.path)
@@ -269,7 +276,7 @@ export default function ResponsiveSidebar({
               }
             }}
           />
-          {hasChildren && (
+          {hasVisibleChildren && (
             <Box className={isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}>
               {isExpanded ? <ExpandLess /> : <ExpandMore />}
             </Box>

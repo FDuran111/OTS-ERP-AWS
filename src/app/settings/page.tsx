@@ -47,7 +47,7 @@ const CompanySettingsSchema = z.object({
 })
 
 const SecuritySettingsSchema = z.object({
-  current_password: z.string().optional(),
+  current_password: z.string().optional().or(z.literal('')),
   new_password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
   confirm_password: z.string().optional(),
 }).refine((data) => {
@@ -188,13 +188,17 @@ export default function SettingsPage() {
   // Save settings to API
   const saveSettings = async (type: 'company' | 'notifications' | 'security' | 'appearance', data: any) => {
     setLoading(true)
+    console.log('Saving settings - Type:', type, 'Data:', data)
     try {
+      const requestBody = { type, data }
+      console.log('Request body being sent:', JSON.stringify(requestBody))
+      
       const response = await fetch('/api/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ type, data }),
+        body: JSON.stringify(requestBody),
       })
       
       if (!response.ok) {
@@ -203,9 +207,11 @@ export default function SettingsPage() {
       }
       
       setMessage({ type: 'success', text: 'Settings saved successfully!' })
+      return true // Return success
     } catch (error) {
       console.error('Error saving settings:', error)
       setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to save settings' })
+      return false // Return failure
     } finally {
       setLoading(false)
     }
@@ -234,6 +240,8 @@ export default function SettingsPage() {
   }
 
   const onSecuritySubmit = async (data: SecuritySettings) => {
+    console.log('Security form submitted:', data)
+    
     if (data.new_password && !data.current_password) {
       setMessage({ type: 'error', text: 'Current password is required to change password' })
       return
@@ -248,15 +256,31 @@ export default function SettingsPage() {
       } : {})
     }
     
-    await saveSettings('security', securityData)
+    console.log('Sending security data:', securityData)
     
-    // Clear password fields after successful submission
-    if (data.new_password) {
+    const success = await saveSettings('security', securityData)
+    
+    // Only proceed if the save was successful
+    if (success && data.new_password) {
       securityForm.reset({
         current_password: '',
         new_password: '',
         confirm_password: '',
       })
+      
+      // Show success message and redirect to login after password change
+      setMessage({ type: 'success', text: 'Password changed successfully! Please login with your new password.' })
+      
+      // Wait a moment for the user to see the message, then redirect
+      setTimeout(() => {
+        // Clear auth token and redirect to login
+        localStorage.removeItem('auth-token')
+        localStorage.removeItem('user')
+        router.push('/login')
+      }, 2000)
+    } else if (!success && data.new_password) {
+      // Password change failed - likely due to incorrect current password
+      console.error('Password change failed - check current password')
     }
   }
 

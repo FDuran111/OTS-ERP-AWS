@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import {
   Box,
   Typography,
@@ -33,6 +34,7 @@ import MaterialUsageTracker from '@/components/jobs/MaterialUsageTracker'
 import RealTimeJobCosts from '@/components/job-costing/RealTimeJobCosts'
 import JobLaborRateOverrides from '@/components/jobs/JobLaborRateOverrides'
 import FileAttachmentManager from '@/components/FileAttachmentManager'
+import EditJobDialog from '@/components/jobs/EditJobDialog'
 
 interface Job {
   id: string
@@ -48,6 +50,7 @@ interface Job {
   customerPO?: string
   dueDate: string | null
   completedDate: string | null
+  crew: string[]
   estimatedHours?: number
   actualHours?: number
   estimatedCost?: number
@@ -86,10 +89,12 @@ function TabPanel(props: TabPanelProps) {
 export default function JobDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
   const router = useRouter()
+  const { user } = useAuth()
   const [job, setJob] = useState<Job | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(0)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   useEffect(() => {
     params.then(setResolvedParams)
@@ -190,12 +195,14 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         title={`${job.jobNumber} - ${job.title}`}
         subtitle={job.customerName || job.customer}
         actions={
-          <Button
-            startIcon={<EditIcon />}
-            onClick={() => router.push(`/jobs/${job.id}/edit`)}
-          >
-            Edit Job
-          </Button>
+          user?.role === 'OWNER_ADMIN' ? (
+            <Button
+              startIcon={<EditIcon />}
+              onClick={() => setEditDialogOpen(true)}
+            >
+              Edit Job
+            </Button>
+          ) : null
         }
       >
         {/* Job Summary Card */}
@@ -368,6 +375,17 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             }}
           />
         </TabPanel>
+
+        {/* Edit Job Dialog */}
+        <EditJobDialog
+          open={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          onJobUpdated={() => {
+            setEditDialogOpen(false)
+            fetchJob() // Refresh job data after update
+          }}
+          job={job}
+        />
       </ResponsiveContainer>
     </ResponsiveLayout>
   )

@@ -48,15 +48,24 @@ const AppearanceSettingsSchema = z.object({
   show_tooltips: z.boolean().optional(),
 })
 
-const SettingsUpdateSchema = z.object({
-  type: z.enum(['company', 'notifications', 'security', 'appearance']),
-  data: z.union([
-    CompanySettingsSchema,
-    NotificationSettingsSchema,
-    SecuritySettingsSchema,
-    AppearanceSettingsSchema,
-  ]),
-})
+const SettingsUpdateSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('company'),
+    data: CompanySettingsSchema,
+  }),
+  z.object({
+    type: z.literal('notifications'),
+    data: NotificationSettingsSchema,
+  }),
+  z.object({
+    type: z.literal('security'),
+    data: SecuritySettingsSchema,
+  }),
+  z.object({
+    type: z.literal('appearance'),
+    data: AppearanceSettingsSchema,
+  }),
+])
 
 // Helper function to check if table exists
 async function tableExists(tableName: string): Promise<boolean> {
@@ -182,7 +191,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('Raw request body received:', JSON.stringify(body))
     const { type, data } = SettingsUpdateSchema.parse(body)
+    console.log('Parsed settings update - Type:', type, 'Data:', data)
 
     // Get user ID from JWT token
     const token = request.cookies.get('auth-token')?.value
@@ -298,8 +309,17 @@ export async function POST(request: NextRequest) {
       case 'security':
         const securityData = SecuritySettingsSchema.parse(data)
         
+        console.log('Processing security update for user:', userId)
+        console.log('Security data received:', { 
+          hasNewPassword: !!securityData.new_password,
+          hasCurrentPassword: !!securityData.current_password,
+          twoFactorAuth: securityData.two_factor_auth
+        })
+        
         // Handle password change if provided
         if (securityData.new_password && securityData.current_password) {
+          console.log('Password change requested')
+          
           // Verify current password
           const userResult = await query(
             'SELECT password FROM "User" WHERE id = $1',
@@ -307,6 +327,7 @@ export async function POST(request: NextRequest) {
           )
           
           if (userResult.rows.length === 0) {
+            console.error('User not found for password change:', userId)
             return NextResponse.json({ error: 'User not found' }, { status: 404 })
           }
           
@@ -316,16 +337,31 @@ export async function POST(request: NextRequest) {
           )
           
           if (!isCurrentPasswordValid) {
+            console.error('Current password verification failed for user:', userId)
             return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 })
           }
+          
+          console.log('Current password verified successfully')
           
           // Hash and update new password
           const hashedPassword = await hashPassword(securityData.new_password)
           
-          await query(
-            'UPDATE "User" SET password = $1 WHERE id = $2',
+          const updateResult = await query(
+            'UPDATE "User" SET password = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id',
             [hashedPassword, userId]
           )
+          
+          console.log('Password update result:', { 
+            rowCount: updateResult.rowCount,
+            userId: updateResult.rows[0]?.id 
+          })
+          
+          if (updateResult.rowCount === 0) {
+            console.error('Password update failed - no rows affected')
+            throw new Error('Failed to update password')
+          }
+          
+          console.log('Password successfully updated for user:', userId)
           
           // Only update password timestamp if table exists
           if (await tableExists('UserSecuritySettings')) {
