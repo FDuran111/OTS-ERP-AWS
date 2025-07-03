@@ -195,14 +195,24 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         title={`${job.jobNumber} - ${job.title}`}
         subtitle={job.customerName || job.customer}
         actions={
-          user?.role === 'OWNER_ADMIN' ? (
+          <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
-              startIcon={<EditIcon />}
-              onClick={() => setEditDialogOpen(true)}
+              startIcon={<ArrowBackIcon />}
+              onClick={() => router.push('/jobs')}
+              variant="outlined"
             >
-              Edit Job
+              Back to Jobs
             </Button>
-          ) : null
+            {user?.role === 'OWNER_ADMIN' && (
+              <Button
+                startIcon={<EditIcon />}
+                onClick={() => setEditDialogOpen(true)}
+                variant="contained"
+              >
+                Edit Job
+              </Button>
+            )}
+          </Box>
         }
       >
         {/* Job Summary Card */}
