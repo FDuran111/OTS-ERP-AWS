@@ -34,6 +34,7 @@ import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import LowStockNotification from '@/components/notifications/LowStockNotification'
 import EmployeeJobQuickAccess from '@/components/dashboard/EmployeeJobQuickAccess'
+import { useAuthCheck } from '@/hooks/useAuthCheck'
 
 
 interface User {
@@ -99,7 +100,7 @@ const colorMap = {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading: authLoading } = useAuthCheck()
   const [stats, setStats] = useState<Stat[]>([])
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([])
   const [phaseData, setPhaseData] = useState<PhaseData | null>(null)
@@ -108,54 +109,10 @@ export default function DashboardPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   useEffect(() => {
-    const verifyAuth = async () => {
-      // Add a small delay to ensure cookie is set after redirect
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      // Verify authentication with server
-      try {
-        const response = await fetch('/api/auth/me')
-        if (!response.ok) {
-          console.log('Auth verification failed, checking localStorage')
-          
-          // Check localStorage as fallback
-          const storedUser = localStorage.getItem('user')
-          if (!storedUser) {
-            console.log('No user in localStorage, redirecting to login')
-            router.push('/login')
-            return
-          }
-          
-          // Try to use stored user data
-          const parsedUser = JSON.parse(storedUser)
-          setUser(parsedUser)
-          fetchDashboardData()
-          return
-        }
-        
-        const userData = await response.json()
-        setUser(userData)
-        localStorage.setItem('user', JSON.stringify(userData))
-        fetchDashboardData()
-      } catch (error) {
-        console.error('Auth check error:', error)
-        
-        // Check localStorage as fallback
-        const storedUser = localStorage.getItem('user')
-        if (!storedUser) {
-          router.push('/login')
-          return
-        }
-        
-        // Try to use stored user data if API fails
-        const parsedUser = JSON.parse(storedUser)
-        setUser(parsedUser)
-        fetchDashboardData()
-      }
+    if (!authLoading && user) {
+      fetchDashboardData()
     }
-    
-    verifyAuth()
-  }, [router])
+  }, [authLoading, user])
 
   const fetchDashboardData = async () => {
     try {
@@ -196,7 +153,7 @@ export default function DashboardPage() {
     router.push(path)
   }
 
-  if (!user) return null
+  if (authLoading || !user) return null
 
   // Quick action buttons for mobile and desktop
   const quickActions = user.role === 'EMPLOYEE' ? (

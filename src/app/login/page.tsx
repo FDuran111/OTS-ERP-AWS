@@ -60,11 +60,9 @@ export default function LoginPage() {
       // Wait briefly for cookie to be set
       await new Promise(resolve => setTimeout(resolve, 100))
       
-      // Force page reload to ensure middleware picks up the new cookie
-      console.log('Login successful, forcing navigation to dashboard...')
-      
-      // Use window.location.href for a full page reload
-      window.location.href = '/dashboard'
+      // Use router.push for client-side navigation
+      console.log('Login successful, navigating to dashboard...')
+      router.push('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
