@@ -193,7 +193,6 @@ export default function SchedulePage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Schedule Management"
-        subtitle="Manage job schedules, reminders, and crew availability"
         breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
