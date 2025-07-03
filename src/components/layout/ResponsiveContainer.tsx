@@ -67,8 +67,14 @@ export default function ResponsiveContainer({
           md: 4,      // desktop: 32px
           lg: 4       // large desktop: 32px
         },
-        py: {
-          xs: 2,      // mobile: 16px vertical (gives proper spacing from header)
+        pt: {
+          xs: 3,      // mobile: 24px top (more space for header clearance)
+          sm: 3,      // tablet: 24px  
+          md: 4,      // desktop: 32px
+          lg: 4       // large desktop: 32px
+        },
+        pb: {
+          xs: 2,      // mobile: 16px bottom
           sm: 3,      // tablet: 24px  
           md: 4,      // desktop: 32px
           lg: 4       // large desktop: 32px
