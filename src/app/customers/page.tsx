@@ -179,7 +179,6 @@ export default function CustomersPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Customer Management"
-        subtitle="Manage and track all customers and their information"
         breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
