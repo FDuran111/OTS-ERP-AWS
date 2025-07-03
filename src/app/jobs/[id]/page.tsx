@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
-  Container,
   Typography,
   Card,
   CardContent,
@@ -13,11 +12,11 @@ import {
   Tabs,
   Paper,
   IconButton,
-  AppBar,
-  Toolbar,
   Button,
   Divider,
 } from '@mui/material'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
@@ -160,53 +159,50 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   if (loading) {
     return (
-      <Container maxWidth="xl" sx={{ mt: 4 }}>
-        <Typography align="center">Loading job details...</Typography>
-      </Container>
+      <ResponsiveLayout>
+        <ResponsiveContainer>
+          <Typography align="center">Loading job details...</Typography>
+        </ResponsiveContainer>
+      </ResponsiveLayout>
     )
   }
 
   if (error || !job) {
     return (
-      <Container maxWidth="xl" sx={{ mt: 4 }}>
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="h6" color="error" gutterBottom>
-            {error || 'Job not found'}
-          </Typography>
-          <Button onClick={() => router.push('/jobs')} startIcon={<ArrowBackIcon />}>
-            Back to Jobs
-          </Button>
-        </Box>
-      </Container>
+      <ResponsiveLayout>
+        <ResponsiveContainer>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h6" color="error" gutterBottom>
+              {error || 'Job not found'}
+            </Typography>
+            <Button onClick={() => router.push('/jobs')} startIcon={<ArrowBackIcon />}>
+              Back to Jobs
+            </Button>
+          </Box>
+        </ResponsiveContainer>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <Box>
-      {/* Header */}
-      <AppBar position="static" color="default" elevation={0}>
-        <Toolbar>
-          <IconButton onClick={() => router.push('/jobs')} sx={{ mr: 2 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6">
-              {job.jobNumber} - {job.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {job.customerName || job.customer}
-            </Typography>
-          </Box>
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title={`${job.jobNumber} - ${job.title}`}
+        subtitle={job.customerName || job.customer}
+        breadcrumbs={[
+          { label: 'Home', path: '/dashboard' },
+          { label: 'Jobs', path: '/jobs' },
+          { label: job.jobNumber }
+        ]}
+        actions={
           <Button
             startIcon={<EditIcon />}
             onClick={() => router.push(`/jobs/${job.id}/edit`)}
           >
             Edit Job
           </Button>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="xl" sx={{ mt: 3 }}>
+        }
+      >
         {/* Job Summary Card */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
@@ -377,7 +373,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             }}
           />
         </TabPanel>
-      </Container>
-    </Box>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }

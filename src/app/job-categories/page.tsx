@@ -368,16 +368,15 @@ export default function JobCategoriesPage() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          🗂️ Job Categorization
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Manage job categories, sub-categories, and tags for better organization and analysis
-        </Typography>
-      </Box>
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="🗂️ Job Categorization"
+        subtitle="Manage job categories, sub-categories, and tags for better organization and analysis"
+        breadcrumbs={[
+          { label: 'Home', path: '/dashboard' },
+          { label: 'Job Categories' }
+        ]}
+      >
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
@@ -858,6 +857,7 @@ export default function JobCategoriesPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }

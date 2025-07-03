@@ -37,6 +37,8 @@ import {
   AccordionDetails,
   Fab,
 } from '@mui/material'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -422,16 +424,15 @@ export default function EquipmentBillingPage() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          🚛 Equipment Billing
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Track equipment usage, manage billing rates, and analyze utilization
-        </Typography>
-      </Box>
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="🚛 Equipment Billing"
+        subtitle="Track equipment usage, manage billing rates, and analyze utilization"
+        breadcrumbs={[
+          { label: 'Home', path: '/dashboard' },
+          { label: 'Equipment Billing' }
+        ]}
+      >
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
@@ -904,6 +905,7 @@ export default function EquipmentBillingPage() {
       >
         <StartIcon />
       </Fab>
-    </Box>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }

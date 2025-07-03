@@ -7,17 +7,11 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
-  Container,
   Typography,
   Card,
   CardContent,
   Chip,
   IconButton,
-  AppBar,
-  Toolbar,
-  Drawer,
-  ListItemIcon,
-  ListItemButton,
   Avatar,
   Menu,
   MenuItem,
@@ -47,18 +41,9 @@ import {
   Tabs,
   Tab,
 } from '@mui/material'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
-  Dashboard as DashboardIcon,
-  Work as WorkIcon,
-  Schedule as ScheduleIcon,
-  People as PeopleIcon,
-  Inventory as InventoryIcon,
-  Receipt as ReceiptIcon,
-  Assessment as AssessmentIcon,
-  Settings as SettingsIcon,
-  AccessTime as TimeIcon,
-  Logout as LogoutIcon,
-  Menu as MenuIcon,
   Add as AddIcon,
   Search as SearchIcon,
   Edit as EditIcon,
@@ -69,8 +54,6 @@ import {
 } from '@mui/icons-material'
 import LaborRateDialog from '@/components/billing/LaborRateDialog'
 import LaborRateCard from '@/components/billing/LaborRateCard'
-
-const drawerWidth = 240
 
 interface User {
   id: string
@@ -92,20 +75,6 @@ interface LaborRate {
   createdAt: string
   updatedAt: string
 }
-
-const menuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { text: 'Jobs', icon: WorkIcon, path: '/jobs' },
-  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
-  { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
-  { text: 'Customers', icon: PeopleIcon, path: '/customers' },
-  { text: 'Leads', icon: TrendingUp, path: '/leads' },
-  { text: 'Materials', icon: InventoryIcon, path: '/materials' },
-  { text: 'Billing & Rates', icon: MoneyIcon, path: '/billing' },
-  { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing' },
-  { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
-  { text: 'Settings', icon: SettingsIcon, path: '/settings' },
-]
 
 const skillLevelOrder = ['APPRENTICE', 'HELPER', 'TECH_L1', 'TECH_L2', 'JOURNEYMAN', 'FOREMAN', 'LOW_VOLTAGE', 'CABLING', 'INSTALL']
 
@@ -138,8 +107,6 @@ const getCategoryColor = (category: string) => {
 export default function BillingPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [skillLevelFilter, setSkillLevelFilter] = useState('')
@@ -190,24 +157,6 @@ export default function BillingPage() {
     }
   }
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen)
-  }
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
-  }
-
   const handleAddRate = () => {
     setSelectedRate(null)
     setDialogOpen(true)
@@ -250,48 +199,6 @@ export default function BillingPage() {
 
   if (!user) return null
 
-  const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ px: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 300 }}>
-          Ortmeier Technical Service
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List sx={{ flexGrow: 1 }}>
-        {menuItems.map((item) => (
-          <ListItemButton
-            key={item.text}
-            onClick={() => router.push(item.path)}
-            selected={item.path === '/billing'}
-            sx={{
-              '&:hover': {
-                backgroundColor: 'rgba(225, 78, 202, 0.08)',
-              },
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(225, 78, 202, 0.12)',
-              },
-            }}
-          >
-            <ListItemIcon>
-              <item.icon sx={{ color: 'text.secondary' }} />
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        <ListItemButton onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon sx={{ color: 'text.secondary' }} />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItemButton>
-      </List>
-    </Box>
-  )
-
   const filteredRates = laborRates.filter(rate => {
     const matchesSearch = !searchTerm || 
       rate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -329,126 +236,39 @@ export default function BillingPage() {
   const availableSkillLevels = [...new Set(laborRates.map(rate => rate.skillLevel))]
 
   return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="💰 Billing & Rate Management"
+        subtitle="Manage labor rates and billing categories"
+        breadcrumbs={[
+          { label: 'Home', path: '/dashboard' },
+          { label: 'Billing & Rates' }
+        ]}
+        actions={
+          <>
+            <Button
+              variant="outlined"
+              onClick={() => fetchLaborRates()}
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : 'Refresh'}
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAddRate}
+              sx={{
+                backgroundColor: '#e14eca',
+                '&:hover': {
+                  backgroundColor: '#d236b8',
+                },
+              }}
+            >
+              Add Labor Rate
+            </Button>
+          </>
+        }
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Billing & Rate Management
-          </Typography>
-          <IconButton onClick={handleMenuClick}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
-              {user.name.charAt(0)}
-            </Avatar>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem>
-              <Typography variant="body2">{user.name}</Typography>
-            </MenuItem>
-            <MenuItem>
-              <Typography variant="caption" color="text.secondary">
-                {user.role}
-              </Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              Logout
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
-
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
-        }}
-      >
-        <Container maxWidth="xl">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="h4">
-              💰 Billing & Rate Management
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                variant="outlined"
-                onClick={() => fetchLaborRates()}
-                disabled={loading}
-              >
-                {loading ? 'Loading...' : 'Refresh'}
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleAddRate}
-                sx={{
-                  backgroundColor: '#e14eca',
-                  '&:hover': {
-                    backgroundColor: '#d236b8',
-                  },
-                }}
-              >
-                Add Labor Rate
-              </Button>
-            </Box>
-          </Box>
 
           {/* Summary Stats */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -732,8 +552,7 @@ export default function BillingPage() {
             onRateCreated={handleRateCreated}
             onRateUpdated={handleRateUpdated}
           />
-        </Container>
-      </Box>
-    </Box>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }

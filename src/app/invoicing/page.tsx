@@ -4,23 +4,10 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
-  Container,
   Typography,
   Card,
   CardContent,
   Chip,
-  IconButton,
-  AppBar,
-  Toolbar,
-  Drawer,
-  ListItemIcon,
-  ListItemButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
-  List,
-  ListItemText,
   Table,
   TableBody,
   TableCell,
@@ -36,31 +23,19 @@ import {
   Grid,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
-  Work as WorkIcon,
-  Schedule as ScheduleIcon,
-  People as PeopleIcon,
-  Inventory as InventoryIcon,
-  Receipt as ReceiptIcon,
-  Assessment as AssessmentIcon,
-  Settings as SettingsIcon,
-  AccessTime as TimeIcon,
-  Logout as LogoutIcon,
-  Menu as MenuIcon,
   Add as AddIcon,
   Search as SearchIcon,
-  MoreVert as MoreVertIcon,
   AttachMoney,
   PendingActions,
   CheckCircle,
   Warning,
-  TrendingUp,
+  Receipt as ReceiptIcon,
 } from '@mui/icons-material'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
+import InvoiceActionsMenu from '@/components/invoices/InvoiceActionsMenu'
 import CreateInvoiceDialog from '@/components/invoices/CreateInvoiceDialog'
 import EditInvoiceDialog from '@/components/invoices/EditInvoiceDialog'
-import InvoiceActionsMenu from '@/components/invoices/InvoiceActionsMenu'
-
-const drawerWidth = 240
 
 interface User {
   id: string
@@ -69,34 +44,35 @@ interface User {
   role: string
 }
 
+interface Customer {
+  id: string
+  firstName: string
+  lastName: string
+}
+
+interface Job {
+  id: string
+  jobNumber: string
+  description?: string
+  status: string
+  customerId: string
+}
+
 interface Invoice {
   id: string
   invoiceNumber: string
-  jobId?: string
-  status: string
+  job: Job
+  customer: Customer
   totalAmount: number
-  subtotalAmount: number
-  taxAmount: number
   dueDate: string
-  sentDate: string | null
-  paidDate: string | null
-  notes?: string
-  customer: {
-    firstName: string
-    lastName: string
-  }
-  job: {
-    jobNumber: string
-    description?: string
-  }
+  sentDate?: string
+  status: string
   lineItems?: Array<{
     id: string
-    type: string
     description: string
     quantity: number
-    unitPrice: number
-    totalPrice: number
-    materialId?: string
+    rate: number
+    total: number
     laborRateId?: string
   }>
 }
@@ -108,30 +84,16 @@ interface Stats {
   color: string
 }
 
-
-const menuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { text: 'Jobs', icon: WorkIcon, path: '/jobs' },
-  { text: 'Schedule', icon: ScheduleIcon, path: '/schedule' },
-  { text: 'Time Tracking', icon: TimeIcon, path: '/time' },
-  { text: 'Customers', icon: PeopleIcon, path: '/customers' },
-  { text: 'Leads', icon: TrendingUp, path: '/leads' },
-  { text: 'Materials', icon: InventoryIcon, path: '/materials' },
-  { text: 'A/R - Invoicing', icon: ReceiptIcon, path: '/invoicing' },
-  { text: 'Reports', icon: AssessmentIcon, path: '/reports' },
-  { text: 'Settings', icon: SettingsIcon, path: '/settings' },
-]
-
 const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
   switch (status) {
     case 'Paid':
       return 'success'
     case 'Sent':
-      return 'info'
-    case 'Draft':
-      return 'default'
+      return 'primary'
     case 'Overdue':
       return 'error'
+    case 'Draft':
+      return 'default'
     default:
       return 'default'
   }
@@ -140,8 +102,6 @@ const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | '
 export default function InvoicingPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [stats, setStats] = useState<Stats[]>([])
@@ -170,17 +130,11 @@ export default function InvoicingPage() {
         throw new Error('Failed to fetch invoices')
       }
       const data = await response.json()
-      console.log('Fetched invoices:', data)
-      // Log the first invoice to see its structure
-      if (data.length > 0) {
-        console.log('First invoice details:', data[0])
-        console.log('First invoice line items:', data[0].lineItems)
-      }
       setInvoices(data)
       setError(null)
-    } catch (error) {
-      console.error('Error fetching invoices:', error)
+    } catch (err) {
       setError('Failed to load invoices')
+      console.error('Error fetching invoices:', err)
     } finally {
       setLoading(false)
     }
@@ -191,29 +145,11 @@ export default function InvoicingPage() {
       const response = await fetch('/api/invoices/stats')
       if (response.ok) {
         const data = await response.json()
-        setStats(data.stats)
+        setStats(data)
       }
     } catch (error) {
-      console.error('Error fetching stats:', error)
+      console.error('Error fetching invoice stats:', error)
     }
-  }
-
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen)
-  }
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
   }
 
   const handleCreateInvoice = () => {
@@ -289,327 +225,199 @@ export default function InvoicingPage() {
 
   if (!user) return null
 
-  const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ px: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 300 }}>
-          Ortmeier Technical Service
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List sx={{ flexGrow: 1 }}>
-        {menuItems.map((item) => (
-          <ListItemButton
-            key={item.text}
-            onClick={() => router.push(item.path)}
-            selected={item.path === '/invoicing'}
+  const breadcrumbs = [
+    {
+      label: 'Dashboard',
+      path: '/dashboard',
+    },
+    {
+      label: 'Invoicing',
+      icon: <ReceiptIcon fontSize="small" />
+    }
+  ]
+
+  return (
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="Invoicing"
+        subtitle="Manage invoices and billing"
+        breadcrumbs={breadcrumbs}
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleCreateInvoice}
             sx={{
+              backgroundColor: '#e14eca',
               '&:hover': {
-                backgroundColor: 'rgba(225, 78, 202, 0.08)',
-              },
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(225, 78, 202, 0.12)',
+                backgroundColor: '#d236b8',
               },
             }}
           >
-            <ListItemIcon>
-              <item.icon sx={{ color: 'text.secondary' }} />
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        <ListItemButton onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon sx={{ color: 'text.secondary' }} />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItemButton>
-      </List>
-    </Box>
-  )
-
-  return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
+            Create Invoice
+          </Button>
+        }
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Accounts Receivable - Customer Invoices
-          </Typography>
-          <IconButton onClick={handleMenuClick}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
-              {user.name.charAt(0)}
-            </Avatar>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem>
-              <Typography variant="body2">{user.name}</Typography>
-            </MenuItem>
-            <MenuItem>
-              <Typography variant="caption" color="text.secondary">
-                {user.role}
-              </Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              Logout
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
-
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
-        }}
-      >
-        <Container maxWidth="xl">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Box>
-              <Typography variant="h4">
-                Accounts Receivable
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Create and manage customer invoices for completed electrical work
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleCreateInvoice}
-              sx={{
-                backgroundColor: '#e14eca',
-                '&:hover': {
-                  backgroundColor: '#d236b8',
-                },
-              }}
-            >
-              Create Customer Invoice
-            </Button>
-          </Box>
-
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-            {stats.map((stat) => {
-              const IconComponent = getStatsIconComponent(stat.icon)
-              return (
-                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
-                  <Card>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 48,
-                            height: 48,
-                            borderRadius: '12px',
-                            backgroundColor: `${stat.color}20`,
-                            mr: 2,
-                          }}
-                        >
-                          {React.createElement(IconComponent, { sx: { color: stat.color } })}
-                        </Box>
-                        <Box>
-                          <Typography color="text.secondary" variant="caption">
-                            {stat.title}
-                          </Typography>
-                          <Typography variant="h5">{stat.value}</Typography>
-                        </Box>
+        {/* Stats Cards */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {stats.map((stat, index) => {
+            const IconComponent = getStatsIconComponent(stat.icon)
+            return (
+              <Grid key={index} size={{ xs: 12, sm: 6, md: 3 }}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <Box>
+                        <Typography color="text.secondary" gutterBottom>
+                          {stat.title}
+                        </Typography>
+                        <Typography variant="h4">
+                          {stat.value}
+                        </Typography>
                       </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )
-            })}
-          </Grid>
+                      <IconComponent
+                        sx={{
+                          fontSize: 40,
+                          color: stat.color || 'primary.main',
+                          opacity: 0.3,
+                        }}
+                      />
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )
+          })}
+        </Grid>
 
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <TextField
-                fullWidth
-                placeholder="Search invoices by ID, job, or customer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </CardContent>
-          </Card>
+        {/* Search and Filter */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Search by invoice number, job number, or customer name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </CardContent>
+        </Card>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Invoice #</TableCell>
+                  <TableCell>Job #</TableCell>
+                  <TableCell>Customer</TableCell>
+                  <TableCell>Amount</TableCell>
+                  <TableCell>Due Date</TableCell>
+                  <TableCell>Sent Date</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {invoices.length === 0 ? (
                   <TableRow>
-                    <TableCell>Invoice #</TableCell>
-                    <TableCell>Job #</TableCell>
-                    <TableCell>Customer</TableCell>
-                    <TableCell>Amount</TableCell>
-                    <TableCell>Due Date</TableCell>
-                    <TableCell>Sent Date</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell align="right">Actions</TableCell>
+                    <TableCell colSpan={8} align="center">
+                      No invoices found
+                    </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {invoices.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center">
-                        No invoices found
+                ) : invoices
+                  .filter(invoice => 
+                    invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    invoice.job?.jobNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    `${invoice.customer?.firstName || ''} ${invoice.customer?.lastName || ''}`.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((invoice) => (
+                    <TableRow key={invoice.id} hover>
+                      <TableCell>{invoice.invoiceNumber}</TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2">{invoice.job.jobNumber}</Typography>
+                          {invoice.job.description && (
+                            <Typography variant="caption" color="text.secondary">
+                              {invoice.job.description}
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        {invoice.customer.firstName} {invoice.customer.lastName}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'medium' }}>
+                        ${invoice.totalAmount.toFixed(2)}
+                      </TableCell>
+                      <TableCell>{formatDate(invoice.dueDate)}</TableCell>
+                      <TableCell>
+                        {invoice.sentDate ? formatDate(invoice.sentDate) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={invoice.status}
+                          color={getStatusColor(invoice.status)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <InvoiceActionsMenu
+                          invoice={invoice}
+                          onEdit={handleEditInvoice}
+                          onDelete={handleDeleteInvoice}
+                          onStatusUpdated={handleStatusUpdated}
+                        />
                       </TableCell>
                     </TableRow>
-                  ) : invoices
-                    .filter(invoice => 
-                      invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      invoice.job?.jobNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      `${invoice.customer?.firstName || ''} ${invoice.customer?.lastName || ''}`.toLowerCase().includes(searchTerm.toLowerCase())
-                    )
-                    .map((invoice) => (
-                      <TableRow key={invoice.id} hover>
-                        <TableCell>{invoice.invoiceNumber}</TableCell>
-                        <TableCell>
-                          <Box>
-                            <Typography variant="body2">{invoice.job.jobNumber}</Typography>
-                            {invoice.job.description && (
-                              <Typography variant="caption" color="text.secondary">
-                                {invoice.job.description}
-                              </Typography>
-                            )}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          {invoice.customer.firstName} {invoice.customer.lastName}
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 'medium' }}>
-                          ${invoice.totalAmount.toFixed(2)}
-                        </TableCell>
-                        <TableCell>{formatDate(invoice.dueDate)}</TableCell>
-                        <TableCell>
-                          {invoice.sentDate ? formatDate(invoice.sentDate) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={invoice.status}
-                            color={getStatusColor(invoice.status)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <InvoiceActionsMenu
-                            invoice={invoice}
-                            onEdit={handleEditInvoice}
-                            onDelete={handleDeleteInvoice}
-                            onStatusUpdated={handleStatusUpdated}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  {invoices.length === 0 && !loading && (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center">
-                        <Typography color="text.secondary">No invoices found</Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+                  ))}
+                {invoices.length === 0 && !loading && (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      <Typography color="text.secondary">No invoices found</Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
-          <CreateInvoiceDialog
-            open={createDialogOpen}
-            onClose={() => setCreateDialogOpen(false)}
-            onInvoiceCreated={handleInvoiceCreated}
-          />
+        <CreateInvoiceDialog
+          open={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          onInvoiceCreated={handleInvoiceCreated}
+        />
 
+        {selectedInvoice && (
           <EditInvoiceDialog
             open={editDialogOpen}
-            invoice={selectedInvoice}
             onClose={() => {
               setEditDialogOpen(false)
               setSelectedInvoice(null)
             }}
             onInvoiceUpdated={handleInvoiceUpdated}
+            invoice={selectedInvoice}
           />
-        </Container>
-      </Box>
-    </Box>
+        )}
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }

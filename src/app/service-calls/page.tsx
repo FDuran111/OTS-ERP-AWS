@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import {
-  Container,
   Typography,
   Box,
   Button,
@@ -27,6 +26,8 @@ import {
   Stack,
   Avatar
 } from '@mui/material'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -295,11 +296,15 @@ export default function ServiceCallsPage() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Service Calls
-        </Typography>
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="Service Calls"
+        subtitle="Manage and track service calls"
+        breadcrumbs={[
+          { label: 'Home', path: '/dashboard' },
+          { label: 'Service Calls' }
+        ]}
+      >
         
         {/* Stats Cards */}
         {stats && (
@@ -645,6 +650,7 @@ export default function ServiceCallsPage() {
       >
         <AddIcon />
       </Fab>
-    </Container>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }

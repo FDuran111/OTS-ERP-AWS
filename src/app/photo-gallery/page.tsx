@@ -27,6 +27,8 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   PhotoLibrary as GalleryIcon,
   Close as CloseIcon,
@@ -230,16 +232,15 @@ export default function PhotoGalleryPage() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          📸 Photo Gallery
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Browse and manage all job photos, before/after shots, and documentation images
-        </Typography>
-      </Box>
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="📸 Photo Gallery"
+        subtitle="Browse and manage all job photos, before/after shots, and documentation images"
+        breadcrumbs={[
+          { label: 'Home', path: '/dashboard' },
+          { label: 'Photo Gallery' }
+        ]}
+      >
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
@@ -507,6 +508,7 @@ export default function PhotoGalleryPage() {
           </Box>
         </DialogActions>
       </Dialog>
-    </Box>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }

@@ -34,6 +34,8 @@ import {
   LinearProgress,
   Tooltip,
 } from '@mui/material'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import {
   LocalShipping as TruckIcon,
@@ -327,18 +329,16 @@ export default function RouteOptimizationPage() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h4" gutterBottom>
-            🚛 Route Optimization
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Optimize crew routes, manage vehicles, and track performance
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={2}>
+    <ResponsiveLayout>
+      <ResponsiveContainer
+        title="🚛 Route Optimization"
+        subtitle="Optimize crew routes, manage vehicles, and track performance"
+        breadcrumbs={[
+          { label: 'Home', path: '/dashboard' },
+          { label: 'Route Optimization' }
+        ]}
+        actions={
+          <Stack direction="row" spacing={2}>
           <TextField
             type="date"
             label="Route Date"
@@ -355,7 +355,8 @@ export default function RouteOptimizationPage() {
             Optimize Routes
           </Button>
         </Stack>
-      </Box>
+        }
+      >
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
@@ -892,6 +893,7 @@ export default function RouteOptimizationPage() {
           <Button onClick={() => setRouteDetailsOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }
