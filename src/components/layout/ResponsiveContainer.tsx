@@ -60,15 +60,18 @@ export default function ResponsiveContainer({
         display: 'flex',
         flexDirection: 'column',
         flexGrow: 1,
-        // Temporarily remove padding to test
-        p: 0,
-        // Debug border
-        border: '3px solid orange',
+        // Responsive padding
+        p: { 
+          xs: 2,      // mobile: 16px
+          sm: 3,      // tablet: 24px  
+          md: 4,      // desktop: 32px
+          lg: 4       // large desktop: 32px
+        },
       }}
     >
       {/* Header Section */}
       {(title || breadcrumbs) && (
-        <Box className="mb-6" sx={{ pt: 6, px: 4 }}>
+        <Box className="mb-6">
           {/* Breadcrumbs */}
           {breadcrumbs && breadcrumbs.length > 0 && (
             <Breadcrumbs
@@ -196,8 +199,6 @@ export default function ResponsiveContainer({
       <Box
         className="flex-1 w-full overflow-auto"
         sx={{
-          px: 4,
-          pb: 4,
           '& > *': {
             maxWidth: '100%',
           },

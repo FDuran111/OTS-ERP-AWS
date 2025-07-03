@@ -51,7 +51,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   }
 
   return (
-    <Box className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden" sx={{ width: '100vw', maxWidth: '100vw', border: '3px solid purple', position: 'relative', display: 'flex', flexDirection: 'row' }}>
+    <Box className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden" sx={{ width: '100vw', maxWidth: '100vw', position: 'relative', display: 'flex', flexDirection: 'row' }}>
       {/* Responsive App Bar - Only shows on mobile */}
       {isMobile && (
         <ResponsiveAppBar
@@ -89,8 +89,6 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          border: '3px solid yellow',
-          boxSizing: 'border-box',
         }}
       >
         {/* Desktop Sidebar Toggle Button - Inside content */}
