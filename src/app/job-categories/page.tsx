@@ -54,6 +54,8 @@ import {
   AttachMoney as MoneyIcon,
   Assessment as StatsIcon,
 } from '@mui/icons-material'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 
 interface TabPanelProps {
   children?: React.ReactNode

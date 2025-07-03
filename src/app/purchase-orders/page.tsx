@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import {
   Box,
   Typography,
@@ -128,6 +129,7 @@ const getPriorityColor = (priority?: string): 'default' | 'error' | 'warning' | 
 
 export default function PurchaseOrdersPage() {
   const router = useRouter()
+  const { user: authUser } = useAuth()
   const [user, setUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
@@ -524,7 +526,8 @@ export default function PurchaseOrdersPage() {
         <CreatePurchaseOrderDialog
           open={createDialogOpen}
           onClose={() => setCreateDialogOpen(false)}
-          onPOCreated={handlePOCreated}
+          onPurchaseOrderCreated={handlePOCreated}
+          currentUser={user || authUser || { id: '', email: '', name: '', role: 'EMPLOYEE' }}
         />
 
         {selectedPO && (
@@ -535,8 +538,9 @@ export default function PurchaseOrdersPage() {
                 setEditDialogOpen(false)
                 setSelectedPO(null)
               }}
-              onPOUpdated={handlePOUpdated}
+              onPurchaseOrderUpdated={handlePOUpdated}
               purchaseOrder={selectedPO}
+              currentUser={user || authUser || { id: '', email: '', name: '', role: 'EMPLOYEE' }}
             />
 
             <PurchaseOrderDetailsDialog
@@ -546,18 +550,6 @@ export default function PurchaseOrdersPage() {
                 setSelectedPO(null)
               }}
               purchaseOrder={selectedPO}
-              onEdit={() => {
-                setDetailsDialogOpen(false)
-                handleEditPO(selectedPO)
-              }}
-              onDelete={() => {
-                setDetailsDialogOpen(false)
-                handleDeletePO(selectedPO.id)
-              }}
-              onStatusChange={() => {
-                fetchPurchaseOrders()
-                fetchStats()
-              }}
             />
           </>
         )}
@@ -565,7 +557,6 @@ export default function PurchaseOrdersPage() {
         <ApprovalQueueDialog
           open={approvalQueueOpen}
           onClose={() => setApprovalQueueOpen(false)}
-          onApprovalComplete={handleApprovalComplete}
         />
       </ResponsiveContainer>
     </ResponsiveLayout>

@@ -161,23 +161,29 @@ export default function InvoicingPage() {
     setCreateDialogOpen(true)
   }
 
-  const handleEditInvoice = async (invoice: Invoice) => {
-    try {
-      // Fetch full invoice details including line items
-      const response = await fetch(`/api/invoices/${invoice.id}`)
-      if (response.ok) {
-        const fullInvoice = await response.json()
-        console.log('Fetched full invoice for editing:', fullInvoice)
-        setSelectedInvoice(fullInvoice)
-        setEditDialogOpen(true)
-      } else {
-        console.error('Failed to fetch invoice details')
+  const handleEditInvoice = (invoice: Invoice) => {
+    // Create an async function to handle the actual edit operation
+    const performEdit = async () => {
+      try {
+        // Fetch full invoice details including line items
+        const response = await fetch(`/api/invoices/${invoice.id}`)
+        if (response.ok) {
+          const fullInvoice = await response.json()
+          console.log('Fetched full invoice for editing:', fullInvoice)
+          setSelectedInvoice(fullInvoice)
+          setEditDialogOpen(true)
+        } else {
+          console.error('Failed to fetch invoice details')
+          alert('Failed to load invoice details')
+        }
+      } catch (error) {
+        console.error('Error fetching invoice for edit:', error)
         alert('Failed to load invoice details')
       }
-    } catch (error) {
-      console.error('Error fetching invoice for edit:', error)
-      alert('Failed to load invoice details')
     }
+    
+    // Execute the async function
+    performEdit()
   }
 
   const handleDeleteInvoice = async (invoice: Invoice) => {
@@ -385,9 +391,19 @@ export default function InvoicingPage() {
                       </TableCell>
                       <TableCell align="right">
                         <InvoiceActionsMenu
-                          invoice={invoice}
-                          onEdit={handleEditInvoice}
-                          onDelete={handleDeleteInvoice}
+                          invoice={{
+                            ...invoice,
+                            job: {
+                              jobNumber: invoice.job.jobNumber,
+                              description: invoice.job.description
+                            },
+                            customer: {
+                              firstName: invoice.customer.firstName,
+                              lastName: invoice.customer.lastName
+                            }
+                          } as any}
+                          onEdit={handleEditInvoice as any}
+                          onDelete={handleDeleteInvoice as any}
                           onStatusUpdated={handleStatusUpdated}
                         />
                       </TableCell>
