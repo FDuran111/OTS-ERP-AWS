@@ -373,7 +373,6 @@ export default function JobCategoriesPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="🗂️ Job Categorization"
-        subtitle="Manage job categories, sub-categories, and tags for better organization and analysis"
         breadcrumbs={[
           { label: 'Home', path: '/dashboard' },
           { label: 'Job Categories' }
