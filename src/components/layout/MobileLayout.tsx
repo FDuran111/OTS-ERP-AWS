@@ -44,7 +44,6 @@ import {
   Category as CategoriesIcon,
   Photo as PhotoIcon,
   AccountBalance as QuickBooksIcon,
-  Person as CustomerPortalIcon,
   Tune as OptimizeIcon,
 } from '@mui/icons-material'
 import { useRouter, usePathname } from 'next/navigation'
@@ -283,14 +282,6 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
             </Typography>
           </Box>
         </Box>
-        <Chip
-          icon={<CustomerPortalIcon />}
-          label="Customer Portal"
-          size="small"
-          variant="outlined"
-          onClick={() => handleNavigation('/customer-portal')}
-          sx={{ mr: 1 }}
-        />
       </Box>
     </Box>
   )

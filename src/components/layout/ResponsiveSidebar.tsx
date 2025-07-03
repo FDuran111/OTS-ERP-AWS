@@ -34,7 +34,6 @@ import {
   Category as CategoriesIcon,
   Photo as PhotoIcon,
   AccountBalance as QuickBooksIcon,
-  Person as CustomerPortalIcon,
   Logout as LogoutIcon,
 } from '@mui/icons-material'
 import { useState } from 'react'
@@ -364,20 +363,6 @@ export default function ResponsiveSidebar({
             <ListItemText>Logout</ListItemText>
           </MenuItem>
         </Menu>
-        <Chip
-          icon={<CustomerPortalIcon />}
-          label="Customer Portal"
-          size="small"
-          variant="outlined"
-          onClick={() => handleNavigation('/customer-portal')}
-          className="w-full"
-          sx={{
-            '& .MuiChip-label': {
-              width: '100%',
-              justifyContent: 'center'
-            }
-          }}
-        />
       </Box>
     </Box>
   )
