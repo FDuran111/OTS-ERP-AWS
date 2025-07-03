@@ -60,29 +60,6 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         />
       )}
 
-      {/* Desktop Sidebar Toggle Button */}
-      {!isMobile && (
-        <Tooltip title={sidebarOpen ? "Hide sidebar" : "Show sidebar"} placement="right">
-          <IconButton
-            onClick={handleSidebarToggle}
-            sx={{
-              position: 'fixed',
-              left: sidebarOpen ? 268 : 8,
-              top: 16,
-              zIndex: theme.zIndex.drawer + 1,
-              backgroundColor: 'background.paper',
-              boxShadow: 2,
-              transition: 'left 0.3s ease-in-out',
-              '&:hover': {
-                backgroundColor: 'action.hover',
-                transform: 'scale(1.05)',
-              },
-            }}
-          >
-            {sidebarOpen ? <MenuOpenIcon /> : <MenuIcon />}
-          </IconButton>
-        </Tooltip>
-      )}
 
       {/* Responsive Sidebar */}
       <ResponsiveSidebar
@@ -105,7 +82,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           marginLeft: !isMobile && sidebarOpen ? '256px' : 0,
           marginRight: 0,
           padding: 0,
-          paddingTop: !isMobile ? '60px' : 0, // Space for toggle button
+          paddingTop: 0, // Remove top padding
           transition: 'margin-left 0.3s ease-in-out',
           width: !isMobile && sidebarOpen ? 'calc(100% - 256px)' : '100%',
           maxWidth: '100%',
@@ -113,6 +90,29 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           flexDirection: 'column',
         }}
       >
+        {/* Desktop Sidebar Toggle Button - Inside content */}
+        {!isMobile && (
+          <Tooltip title={sidebarOpen ? "Hide sidebar" : "Show sidebar"} placement="right">
+            <IconButton
+              onClick={handleSidebarToggle}
+              sx={{
+                position: 'absolute',
+                left: 8,
+                top: 16,
+                zIndex: theme.zIndex.drawer + 1,
+                backgroundColor: 'background.paper',
+                boxShadow: 2,
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  transform: 'scale(1.05)',
+                },
+              }}
+            >
+              {sidebarOpen ? <MenuOpenIcon /> : <MenuIcon />}
+            </IconButton>
+          </Tooltip>
+        )}
+        
         {/* Direct children without extra container */}
         {children}
       </Box>

@@ -68,7 +68,7 @@ export default function ResponsiveContainer({
     >
       {/* Header Section */}
       {(title || breadcrumbs) && (
-        <Box className="mb-6">
+        <Box className="mb-6" sx={{ pt: 6, px: 4 }}>
           {/* Breadcrumbs */}
           {breadcrumbs && breadcrumbs.length > 0 && (
             <Breadcrumbs
@@ -196,6 +196,8 @@ export default function ResponsiveContainer({
       <Box
         className="flex-1 w-full overflow-auto"
         sx={{
+          px: 4,
+          pb: 4,
           '& > *': {
             maxWidth: '100%',
           },
