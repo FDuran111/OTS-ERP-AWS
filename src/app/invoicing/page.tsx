@@ -282,7 +282,6 @@ export default function InvoicingPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Invoicing"
-        subtitle="Manage invoices and billing"
         breadcrumbs={breadcrumbs}
         actions={
           <Button
