@@ -56,15 +56,14 @@ export default function ResponsiveContainer({
         width: '100%',
         maxWidth: maxWidth || '100%',
         height: '100%',
+        minHeight: '100%',
         display: 'flex',
         flexDirection: 'column',
-        // Padding for content breathing room
-        p: { 
-          xs: 2,      // mobile: 16px
-          sm: 3,      // tablet: 24px  
-          md: 4,      // desktop: 32px
-          lg: 4       // large desktop: 32px
-        },
+        flexGrow: 1,
+        // Temporarily remove padding to test
+        p: 0,
+        // Debug border
+        border: '3px solid orange',
       }}
     >
       {/* Header Section */}

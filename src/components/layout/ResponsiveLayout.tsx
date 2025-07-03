@@ -51,7 +51,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   }
 
   return (
-    <Box className="flex min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden" sx={{ width: '100vw', maxWidth: '100vw' }}>
+    <Box className="flex min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden" sx={{ width: '100vw', maxWidth: '100vw', border: '3px solid purple' }}>
       {/* Responsive App Bar - Only shows on mobile */}
       {isMobile && (
         <ResponsiveAppBar
@@ -104,33 +104,17 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           backgroundColor: 'background.default',
           marginLeft: !isMobile && sidebarOpen ? '256px' : 0,
           marginRight: 0,
+          padding: 0,
           paddingTop: !isMobile ? '60px' : 0, // Space for toggle button
           transition: 'margin-left 0.3s ease-in-out',
           width: !isMobile && sidebarOpen ? 'calc(100% - 256px)' : '100%',
           maxWidth: '100%',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        {/* Scrollable Content Container */}
-        <Box
-          className="flex-1 w-full overflow-y-auto overflow-x-hidden"
-          sx={{
-            // Remove all padding when sidebar is hidden on desktop
-            pl: 0,
-            pr: 0,
-            transition: 'padding 0.3s ease-in-out',
-            width: '100%',
-            maxWidth: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'stretch',
-            '& > *': {
-              width: '100%',
-              maxWidth: '100%',
-            }
-          }}
-        >
-          {children}
-        </Box>
+        {/* Direct children without extra container */}
+        {children}
       </Box>
 
       {/* Mobile Bottom Navigation */}
