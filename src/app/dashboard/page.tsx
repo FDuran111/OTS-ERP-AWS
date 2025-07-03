@@ -33,6 +33,7 @@ import {
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import LowStockNotification from '@/components/notifications/LowStockNotification'
+import EmployeeJobQuickAccess from '@/components/dashboard/EmployeeJobQuickAccess'
 
 
 interface User {
@@ -198,7 +199,46 @@ export default function DashboardPage() {
   if (!user) return null
 
   // Quick action buttons for mobile and desktop
-  const quickActions = (
+  const quickActions = user.role === 'EMPLOYEE' ? (
+    <Stack 
+      direction={isMobile ? 'column' : 'row'} 
+      spacing={2} 
+      sx={{
+        width: { xs: '100%', md: 'auto' },
+        alignItems: { xs: 'stretch', md: 'center' }
+      }}
+    >
+      <Button
+        variant="contained"
+        startIcon={<WorkIcon />}
+        onClick={() => handleQuickAction(isMobile ? '/jobs/mobile' : '/jobs')}
+        sx={{
+          width: { xs: '100%', md: 'auto' },
+          minWidth: { xs: 'auto', md: '120px' },
+          backgroundColor: '#e14eca',
+          '&:hover': {
+            backgroundColor: '#d236b8',
+          },
+        }}
+        size={isMobile ? 'large' : 'medium'}
+      >
+        My Jobs
+      </Button>
+      <Button
+        variant="outlined"
+        startIcon={<AccessTime />}
+        onClick={() => handleQuickAction('/time')}
+        sx={{
+          width: { xs: '100%', md: 'auto' },
+          minWidth: { xs: 'auto', md: '140px' },
+          whiteSpace: 'nowrap'
+        }}
+        size={isMobile ? 'large' : 'medium'}
+      >
+        Time Clock
+      </Button>
+    </Stack>
+  ) : (
     <Stack 
       direction={isMobile ? 'column' : 'row'} 
       spacing={2} 
@@ -245,6 +285,13 @@ export default function DashboardPage() {
         title={`Welcome back, ${user.name}`}
         actions={quickActions}
       >
+        {/* Employee Job Quick Access - Only for employees on mobile */}
+        {user.role === 'EMPLOYEE' && isMobile && (
+          <Box sx={{ mb: 3 }}>
+            <EmployeeJobQuickAccess userName={user.name} />
+          </Box>
+        )}
+
         {/* Low Stock Notification */}
         <Box sx={{ mb: 3 }}>
           <LowStockNotification refreshTrigger={loading ? 0 : 1} />

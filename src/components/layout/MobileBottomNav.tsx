@@ -53,7 +53,13 @@ const bottomNavItems: BottomNavItem[] = [
     label: 'Jobs',
     icon: <JobsIcon />,
     path: '/jobs',
-    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
+    roles: ['OWNER_ADMIN', 'FOREMAN']
+  },
+  {
+    label: 'My Jobs',
+    icon: <JobsIcon />,
+    path: '/jobs/mobile',
+    roles: ['EMPLOYEE']
   },
   {
     label: 'Schedule',
