@@ -22,7 +22,7 @@ import {
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
 } from '@mui/icons-material'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from '@mui/material/styles'
 import { UserRole } from '@/lib/auth'
@@ -44,9 +44,31 @@ export default function ResponsiveAppBar({
   user
 }: ResponsiveAppBarProps) {
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null)
-  const [notificationCount] = useState(3) // Mock notification count
+  const [notificationCount, setNotificationCount] = useState(0)
   const router = useRouter()
   const theme = useTheme()
+
+  useEffect(() => {
+    // Fetch notification count
+    const fetchNotificationCount = async () => {
+      try {
+        const response = await fetch('/api/notifications', {
+          credentials: 'include'
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setNotificationCount(data.unreadCount || 0)
+        }
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error)
+      }
+    }
+
+    fetchNotificationCount()
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchNotificationCount, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setProfileMenuAnchor(event.currentTarget)

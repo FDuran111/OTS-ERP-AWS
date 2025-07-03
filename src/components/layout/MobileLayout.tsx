@@ -141,7 +141,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   const [expandedItems, setExpandedItems] = useState<string[]>([])
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null)
   const [quickActionMenuOpen, setQuickActionMenuOpen] = useState(false)
-  const [notificationCount, setNotificationCount] = useState(3) // Mock notification count
+  const [notificationCount, setNotificationCount] = useState(0)
   
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -155,6 +155,28 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
       setDrawerOpen(false)
     }
   }, [pathname, isMobile])
+
+  // Fetch notification count
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      try {
+        const response = await fetch('/api/notifications', {
+          credentials: 'include'
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setNotificationCount(data.unreadCount || 0)
+        }
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error)
+      }
+    }
+
+    fetchNotificationCount()
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchNotificationCount, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen)
