@@ -384,7 +384,7 @@ export default function ResponsiveSidebar({
 
   return (
     <Drawer
-      variant={isMobile ? 'temporary' : 'persistent'}
+      variant="temporary"
       anchor="left"
       open={open}
       onClose={onClose}

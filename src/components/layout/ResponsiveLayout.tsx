@@ -45,9 +45,6 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   const handleSidebarToggle = () => {
     setSidebarOpen(!sidebarOpen)
   }
-  
-  // Debug
-  console.log('Sidebar open:', sidebarOpen, 'Mobile:', isMobile)
 
   if (!user) {
     return null
@@ -82,12 +79,12 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           flexGrow: 1,
           minHeight: '100vh',
           backgroundColor: 'background.default',
-          marginLeft: !isMobile && sidebarOpen ? '256px' : 0,
+          marginLeft: 0,
           marginRight: 0,
           padding: 0,
           paddingTop: 0, // Remove top padding
           transition: 'margin-left 0.3s ease-in-out',
-          width: !isMobile && sidebarOpen ? 'calc(100% - 256px)' : '100%',
+          width: '100%',
           maxWidth: '100%',
           display: 'flex',
           flexDirection: 'column',
