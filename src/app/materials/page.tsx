@@ -424,7 +424,6 @@ export default function MaterialsPage() {
     <ResponsiveLayout>
       <ResponsiveContainer
         title="Materials & Inventory"
-        subtitle="Manage electrical materials, track inventory, and monitor stock levels"
         breadcrumbs={breadcrumbs}
         actions={actionButtons}
       >
