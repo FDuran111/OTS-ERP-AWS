@@ -139,7 +139,7 @@ const navigationItems: NavItem[] = [
     title: 'Settings',
     icon: <SettingsIcon />,
     path: '/settings',
-    roles: ['OWNER_ADMIN', 'FOREMAN']
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
   }
 ]
 

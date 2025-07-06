@@ -93,6 +93,19 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
+  // Calculate tab indices based on user role
+  const getTabIndex = (tabName: 'company' | 'notifications' | 'security' | 'appearance' | 'users') => {
+    const isEmployee = authUser?.role === 'EMPLOYEE'
+    
+    if (tabName === 'company' && isEmployee) return -1 // Hidden for employees
+    if (tabName === 'notifications') return isEmployee ? 0 : 1
+    if (tabName === 'security') return isEmployee ? 1 : 2
+    if (tabName === 'appearance') return isEmployee ? 2 : 3
+    if (tabName === 'users') return authUser?.role === 'OWNER_ADMIN' ? 4 : -1
+    
+    return 0
+  }
+
   // Settings state
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [smsNotifications, setSmsNotifications] = useState(false)
@@ -326,7 +339,9 @@ export default function SettingsPage() {
           }}>
             <CardContent sx={{ p: 2.5 }}>
               <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Tab icon={<Business />} label="Company" />
+                {(authUser?.role === 'OWNER_ADMIN' || authUser?.role === 'FOREMAN') && (
+                  <Tab icon={<Business />} label="Company" />
+                )}
                 <Tab icon={<Notifications />} label="Notifications" />
                 <Tab icon={<Security />} label="Security" />
                 <Tab icon={<Palette />} label="Appearance" />
@@ -335,7 +350,9 @@ export default function SettingsPage() {
                 )}
               </Tabs>
 
-              <TabPanel value={tabValue} index={0}>
+              {/* Company Settings - Only for OWNER_ADMIN and FOREMAN */}
+              {(authUser?.role === 'OWNER_ADMIN' || authUser?.role === 'FOREMAN') && (
+                <TabPanel value={tabValue} index={0}>
                 <form onSubmit={companyForm.handleSubmit(onCompanySubmit)}>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                     <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: '300px' }}>
@@ -463,9 +480,11 @@ export default function SettingsPage() {
                     </Box>
                   </Box>
                 </form>
-              </TabPanel>
+                </TabPanel>
+              )}
 
-              <TabPanel value={tabValue} index={1}>
+              {/* Notifications - Available to all users */}
+              <TabPanel value={tabValue} index={getTabIndex('notifications')}>
                 <Typography variant="h6" gutterBottom>
                   Notification Preferences
                 </Typography>
@@ -578,7 +597,8 @@ export default function SettingsPage() {
                 </Button>
               </TabPanel>
 
-              <TabPanel value={tabValue} index={2}>
+              {/* Security - Available to all users */}
+              <TabPanel value={tabValue} index={getTabIndex('security')}>
                 <Typography variant="h6" gutterBottom>
                   Security Settings
                 </Typography>
@@ -673,7 +693,8 @@ export default function SettingsPage() {
                 </form>
               </TabPanel>
 
-              <TabPanel value={tabValue} index={3}>
+              {/* Appearance - Available to all users */}
+              <TabPanel value={tabValue} index={getTabIndex('appearance')}>
                 <Typography variant="h6" gutterBottom>
                   Appearance Settings
                 </Typography>
@@ -740,8 +761,9 @@ export default function SettingsPage() {
                 </Button>
               </TabPanel>
 
+              {/* User Management - Only for OWNER_ADMIN */}
               {authUser?.role === 'OWNER_ADMIN' && (
-                <TabPanel value={tabValue} index={4}>
+                <TabPanel value={tabValue} index={getTabIndex('users')}>
                   <UserManagement />
                 </TabPanel>
               )}
