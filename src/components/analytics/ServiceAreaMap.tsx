@@ -241,8 +241,4 @@ export default function ServiceAreaMap({ data, viewMode }: ServiceAreaMapProps) 
         </Typography>
       </Paper>
     )
-  }
-
-  // This line is not reached due to the always-return above
-  // return <Box ref={mapRef} sx={{ width: '100%', height: '100%', borderRadius: 1 }} />
 }
