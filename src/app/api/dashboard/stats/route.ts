@@ -163,17 +163,11 @@ export async function GET(request: NextRequest) {
         
         // Filter stats based on role
         if (!permissions.canViewRevenueReports(userRole)) {
-          // Remove revenue stat for employees
-          filteredStats = stats.filter(stat => stat.title !== 'Revenue This Month')
-          
-          // Replace with a different stat for employees
-          filteredStats.push({
-            title: 'Pending Estimates',
-            value: pendingEstimates.toString(),
-            change: 'Awaiting review',
-            icon: 'pending_actions',
-            color: 'warning' as const,
-          })
+          // Remove revenue and purchase order stats for employees
+          filteredStats = stats.filter(stat => 
+            stat.title !== 'Revenue This Month' && 
+            stat.title !== 'Pending Purchase Orders'
+          )
         }
       } catch (error) {
         console.error('Error verifying token:', error)
@@ -194,7 +188,7 @@ export async function GET(request: NextRequest) {
     console.error('Dashboard stats error:', error)
     
     // Return fallback data instead of complete failure
-    const fallbackStats = [
+    let fallbackStats = [
       {
         title: 'Active Jobs',
         value: '0',
@@ -207,23 +201,42 @@ export async function GET(request: NextRequest) {
         value: '0.0',
         change: 'Loading...',
         icon: 'access_time',
-        color: 'success' as const,
+        color: 'info' as const,
+      },
+      {
+        title: 'Pending Purchase Orders',
+        value: '0',
+        change: 'Loading...',
+        icon: 'shopping_cart',
+        color: 'warning' as const,
       },
       {
         title: 'Revenue This Month',
         value: '$0',
         change: 'Loading...',
         icon: 'attach_money',
-        color: 'warning' as const,
-      },
-      {
-        title: 'Pending Estimates',
-        value: '0',
-        change: 'Loading...',
-        icon: 'pending_actions',
-        color: 'info' as const,
+        color: 'success' as const,
       },
     ]
+    
+    // Check user role for fallback stats too
+    const token = request.cookies.get('auth-token')?.value
+    if (token) {
+      try {
+        const userPayload = verifyToken(token)
+        const userRole = userPayload.role
+        
+        if (!permissions.canViewRevenueReports(userRole)) {
+          // For employees, show only Active Jobs and Hours Today
+          fallbackStats = fallbackStats.filter(stat => 
+            stat.title !== 'Revenue This Month' && 
+            stat.title !== 'Pending Purchase Orders'
+          )
+        }
+      } catch (error) {
+        console.error('Error verifying token for fallback:', error)
+      }
+    }
     
     return NextResponse.json(
       { 

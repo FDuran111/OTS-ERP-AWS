@@ -6,7 +6,6 @@ import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import SimpleTimeEntry from '@/components/time/SimpleTimeEntry'
 import ScheduledJobSuggestions from '@/components/time/ScheduledJobSuggestions'
-import ActiveTimerCard from '@/components/time/ActiveTimerCard'
 import {
   Box,
   Typography,
@@ -98,7 +97,6 @@ export default function TimePage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
-  const [activeTimers, setActiveTimers] = useState<TimeEntry[]>([])
   const [stats, setStats] = useState<TimeStat[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -108,26 +106,38 @@ export default function TimePage() {
       router.push('/login')
       return
     }
-    setUser(JSON.parse(storedUser))
-    fetchTimeData()
+    const userData = JSON.parse(storedUser)
+    setUser(userData)
+    fetchTimeData(userData)
   }, [router])
 
-  const fetchTimeData = async () => {
+  const fetchTimeData = async (currentUser?: User) => {
     try {
       setLoading(true)
+      
+      // Use passed user or state user
+      const activeUser = currentUser || user
+      
+      // For employees, only fetch their own time entries
+      const timeEntriesUrl = activeUser?.role === 'EMPLOYEE' 
+        ? `/api/time-entries?limit=20&userId=${activeUser.id}` 
+        : '/api/time-entries?limit=20'
+      
       const [entriesResponse, statsResponse] = await Promise.all([
-        fetch('/api/time-entries?limit=20', {
+        fetch(timeEntriesUrl, {
           credentials: 'include'
         }),
-        fetch('/api/time-entries/stats', {
+        fetch(activeUser?.role === 'EMPLOYEE' 
+          ? `/api/time-entries/stats?userId=${activeUser.id}`
+          : '/api/time-entries/stats', {
           credentials: 'include'
         })
       ])
 
       if (entriesResponse.ok) {
         const entries = await entriesResponse.json()
+        // Only show completed time entries, not active ones
         setTimeEntries(entries.filter((entry: TimeEntry) => !entry.isActive))
-        setActiveTimers(entries.filter((entry: TimeEntry) => entry.isActive))
       }
 
       if (statsResponse.ok) {
@@ -234,53 +244,9 @@ export default function TimePage() {
           <SimpleTimeEntry onTimeEntryCreated={fetchTimeData} />
         </Box>
 
-        {/* Active Timers - Legacy Support */}
-        {activeTimers.length > 0 && (
-          <Card sx={{ 
-            mb: 3,
-            transition: 'all 0.2s ease-in-out',
-            '&:hover': {
-              boxShadow: 3,
-            },
-          }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="h6" gutterBottom>
-                ⏱️ Active Timers (Legacy)
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                These are old-style timers that are still running. Stop them to complete the time entries.
-              </Typography>
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <Grid container spacing={1.5}>
-                  {activeTimers.map((timer) => (
-                    <Grid size={{ xs: 12, md: 6 }} key={timer.id}>
-                      <ActiveTimerCard
-                        timer={{
-                          id: timer.id,
-                          userName: timer.userName,
-                          jobNumber: timer.jobNumber,
-                          jobTitle: timer.jobTitle,
-                          customer: timer.customer,
-                          phaseName: timer.phaseName,
-                          startTime: timer.startTime,
-                          description: timer.description,
-                        }}
-                        onTimerStopped={fetchTimeData}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         <Typography variant="h6" sx={{ mb: 2 }}>
-          📋 Recent Time Entries
+          📋 {user?.role === 'EMPLOYEE' ? 'My Time Entries' : 'Recent Time Entries'}
         </Typography>
         <TableContainer component={Paper} sx={{
           borderRadius: 2,
@@ -293,7 +259,9 @@ export default function TimePage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Employee</TableCell>
+                {user?.role !== 'EMPLOYEE' && (
+                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Employee</TableCell>
+                )}
                 <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Job</TableCell>
                 <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Date</TableCell>
                 <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Start Time</TableCell>
@@ -305,7 +273,7 @@ export default function TimePage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={user?.role === 'EMPLOYEE' ? 6 : 7} align="center">
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
                       <CircularProgress size={24} />
                       <Typography sx={{ ml: 2 }}>Loading time entries...</Typography>
@@ -314,7 +282,7 @@ export default function TimePage() {
                 </TableRow>
               ) : timeEntries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={user?.role === 'EMPLOYEE' ? 6 : 7} align="center">
                     <Typography color="text.secondary">No time entries found</Typography>
                   </TableCell>
                 </TableRow>
@@ -325,7 +293,9 @@ export default function TimePage() {
                       backgroundColor: 'action.hover',
                     },
                   }}>
-                    <TableCell>{entry.userName}</TableCell>
+                    {user?.role !== 'EMPLOYEE' && (
+                      <TableCell>{entry.userName}</TableCell>
+                    )}
                     <TableCell>
                       <Stack>
                         <Typography variant="body2">{entry.jobNumber}</Typography>

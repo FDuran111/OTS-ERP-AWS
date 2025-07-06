@@ -117,10 +117,15 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      const [statsResponse, phasesResponse] = await Promise.all([
-        fetch('/api/dashboard/stats'),
-        fetch('/api/dashboard/phases')
-      ])
+      
+      // Only fetch phases data for non-employees
+      const requests = [fetch('/api/dashboard/stats')]
+      if (user?.role !== 'EMPLOYEE') {
+        requests.push(fetch('/api/dashboard/phases'))
+      }
+      
+      const responses = await Promise.all(requests)
+      const [statsResponse, phasesResponse] = responses
       
       if (!statsResponse.ok) {
         throw new Error('Failed to fetch dashboard data')
@@ -138,7 +143,8 @@ export default function DashboardPage() {
       setStats(transformedStats)
       setRecentJobs(statsData.recentJobs)
       
-      if (phasesResponse.ok) {
+      // Only process phases data if it was fetched
+      if (phasesResponse && phasesResponse.ok) {
         const phasesData = await phasesResponse.json()
         setPhaseData(phasesData)
       }
@@ -370,7 +376,7 @@ export default function DashboardPage() {
 
         {/* Recent Jobs and Phases - Responsive Layout */}
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, lg: 6 }}>
+          <Grid size={{ xs: 12, lg: user.role === 'EMPLOYEE' ? 12 : 6 }}>
             <Card sx={{ 
               height: '100%',
               transition: 'all 0.2s ease-in-out',
@@ -451,165 +457,167 @@ export default function DashboardPage() {
             </Card>
           </Grid>
 
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <Card sx={{ 
-              height: '100%',
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                boxShadow: 3,
-              },
-            }}>
-              <CardContent sx={{ p: 2.5 }}>
-                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-                  Job Phases Progress
-                </Typography>
-                {loading ? (
-                  <Typography>Loading phases...</Typography>
-                ) : phaseData ? (
-                  <Box>
-                    {/* Phase Summary - Responsive Grid */}
-                    <Grid container spacing={1.5} sx={{ mb: 2 }}>
-                      <Grid size={{ xs: 12, sm: 4 }}>
-                        <Paper sx={{ 
-                          p: 2, 
-                          textAlign: 'center',
-                          backgroundColor: 'background.paper',
-                          boxShadow: 1,
-                          transition: 'box-shadow 0.2s',
-                          '&:hover': {
-                            boxShadow: 2,
-                          },
-                        }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                            Underground
-                          </Typography>
-                          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
-                            <Chip 
-                              label={phaseData.summary?.UG?.COMPLETED || 0} 
-                              color="success" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.UG?.IN_PROGRESS || 0} 
-                              color="warning" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.UG?.NOT_STARTED || 0} 
-                              color="default" 
-                              size="small" 
-                            />
-                          </Stack>
-                        </Paper>
-                      </Grid>
-                      <Grid size={{ xs: 12, sm: 4 }}>
-                        <Paper sx={{ 
-                          p: 2, 
-                          textAlign: 'center',
-                          backgroundColor: 'background.paper',
-                          boxShadow: 1,
-                          transition: 'box-shadow 0.2s',
-                          '&:hover': {
-                            boxShadow: 2,
-                          },
-                        }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                            Rough-in
-                          </Typography>
-                          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
-                            <Chip 
-                              label={phaseData.summary?.RI?.COMPLETED || 0} 
-                              color="success" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.RI?.IN_PROGRESS || 0} 
-                              color="warning" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.RI?.NOT_STARTED || 0} 
-                              color="default" 
-                              size="small" 
-                            />
-                          </Stack>
-                        </Paper>
-                      </Grid>
-                      <Grid size={{ xs: 12, sm: 4 }}>
-                        <Paper sx={{ 
-                          p: 2, 
-                          textAlign: 'center',
-                          backgroundColor: 'background.paper',
-                          boxShadow: 1,
-                          transition: 'box-shadow 0.2s',
-                          '&:hover': {
-                            boxShadow: 2,
-                          },
-                        }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                            Finish
-                          </Typography>
-                          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
-                            <Chip 
-                              label={phaseData.summary?.FN?.COMPLETED || 0} 
-                              color="success" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.FN?.IN_PROGRESS || 0} 
-                              color="warning" 
-                              size="small" 
-                            />
-                            <Chip 
-                              label={phaseData.summary?.FN?.NOT_STARTED || 0} 
-                              color="default" 
-                              size="small" 
-                            />
-                          </Stack>
-                        </Paper>
-                      </Grid>
-                    </Grid>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Overall completion: {phaseData.completionRate || 0}% ({phaseData.completedPhases || 0}/{phaseData.totalPhases || 0} phases)
-                    </Typography>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Recent Updates
-                    </Typography>
-                    <List dense sx={{ px: 0 }}>
-                      {(phaseData.recentUpdates || []).slice(0, 3).map((update) => (
-                        <ListItem key={update.id} sx={{ px: 0, py: 1 }}>
-                          <ListItemText
-                            primary={`${update.jobNumber} - ${update.phaseName}`}
-                            secondary={
-                              <Stack>
-                                <Typography variant="body2">
-                                  {update.customer}
-                                </Typography>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Chip
-                                    label={update.status.replace('_', ' ')}
-                                    color={update.status === 'COMPLETED' ? 'success' : 'warning'}
-                                    size="small"
-                                  />
-                                  <Typography variant="caption" color="text.secondary">
-                                    {new Date(update.updatedAt).toLocaleDateString()}
-                                  </Typography>
-                                </Box>
-                              </Stack>
-                            }
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                ) : (
-                  <Typography color="text.secondary">
-                    No phase data available
+          {user.role !== 'EMPLOYEE' && (
+            <Grid size={{ xs: 12, lg: 6 }}>
+              <Card sx={{ 
+                height: '100%',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  boxShadow: 3,
+                },
+              }}>
+                <CardContent sx={{ p: 2.5 }}>
+                  <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+                    Job Phases Progress
                   </Typography>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
+                  {loading ? (
+                    <Typography>Loading phases...</Typography>
+                  ) : phaseData ? (
+                    <Box>
+                      {/* Phase Summary - Responsive Grid */}
+                      <Grid container spacing={1.5} sx={{ mb: 2 }}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
+                          <Paper sx={{ 
+                            p: 2, 
+                            textAlign: 'center',
+                            backgroundColor: 'background.paper',
+                            boxShadow: 1,
+                            transition: 'box-shadow 0.2s',
+                            '&:hover': {
+                              boxShadow: 2,
+                            },
+                          }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                              Underground
+                            </Typography>
+                            <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
+                              <Chip 
+                                label={phaseData.summary?.UG?.COMPLETED || 0} 
+                                color="success" 
+                                size="small" 
+                              />
+                              <Chip 
+                                label={phaseData.summary?.UG?.IN_PROGRESS || 0} 
+                                color="warning" 
+                                size="small" 
+                              />
+                              <Chip 
+                                label={phaseData.summary?.UG?.NOT_STARTED || 0} 
+                                color="default" 
+                                size="small" 
+                              />
+                            </Stack>
+                          </Paper>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 4 }}>
+                          <Paper sx={{ 
+                            p: 2, 
+                            textAlign: 'center',
+                            backgroundColor: 'background.paper',
+                            boxShadow: 1,
+                            transition: 'box-shadow 0.2s',
+                            '&:hover': {
+                              boxShadow: 2,
+                            },
+                          }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                              Rough-in
+                            </Typography>
+                            <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
+                              <Chip 
+                                label={phaseData.summary?.RI?.COMPLETED || 0} 
+                                color="success" 
+                                size="small" 
+                              />
+                              <Chip 
+                                label={phaseData.summary?.RI?.IN_PROGRESS || 0} 
+                                color="warning" 
+                                size="small" 
+                              />
+                              <Chip 
+                                label={phaseData.summary?.RI?.NOT_STARTED || 0} 
+                                color="default" 
+                                size="small" 
+                              />
+                            </Stack>
+                          </Paper>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 4 }}>
+                          <Paper sx={{ 
+                            p: 2, 
+                            textAlign: 'center',
+                            backgroundColor: 'background.paper',
+                            boxShadow: 1,
+                            transition: 'box-shadow 0.2s',
+                            '&:hover': {
+                              boxShadow: 2,
+                            },
+                          }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                              Finish
+                            </Typography>
+                            <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
+                              <Chip 
+                                label={phaseData.summary?.FN?.COMPLETED || 0} 
+                                color="success" 
+                                size="small" 
+                              />
+                              <Chip 
+                                label={phaseData.summary?.FN?.IN_PROGRESS || 0} 
+                                color="warning" 
+                                size="small" 
+                              />
+                              <Chip 
+                                label={phaseData.summary?.FN?.NOT_STARTED || 0} 
+                                color="default" 
+                                size="small" 
+                              />
+                            </Stack>
+                          </Paper>
+                        </Grid>
+                      </Grid>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Overall completion: {phaseData.completionRate || 0}% ({phaseData.completedPhases || 0}/{phaseData.totalPhases || 0} phases)
+                      </Typography>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Recent Updates
+                      </Typography>
+                      <List dense sx={{ px: 0 }}>
+                        {(phaseData.recentUpdates || []).slice(0, 3).map((update) => (
+                          <ListItem key={update.id} sx={{ px: 0, py: 1 }}>
+                            <ListItemText
+                              primary={`${update.jobNumber} - ${update.phaseName}`}
+                              secondary={
+                                <Stack>
+                                  <Typography variant="body2">
+                                    {update.customer}
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Chip
+                                      label={update.status.replace('_', ' ')}
+                                      color={update.status === 'COMPLETED' ? 'success' : 'warning'}
+                                      size="small"
+                                    />
+                                    <Typography variant="caption" color="text.secondary">
+                                      {new Date(update.updatedAt).toLocaleDateString()}
+                                    </Typography>
+                                  </Box>
+                                </Stack>
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Box>
+                  ) : (
+                    <Typography color="text.secondary">
+                      No phase data available
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
         </Grid>
       </ResponsiveContainer>
     </ResponsiveLayout>

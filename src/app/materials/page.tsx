@@ -58,6 +58,8 @@ import {
   TrendingUp,
   Clear as ClearIcon,
   History as HistoryIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material'
 import AddMaterialDialog from '@/components/materials/AddMaterialDialog'
 import EditMaterialDialog from '@/components/materials/EditMaterialDialog'
@@ -170,6 +172,7 @@ export default function MaterialsPage() {
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false)
   const [reservationDialogOpen, setReservationDialogOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [showQuickActions, setShowQuickActions] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -413,103 +416,148 @@ export default function MaterialsPage() {
         title="Materials & Inventory"
         actions={actionButtons}
       >
-            <Box sx={{ 
-              display: 'flex', 
-              flexWrap: 'wrap',
-              gap: 1.5,
-              justifyContent: { xs: 'center', lg: 'flex-end' },
-              maxWidth: { xs: '100%', lg: 'none' },
-              mb: 3
-            }}>
-              <Button
-                variant="outlined"
-                onClick={() => fetchCombinedData()}
-                disabled={loading}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{ 
-                  minWidth: 0,
-                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
-                  maxWidth: { xs: 'none', sm: '160px' }
-                }}
-              >
-                {loading ? 'Loading...' : isMobile ? 'Refresh' : 'Refresh'}
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={!isMobile ? <InventoryIcon /> : undefined}
-                onClick={() => setStorageLocationDialogOpen(true)}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{ 
-                  minWidth: 0,
-                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
-                  maxWidth: { xs: 'none', sm: '160px' }
-                }}
-              >
-                {isMobile ? 'Locations' : 'Manage Locations'}
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={!isMobile ? <HistoryIcon /> : undefined}
-                onClick={() => setStockHistoryDialogOpen(true)}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{ 
-                  minWidth: 0,
-                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
-                  maxWidth: { xs: 'none', sm: '160px' }
-                }}
-              >
-                {isMobile ? 'History' : 'Stock History'}
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={!isMobile ? <AssessmentIcon /> : undefined}
-                onClick={() => setAnalyticsDialogOpen(true)}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{ 
-                  minWidth: 0,
-                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
-                  maxWidth: { xs: 'none', sm: '160px' }
-                }}
-              >
-                Analytics
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={!isMobile ? <TrendingUp /> : undefined}
-                onClick={() => setReorderDialogOpen(true)}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{ 
-                  minWidth: 0,
-                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
-                  maxWidth: { xs: 'none', sm: '160px' }
-                }}
-              >
-                {isMobile ? 'Reorder' : 'Reorder Suggestions'}
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={!isMobile ? <ScheduleIcon /> : undefined}
-                onClick={() => setReservationDialogOpen(true)}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{ 
-                  minWidth: 0,
-                  flex: { xs: '1 0 calc(50% - 4px)', sm: '0 0 auto' },
-                  maxWidth: { xs: 'none', sm: '160px' }
-                }}
-              >
-                {isMobile ? 'Reserve' : 'Reserve Materials'}
-              </Button>
-            </Box>
+            {/* Quick Actions - Collapsible on Mobile */}
+            {isMobile ? (
+              <Box sx={{ mb: 3 }}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => setShowQuickActions(!showQuickActions)}
+                  endIcon={showQuickActions ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  sx={{ mb: showQuickActions ? 2 : 0 }}
+                >
+                  Quick Actions
+                </Button>
+                {showQuickActions && (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap',
+                    gap: 1.5,
+                    justifyContent: 'center',
+                  }}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setStorageLocationDialogOpen(true)}
+                      size="small"
+                      sx={{ 
+                        minWidth: 0,
+                        flex: '1 0 calc(50% - 4px)',
+                      }}
+                    >
+                      Locations
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setStockHistoryDialogOpen(true)}
+                      size="small"
+                      sx={{ 
+                        minWidth: 0,
+                        flex: '1 0 calc(50% - 4px)',
+                      }}
+                    >
+                      History
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setAnalyticsDialogOpen(true)}
+                      size="small"
+                      sx={{ 
+                        minWidth: 0,
+                        flex: '1 0 calc(50% - 4px)',
+                      }}
+                    >
+                      Analytics
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setReorderDialogOpen(true)}
+                      size="small"
+                      sx={{ 
+                        minWidth: 0,
+                        flex: '1 0 calc(50% - 4px)',
+                      }}
+                    >
+                      Reorder
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setReservationDialogOpen(true)}
+                      size="small"
+                      sx={{ 
+                        minWidth: 0,
+                        flex: '1 0 calc(50% - 4px)',
+                      }}
+                    >
+                      Reserve
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+            ) : (
+              <Box sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap',
+                gap: 1.5,
+                justifyContent: 'flex-end',
+                mb: 3
+              }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<InventoryIcon />}
+                  onClick={() => setStorageLocationDialogOpen(true)}
+                  size="medium"
+                  sx={{ minWidth: 140 }}
+                >
+                  Manage Locations
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<HistoryIcon />}
+                  onClick={() => setStockHistoryDialogOpen(true)}
+                  size="medium"
+                  sx={{ minWidth: 140 }}
+                >
+                  Stock History
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<AssessmentIcon />}
+                  onClick={() => setAnalyticsDialogOpen(true)}
+                  size="medium"
+                  sx={{ minWidth: 120 }}
+                >
+                  Analytics
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<TrendingUp />}
+                  onClick={() => setReorderDialogOpen(true)}
+                  size="medium"
+                  sx={{ minWidth: 160 }}
+                >
+                  Reorder Suggestions
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<ScheduleIcon />}
+                  onClick={() => setReservationDialogOpen(true)}
+                  size="medium"
+                  sx={{ minWidth: 150 }}
+                >
+                  Reserve Materials
+                </Button>
+              </Box>
+            )}
 
           {/* Stats Cards - More Compact */}
           <Box sx={{ 
             display: 'grid',
             gridTemplateColumns: {
-              xs: '1fr',
+              xs: 'repeat(2, 1fr)', // 2 columns on mobile for square layout
               sm: 'repeat(2, 1fr)',
               md: 'repeat(4, 1fr)'
             },
-            gap: 2,
+            gap: { xs: 1.5, sm: 2 }, // Smaller gap on mobile
             mb: 3
           }}>
             {stats.map((stat) => {
@@ -523,36 +571,61 @@ export default function MaterialsPage() {
                     boxShadow: 3,
                     transform: 'translateY(-2px)',
                   },
+                  // Make cards square on mobile
+                  aspectRatio: { xs: '1/1', sm: 'auto' },
                 }}>
-                  <CardContent sx={{ p: 2.5 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <CardContent sx={{ 
+                    p: { xs: 2, sm: 2.5 },
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: 'center',
+                    justifyContent: { xs: 'center', sm: 'flex-start' },
+                  }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      alignItems: 'center', 
+                      gap: { xs: 1.5, sm: 2 },
+                      textAlign: { xs: 'center', sm: 'left' },
+                      width: '100%'
+                    }}>
                       <Box
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          width: 40,
-                          height: 40,
+                          width: { xs: 48, sm: 40 },
+                          height: { xs: 48, sm: 40 },
                           borderRadius: '10px',
                           backgroundColor: `${stat.color}15`,
                           flexShrink: 0,
                         }}
                       >
                         {React.createElement(IconComponent, { 
-                          sx: { color: stat.color, fontSize: 20 } 
+                          sx: { color: stat.color, fontSize: { xs: 24, sm: 20 } } 
                         })}
                       </Box>
                       <Box sx={{ minWidth: 0 }}>
                         <Typography 
                           color="text.secondary" 
                           variant="caption"
-                          sx={{ display: 'block', lineHeight: 1.2 }}
+                          sx={{ 
+                            display: 'block', 
+                            lineHeight: 1.2,
+                            fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                            mb: { xs: 0.5, sm: 0 }
+                          }}
                         >
                           {stat.title}
                         </Typography>
                         <Typography 
                           variant="h6" 
-                          sx={{ fontWeight: 600, lineHeight: 1.2 }}
+                          sx={{ 
+                            fontWeight: 600, 
+                            lineHeight: 1.2,
+                            fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                          }}
                         >
                           {stat.value}
                         </Typography>

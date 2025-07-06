@@ -52,6 +52,7 @@ export default function ResponsiveContainer({
 
   return (
     <Box
+      className="responsive-container"
       sx={{
         width: '100%',
         maxWidth: maxWidth || '100%',
@@ -68,7 +69,7 @@ export default function ResponsiveContainer({
           lg: 4       // large desktop: 32px
         },
         pt: {
-          xs: 3,      // mobile: 24px top (more space for header clearance)
+          xs: 2,      // mobile: 16px top (reduced since ResponsiveLayout handles header spacing)
           sm: 3,      // tablet: 24px  
           md: 4,      // desktop: 32px
           lg: 4       // large desktop: 32px

@@ -51,7 +51,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   }
 
   return (
-    <Box className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden" sx={{ width: '100vw', maxWidth: '100vw', position: 'relative', display: 'flex', flexDirection: 'row' }}>
+    <Box className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden responsive-layout" sx={{ width: '100vw', maxWidth: '100vw', position: 'relative' }}>
       {/* Responsive App Bar - Only shows on mobile */}
       {isMobile && (
         <ResponsiveAppBar
@@ -60,37 +60,38 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         />
       )}
 
+      {/* Content wrapper for sidebar and main content */}
+      <Box sx={{ display: 'flex', width: '100%', minHeight: '100vh' }}>
+        {/* Responsive Sidebar */}
+        <ResponsiveSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          isMobile={isMobile}
+          user={user}
+        />
 
-      {/* Responsive Sidebar */}
-      <ResponsiveSidebar
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        isMobile={isMobile}
-        user={user}
-      />
-
-      {/* Main Content Area */}
-      <Box
-        component="main"
-        className={`flex flex-col transition-all duration-300 ease-in-out ${
-          isMobile ? 'pt-16 pb-16' : ''
-        }`}
-        sx={{
-          flexGrow: 1,
-          minHeight: '100vh',
-          backgroundColor: 'background.default',
-          marginLeft: 0,
-          marginRight: 0,
-          padding: 0,
-          paddingTop: 0, // Remove top padding
-          transition: 'margin-left 0.3s ease-in-out',
-          width: '100%',
-          maxWidth: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-        }}
-      >
+        {/* Main Content Area */}
+        <Box
+          component="main"
+          className={`flex flex-col transition-all duration-300 ease-in-out main-content-area`}
+          sx={{
+            flexGrow: 1,
+            minHeight: '100vh',
+            backgroundColor: 'background.default',
+            marginLeft: 0,
+            marginRight: 0,
+            padding: 0,
+            paddingTop: isMobile ? '64px' : 0, // Header height on mobile
+            paddingBottom: isMobile ? '56px' : 0, // Bottom nav height on mobile
+            transition: 'margin-left 0.3s ease-in-out',
+            width: '100%',
+            maxWidth: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            overflow: 'hidden', // Prevent content from showing outside
+          }}
+        >
         {/* Desktop Sidebar Toggle Button - Inside content */}
         {!isMobile && (
           <Tooltip title={sidebarOpen ? "Hide sidebar" : "Show sidebar"} placement="right">
@@ -114,8 +115,9 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           </Tooltip>
         )}
         
-        {/* Direct children without extra container */}
-        {children}
+          {/* Direct children without extra container */}
+          {children}
+        </Box>
       </Box>
 
       {/* Mobile Bottom Navigation */}

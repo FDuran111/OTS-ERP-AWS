@@ -21,6 +21,7 @@ import {
   Logout as LogoutIcon,
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -45,6 +46,7 @@ export default function ResponsiveAppBar({
 }: ResponsiveAppBarProps) {
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null)
   const [notificationCount, setNotificationCount] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
   const router = useRouter()
   const theme = useTheme()
 
@@ -94,17 +96,25 @@ export default function ResponsiveAppBar({
     handleProfileMenuClose()
   }
 
+  const handleRefresh = () => {
+    setRefreshing(true)
+    // Reload the current page
+    window.location.reload()
+  }
+
   return (
     <>
       <AppBar
         position="fixed"
-        className="z-50"
+        className="z-50 responsive-app-bar"
         sx={{
           backgroundColor: 'background.paper',
           color: 'text.primary',
           boxShadow: theme.shadows[2],
           borderBottom: 1,
           borderColor: 'divider',
+          backdropFilter: 'blur(8px)',
+          backgroundImage: 'none',
         }}
       >
         <Toolbar className="min-h-16">
@@ -128,6 +138,26 @@ export default function ResponsiveAppBar({
           >
             Ortmeier Technical Service
           </Typography>
+
+          {/* Refresh Button */}
+          <IconButton
+            color="inherit"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="mr-1 text-gray-700 dark:text-gray-300"
+            size="small"
+          >
+            <RefreshIcon 
+              sx={{ 
+                fontSize: '1.25rem',
+                animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                '@keyframes spin': {
+                  '0%': { transform: 'rotate(0deg)' },
+                  '100%': { transform: 'rotate(360deg)' }
+                }
+              }} 
+            />
+          </IconButton>
 
           {/* Notifications */}
           <IconButton

@@ -148,31 +148,29 @@ export default function SchedulePage() {
 
   if (!user) return null
 
-  // Action buttons for the page header
-  const actionButtons = (
+  // Action buttons for the page header - Only show on desktop
+  const actionButtons = !isMobile ? (
     <Stack 
-      direction={{ xs: 'column', sm: 'row' }} 
+      direction="row" 
       spacing={1.5} 
       sx={{ 
-        width: { xs: '100%', sm: 'auto' },
-        alignItems: { xs: 'stretch', sm: 'center' }
+        alignItems: 'center'
       }}
     >
       <Button
         startIcon={<TvIcon />}
         variant="outlined"
-        size={isMobile ? 'small' : 'large'}
+        size="large"
         onClick={() => window.open('/office-display', '_blank')}
         sx={{ 
           fontWeight: 600,
-          flex: { xs: 1, sm: 'none' },
-          minWidth: { xs: 'auto', sm: '140px' }
+          minWidth: '140px'
         }}
       >
         Office Display
       </Button>
     </Stack>
-  )
+  ) : null
 
 
   return (
@@ -307,10 +305,12 @@ export default function SchedulePage() {
             <JobSchedulingCalendar onJobScheduled={handleJobScheduled} />
           </Box>
 
-          {/* Crew Availability Widget */}
-          <Box sx={{ mb: 3 }}>
-            <CrewAvailabilityWidget />
-          </Box>
+          {/* Crew Availability Widget - Only for managers */}
+          {user.role !== 'EMPLOYEE' && (
+            <Box sx={{ mb: 3 }}>
+              <CrewAvailabilityWidget />
+            </Box>
+          )}
       </ResponsiveContainer>
 
       {/* Reminder Management Dialog */}

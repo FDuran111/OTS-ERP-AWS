@@ -29,17 +29,8 @@ export async function GET(request: NextRequest) {
     const todayParams = [today, tomorrow, ...userParams]
     const todayResult = await query(todayQuery, todayParams)
     const hoursToday = parseFloat(todayResult.rows[0]?.total_hours || 0)
+    const entriesToday = parseInt(todayResult.rows[0]?.entry_count || 0)
 
-    // Get active timers count
-    const activeTimersQuery = `
-      SELECT COUNT(*) as count
-      FROM "TimeEntry" 
-      WHERE "endTime" IS NULL
-      ${userFilter}
-    `
-    const activeTimersParams = userId ? [userId] : []
-    const activeTimersResult = await query(activeTimersQuery, activeTimersParams)
-    const activeTimers = parseInt(activeTimersResult.rows[0]?.count || 0)
 
     // Get this week's hours
     const weekQuery = `
@@ -69,9 +60,9 @@ export async function GET(request: NextRequest) {
         color: '#1d8cf8' 
       },
       { 
-        title: 'Active Timers', 
-        value: activeTimers.toString(), 
-        icon: 'play_arrow', 
+        title: 'Entries Today', 
+        value: entriesToday.toString(), 
+        icon: 'today', 
         color: '#00bf9a' 
       },
       { 
@@ -81,7 +72,7 @@ export async function GET(request: NextRequest) {
         color: '#e14eca' 
       },
       { 
-        title: 'Active Today', 
+        title: 'Active Employees', 
         value: activeEmployeesCount.toString(), 
         icon: 'group', 
         color: '#fd5d93' 

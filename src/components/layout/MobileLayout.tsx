@@ -76,6 +76,7 @@ const navigationItems: NavItem[] = [
     path: '/jobs',
     roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'],
     children: [
+      { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs', roles: ['OWNER_ADMIN', 'FOREMAN'] },
       { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories', roles: ['OWNER_ADMIN', 'FOREMAN'] },
       { title: 'Photos', icon: <PhotoIcon />, path: '/photo-gallery', roles: ['OWNER_ADMIN', 'FOREMAN'] }
     ]
