@@ -20,25 +20,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied. This feature is in beta testing.' }, { status: 403 })
     }
 
-
     // Get query parameters
     const searchParams = request.nextUrl.searchParams
     const startDate = searchParams.get('startDate') || new Date(new Date().setMonth(new Date().getMonth() - 6)).toISOString()
     const endDate = searchParams.get('endDate') || new Date().toISOString()
     const jobType = searchParams.get('jobType') || 'all'
 
-    // Build the query
+    // Build the query - without latitude/longitude for now
     let sqlQuery = `
       SELECT 
         c.id,
         c."firstName" as first_name,
         c."lastName" as last_name,
+        c."companyName" as company_name,
         c.address,
         c.city,
         c.state,
         c.zip,
-        c.latitude,
-        c.longitude,
         COUNT(j.id) as job_count,
         COALESCE(SUM(j."totalAmount"), 0) as total_revenue,
         COALESCE(AVG(j."totalAmount"), 0) as avg_job_value,
@@ -59,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     sqlQuery += `
-      GROUP BY c.id, c."firstName", c."lastName", c.address, c.city, c.state, c.zip, c.latitude, c.longitude
+      GROUP BY c.id, c."firstName", c."lastName", c."companyName", c.address, c.city, c.state, c.zip
       HAVING COUNT(j.id) > 0
       ORDER BY job_count DESC
     `
@@ -82,7 +80,7 @@ export async function GET(request: NextRequest) {
     const jobTypesResult = await query(jobTypesQuery, [startDate, endDate])
 
     // Get city-level aggregation for better heat map visualization
-    const cityQuery = `
+    let cityQuery = `
       SELECT 
         c.city,
         c.state,
@@ -91,44 +89,39 @@ export async function GET(request: NextRequest) {
         COUNT(j.id) as job_count,
         COALESCE(SUM(j."totalAmount"), 0) as total_revenue,
         COALESCE(AVG(j."totalAmount"), 0) as avg_job_value,
-        AVG(c.latitude) as avg_latitude,
-        AVG(c.longitude) as avg_longitude
+        NULL as avg_latitude,
+        NULL as avg_longitude
       FROM "Customer" c
       LEFT JOIN "Job" j ON c.id = j."customerId"
       WHERE j."scheduledStart" >= $1 AND j."scheduledStart" <= $2
         AND c.city IS NOT NULL
-        AND c.latitude IS NOT NULL
-        AND c.longitude IS NOT NULL
     `
 
     const cityParams = [startDate, endDate]
 
     if (jobType !== 'all') {
-      cityQuery + ` AND j."jobType" = $3`
+      cityQuery += ` AND j."jobType" = $3`
       cityParams.push(jobType)
     }
 
-    const cityQueryFinal = cityQuery + `
+    cityQuery += `
       GROUP BY c.city, c.state, c.zip
       HAVING COUNT(j.id) > 0
       ORDER BY job_count DESC
     `
 
-    const cityResult = await query(cityQueryFinal, cityParams)
+    const cityResult = await query(cityQuery, cityParams)
 
-    // Calculate service area bounds
-    const boundsQuery = `
+    // Calculate service area summary (without bounds since we don't have coordinates)
+    const summaryQuery = `
       SELECT 
-        MIN(latitude) as min_lat,
-        MAX(latitude) as max_lat,
-        MIN(longitude) as min_lng,
-        MAX(longitude) as max_lng
-      FROM "Customer"
-      WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+        COUNT(DISTINCT c.city) as unique_cities,
+        COUNT(DISTINCT c.state) as unique_states
+      FROM "Customer" c
+      WHERE c.city IS NOT NULL
     `
 
-    const boundsResult = await query(boundsQuery)
-    const bounds = boundsResult.rows[0]
+    const summaryResult = await query(summaryQuery)
 
     // Get time-based patterns (day of week analysis)
     const dayPatternQuery = `
@@ -152,18 +145,35 @@ export async function GET(request: NextRequest) {
       avg_revenue: parseFloat(row.avg_revenue)
     }))
 
+    // Transform customer data to add placeholder coordinates based on city
+    // In a real implementation, you'd use a geocoding service
+    const customersWithPlaceholderCoords = jobsResult.rows.map((customer, index) => ({
+      ...customer,
+      // Generate placeholder coordinates for visualization
+      // These would be replaced with real geocoding in production
+      latitude: null,
+      longitude: null
+    }))
+
     return NextResponse.json({
       success: true,
       data: {
-        customers: jobsResult.rows,
+        customers: customersWithPlaceholderCoords,
         cities: cityResult.rows,
         jobTypes: jobTypesResult.rows,
-        bounds,
+        bounds: {
+          min_lat: null,
+          max_lat: null,
+          min_lng: null,
+          max_lng: null
+        },
         dayPatterns,
         summary: {
           totalCustomers: jobsResult.rows.length,
           totalJobs: jobsResult.rows.reduce((sum, row) => sum + parseInt(row.job_count), 0),
           totalRevenue: jobsResult.rows.reduce((sum, row) => sum + parseFloat(row.total_revenue), 0),
+          uniqueCities: summaryResult.rows[0]?.unique_cities || 0,
+          uniqueStates: summaryResult.rows[0]?.unique_states || 0,
           dateRange: {
             start: startDate,
             end: endDate

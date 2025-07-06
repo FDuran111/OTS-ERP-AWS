@@ -22,15 +22,15 @@ export default function ServiceAreaMap({ data, viewMode }: ServiceAreaMapProps) 
   const markersRef = useRef<any[]>([])
 
   useEffect(() => {
-    // Load Google Maps script if not already loaded
-    if (!window.google) {
+    // Load Google Maps script if not already loaded and API key exists
+    if (!window.google && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
       const script = document.createElement('script')
       script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=visualization`
       script.async = true
       script.defer = true
       script.onload = () => initializeMap()
       document.head.appendChild(script)
-    } else {
+    } else if (window.google) {
       initializeMap()
     }
   }, [])
@@ -44,10 +44,11 @@ export default function ServiceAreaMap({ data, viewMode }: ServiceAreaMapProps) 
   const initializeMap = () => {
     if (!mapRef.current || !data) return
 
-    const bounds = data.bounds
+    // Since we don't have coordinates, center on a default location
+    // You can update this to center on your service area
     const center = {
-      lat: (bounds.min_lat + bounds.max_lat) / 2,
-      lng: (bounds.min_lng + bounds.max_lng) / 2
+      lat: 32.7157, // Default to San Diego area
+      lng: -117.1611
     }
 
     // Initialize map
@@ -181,22 +182,12 @@ export default function ServiceAreaMap({ data, viewMode }: ServiceAreaMapProps) 
       }
     })
 
-    // Fit map to bounds
-    const mapBounds = new window.google.maps.LatLngBounds()
-    data.customers.forEach((customer: any) => {
-      if (customer.latitude && customer.longitude) {
-        mapBounds.extend({
-          lat: parseFloat(customer.latitude),
-          lng: parseFloat(customer.longitude)
-        })
-      }
-    })
-    mapInstanceRef.current.fitBounds(mapBounds)
+    // Since we don't have coordinates, we can't fit bounds
+    // The map will stay centered on the default location
   }
 
-  // Fallback visualization when Google Maps is not available
-  if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
-    return (
+  // Always use the grid visualization since we don't have coordinates
+  return (
       <Paper sx={{ p: 3, height: '100%', overflow: 'auto' }}>
         <Typography variant="h6" gutterBottom>
           Service Area Distribution
@@ -252,5 +243,6 @@ export default function ServiceAreaMap({ data, viewMode }: ServiceAreaMapProps) 
     )
   }
 
-  return <Box ref={mapRef} sx={{ width: '100%', height: '100%', borderRadius: 1 }} />
+  // This line is not reached due to the always-return above
+  // return <Box ref={mapRef} sx={{ width: '100%', height: '100%', borderRadius: 1 }} />
 }
