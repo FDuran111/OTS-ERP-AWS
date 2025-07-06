@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
     `
 
     const jobsResult = await query(sqlQuery, params)
+    console.log('Jobs query result count:', jobsResult.rows.length)
 
     // Get job type statistics
     const jobTypesQuery = `
@@ -139,7 +140,7 @@ export async function GET(request: NextRequest) {
 
     // Format day names
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    const dayPatterns = dayPatternResult.rows.map(row => ({
+    const dayPatterns = (dayPatternResult.rows || []).map(row => ({
       day: dayNames[row.day_of_week],
       job_count: parseInt(row.job_count),
       avg_revenue: parseFloat(row.avg_revenue)
@@ -147,7 +148,7 @@ export async function GET(request: NextRequest) {
 
     // Transform customer data to add placeholder coordinates based on city
     // In a real implementation, you'd use a geocoding service
-    const customersWithPlaceholderCoords = jobsResult.rows.map((customer, index) => ({
+    const customersWithPlaceholderCoords = (jobsResult.rows || []).map((customer, index) => ({
       ...customer,
       // Generate placeholder coordinates for visualization
       // These would be replaced with real geocoding in production
@@ -159,8 +160,8 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         customers: customersWithPlaceholderCoords,
-        cities: cityResult.rows,
-        jobTypes: jobTypesResult.rows,
+        cities: cityResult.rows || [],
+        jobTypes: jobTypesResult.rows || [],
         bounds: {
           min_lat: null,
           max_lat: null,
@@ -169,11 +170,11 @@ export async function GET(request: NextRequest) {
         },
         dayPatterns,
         summary: {
-          totalCustomers: jobsResult.rows.length,
-          totalJobs: jobsResult.rows.reduce((sum, row) => sum + parseInt(row.job_count), 0),
-          totalRevenue: jobsResult.rows.reduce((sum, row) => sum + parseFloat(row.total_revenue), 0),
-          uniqueCities: summaryResult.rows[0]?.unique_cities || 0,
-          uniqueStates: summaryResult.rows[0]?.unique_states || 0,
+          totalCustomers: (jobsResult.rows || []).length,
+          totalJobs: (jobsResult.rows || []).reduce((sum, row) => sum + parseInt(row.job_count || 0), 0),
+          totalRevenue: (jobsResult.rows || []).reduce((sum, row) => sum + parseFloat(row.total_revenue || 0), 0),
+          uniqueCities: summaryResult.rows?.[0]?.unique_cities || 0,
+          uniqueStates: summaryResult.rows?.[0]?.unique_states || 0,
           dateRange: {
             start: startDate,
             end: endDate
@@ -183,8 +184,13 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Service area analytics error:', error)
+    // Log the specific error details
+    if (error instanceof Error) {
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
     return NextResponse.json(
-      { error: 'Failed to fetch service area data' },
+      { error: 'Failed to fetch service area data', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
