@@ -26,7 +26,6 @@ import {
   Business,
   Notifications,
   Security,
-  Palette,
   Save,
   Group as GroupIcon,
 } from '@mui/icons-material'
@@ -100,8 +99,7 @@ export default function SettingsPage() {
     if (tabName === 'company' && isEmployee) return -1 // Hidden for employees
     if (tabName === 'notifications') return isEmployee ? 0 : 1
     if (tabName === 'security') return isEmployee ? 1 : 2
-    if (tabName === 'appearance') return isEmployee ? 2 : 3
-    if (tabName === 'users') return authUser?.role === 'OWNER_ADMIN' ? 4 : -1
+    if (tabName === 'users') return authUser?.role === 'OWNER_ADMIN' ? 3 : -1
     
     return 0
   }
@@ -116,10 +114,6 @@ export default function SettingsPage() {
   const [customerMessages, setCustomerMessages] = useState(true)
   const [dailySummary, setDailySummary] = useState(false)
   const [twoFactorAuth, setTwoFactorAuth] = useState(false)
-  const [darkMode, setDarkMode] = useState(true)
-  const [showJobNumbers, setShowJobNumbers] = useState(true)
-  const [compactView, setCompactView] = useState(true)
-  const [showTooltips, setShowTooltips] = useState(false)
 
   // Form setup
   const companyForm = useForm<CompanySettings>({
@@ -183,14 +177,6 @@ export default function SettingsPage() {
       // Update security settings
       if (settings.security) {
         setTwoFactorAuth(settings.security.two_factor_auth ?? false)
-      }
-      
-      // Update appearance settings
-      if (settings.appearance) {
-        setDarkMode(settings.appearance.dark_mode ?? true)
-        setShowJobNumbers(settings.appearance.show_job_numbers ?? true)
-        setCompactView(settings.appearance.compact_view ?? true)
-        setShowTooltips(settings.appearance.show_tooltips ?? false)
       }
     } catch (error) {
       console.error('Error loading settings:', error)
@@ -311,16 +297,6 @@ export default function SettingsPage() {
     await saveSettings('notifications', notificationData)
   }
 
-  const handleAppearanceSave = async () => {
-    const appearanceData = {
-      dark_mode: darkMode,
-      show_job_numbers: showJobNumbers,
-      compact_view: compactView,
-      show_tooltips: showTooltips,
-    }
-    await saveSettings('appearance', appearanceData)
-  }
-
   if (!authUser) return null
 
   return (
@@ -344,7 +320,6 @@ export default function SettingsPage() {
                 )}
                 <Tab icon={<Notifications />} label="Notifications" />
                 <Tab icon={<Security />} label="Security" />
-                <Tab icon={<Palette />} label="Appearance" />
                 {authUser?.role === 'OWNER_ADMIN' && (
                   <Tab icon={<GroupIcon />} label="User Management" />
                 )}
@@ -691,74 +666,6 @@ export default function SettingsPage() {
                     Update Password
                   </Button>
                 </form>
-              </TabPanel>
-
-              {/* Appearance - Available to all users */}
-              <TabPanel value={tabValue} index={getTabIndex('appearance')}>
-                <Typography variant="h6" gutterBottom>
-                  Appearance Settings
-                </Typography>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={darkMode}
-                      onChange={(e) => setDarkMode(e.target.checked)}
-                    />
-                  }
-                  label="Dark Mode"
-                />
-                <Typography variant="body2" color="text.secondary" sx={{ ml: 4, mb: 3 }}>
-                  Use dark theme for better visibility in low light conditions
-                </Typography>
-
-                <Divider sx={{ my: 2 }} />
-
-                <Typography variant="h6" gutterBottom>
-                  Display Options
-                </Typography>
-                <FormControlLabel 
-                  control={
-                    <Switch 
-                      checked={showJobNumbers}
-                      onChange={(e) => setShowJobNumbers(e.target.checked)}
-                    />
-                  } 
-                  label="Show job numbers in lists" 
-                />
-                <FormControlLabel 
-                  control={
-                    <Switch 
-                      checked={compactView}
-                      onChange={(e) => setCompactView(e.target.checked)}
-                    />
-                  } 
-                  label="Compact view for tables" 
-                />
-                <FormControlLabel 
-                  control={
-                    <Switch 
-                      checked={showTooltips}
-                      onChange={(e) => setShowTooltips(e.target.checked)}
-                    />
-                  } 
-                  label="Show tooltips" 
-                />
-
-                <Button
-                  variant="contained"
-                  startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-                  disabled={loading}
-                  onClick={handleAppearanceSave}
-                  sx={{
-                    mt: 3,
-                    backgroundColor: '#e14eca',
-                    '&:hover': {
-                      backgroundColor: '#d236b8',
-                    },
-                  }}
-                >
-                  Save Appearance Settings
-                </Button>
               </TabPanel>
 
               {/* User Management - Only for OWNER_ADMIN */}
