@@ -35,6 +35,7 @@ import {
   Photo as PhotoIcon,
   AccountBalance as QuickBooksIcon,
   Logout as LogoutIcon,
+  Map as MapIcon,
 } from '@mui/icons-material'
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
@@ -212,10 +213,20 @@ export default function ResponsiveSidebar({
       return null
     }
 
-    // Filter children based on user roles
-    const visibleChildren = item.children?.filter(child =>
+    // Filter children based on user roles and special conditions
+    let visibleChildren = item.children?.filter(child =>
       hasRole(child.roles || [])
     )
+    
+    // Add Service Area Analytics for admin@admin.com only in Reports section
+    if (item.title === 'Reports' && user.email === 'admin@admin.com' && visibleChildren) {
+      visibleChildren = [...visibleChildren, {
+        title: 'Service Area Heat Map',
+        icon: <MapIcon />,
+        path: '/analytics/service-area',
+        roles: ['OWNER_ADMIN']
+      }]
+    }
 
     // Check if there are visible children
     const hasVisibleChildren = visibleChildren && visibleChildren.length > 0
