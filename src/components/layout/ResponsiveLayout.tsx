@@ -26,7 +26,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -46,6 +46,40 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
     setSidebarOpen(!sidebarOpen)
   }
 
+  // Show loading spinner while auth is being verified
+  if (loading) {
+    return (
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '100vh',
+          backgroundColor: 'background.default'
+        }}
+      >
+        <Box sx={{ textAlign: 'center' }}>
+          <Box 
+            sx={{ 
+              width: 40, 
+              height: 40, 
+              border: '3px solid',
+              borderColor: 'divider',
+              borderTopColor: 'primary.main',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto',
+              '@keyframes spin': {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(360deg)' }
+              }
+            }} 
+          />
+        </Box>
+      </Box>
+    )
+  }
+  
   if (!user) {
     return null
   }

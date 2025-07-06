@@ -62,20 +62,31 @@ export function useAuthState(): AuthContextType {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        // First, try to get user from localStorage
-        const storedUser = localStorage.getItem('user')
-        if (storedUser) {
-          const userData = JSON.parse(storedUser)
+        // Always verify with server first to ensure correct role
+        const response = await fetch('/api/auth/me')
+        
+        if (response.ok) {
+          const userData = await response.json()
           setUser(userData)
+          localStorage.setItem('user', JSON.stringify(userData))
+        } else {
+          // Clear any stale local data
+          localStorage.removeItem('user')
+          setUser(null)
         }
-
-        // Then verify with server
-        await refreshUser()
       } catch (error) {
         console.error('Error loading user:', error)
-        // Clear invalid data
-        localStorage.removeItem('user')
-        setUser(null)
+        // If server is unreachable, try localStorage as fallback
+        const storedUser = localStorage.getItem('user')
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser)
+            setUser(userData)
+          } catch (e) {
+            localStorage.removeItem('user')
+            setUser(null)
+          }
+        }
       } finally {
         setLoading(false)
       }
@@ -87,6 +98,10 @@ export function useAuthState(): AuthContextType {
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true)
+      
+      // Clear any existing user data first
+      setUser(null)
+      localStorage.removeItem('user')
       
       const response = await fetch('/api/auth/login', {
         method: 'POST',
