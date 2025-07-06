@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
     let sqlQuery = `
       SELECT 
         c.id,
-        c.first_name,
-        c.last_name,
+        c."firstName" as first_name,
+        c."lastName" as last_name,
         c.address,
         c.city,
         c.state,
@@ -40,26 +40,26 @@ export async function GET(request: NextRequest) {
         c.latitude,
         c.longitude,
         COUNT(j.id) as job_count,
-        COALESCE(SUM(j.total_amount), 0) as total_revenue,
-        COALESCE(AVG(j.total_amount), 0) as avg_job_value,
-        COALESCE(SUM(j.estimated_hours), 0) as total_hours,
-        STRING_AGG(DISTINCT j.job_type, ', ') as job_types,
-        MAX(j.scheduled_start) as last_service_date,
-        MIN(j.scheduled_start) as first_service_date
-      FROM customers c
-      LEFT JOIN jobs j ON c.id = j.customer_id
-      WHERE j.scheduled_start >= $1 AND j.scheduled_start <= $2
+        COALESCE(SUM(j."totalAmount"), 0) as total_revenue,
+        COALESCE(AVG(j."totalAmount"), 0) as avg_job_value,
+        COALESCE(SUM(j."estimatedHours"), 0) as total_hours,
+        STRING_AGG(DISTINCT j."jobType", ', ') as job_types,
+        MAX(j."scheduledStart") as last_service_date,
+        MIN(j."scheduledStart") as first_service_date
+      FROM "Customer" c
+      LEFT JOIN "Job" j ON c.id = j."customerId"
+      WHERE j."scheduledStart" >= $1 AND j."scheduledStart" <= $2
     `
 
     const params: any[] = [startDate, endDate]
 
     if (jobType !== 'all') {
-      sqlQuery += ` AND j.job_type = $3`
+      sqlQuery += ` AND j."jobType" = $3`
       params.push(jobType)
     }
 
     sqlQuery += `
-      GROUP BY c.id, c.first_name, c.last_name, c.address, c.city, c.state, c.zip, c.latitude, c.longitude
+      GROUP BY c.id, c."firstName", c."lastName", c.address, c.city, c.state, c.zip, c.latitude, c.longitude
       HAVING COUNT(j.id) > 0
       ORDER BY job_count DESC
     `
@@ -69,13 +69,13 @@ export async function GET(request: NextRequest) {
     // Get job type statistics
     const jobTypesQuery = `
       SELECT 
-        job_type,
+        "jobType" as job_type,
         COUNT(*) as count,
-        COALESCE(SUM(total_amount), 0) as revenue
-      FROM jobs
-      WHERE scheduled_start >= $1 AND scheduled_start <= $2
-        AND job_type IS NOT NULL
-      GROUP BY job_type
+        COALESCE(SUM("totalAmount"), 0) as revenue
+      FROM "Job"
+      WHERE "scheduledStart" >= $1 AND "scheduledStart" <= $2
+        AND "jobType" IS NOT NULL
+      GROUP BY "jobType"
       ORDER BY count DESC
     `
 
@@ -89,13 +89,13 @@ export async function GET(request: NextRequest) {
         c.zip,
         COUNT(DISTINCT c.id) as customer_count,
         COUNT(j.id) as job_count,
-        COALESCE(SUM(j.total_amount), 0) as total_revenue,
-        COALESCE(AVG(j.total_amount), 0) as avg_job_value,
+        COALESCE(SUM(j."totalAmount"), 0) as total_revenue,
+        COALESCE(AVG(j."totalAmount"), 0) as avg_job_value,
         AVG(c.latitude) as avg_latitude,
         AVG(c.longitude) as avg_longitude
-      FROM customers c
-      LEFT JOIN jobs j ON c.id = j.customer_id
-      WHERE j.scheduled_start >= $1 AND j.scheduled_start <= $2
+      FROM "Customer" c
+      LEFT JOIN "Job" j ON c.id = j."customerId"
+      WHERE j."scheduledStart" >= $1 AND j."scheduledStart" <= $2
         AND c.city IS NOT NULL
         AND c.latitude IS NOT NULL
         AND c.longitude IS NOT NULL
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     const cityParams = [startDate, endDate]
 
     if (jobType !== 'all') {
-      cityQuery + ` AND j.job_type = $3`
+      cityQuery + ` AND j."jobType" = $3`
       cityParams.push(jobType)
     }
 
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
         MAX(latitude) as max_lat,
         MIN(longitude) as min_lng,
         MAX(longitude) as max_lng
-      FROM customers
+      FROM "Customer"
       WHERE latitude IS NOT NULL AND longitude IS NOT NULL
     `
 
@@ -133,12 +133,12 @@ export async function GET(request: NextRequest) {
     // Get time-based patterns (day of week analysis)
     const dayPatternQuery = `
       SELECT 
-        EXTRACT(DOW FROM scheduled_start) as day_of_week,
+        EXTRACT(DOW FROM "scheduledStart") as day_of_week,
         COUNT(*) as job_count,
-        COALESCE(AVG(total_amount), 0) as avg_revenue
-      FROM jobs
-      WHERE scheduled_start >= $1 AND scheduled_start <= $2
-      GROUP BY EXTRACT(DOW FROM scheduled_start)
+        COALESCE(AVG("totalAmount"), 0) as avg_revenue
+      FROM "Job"
+      WHERE "scheduledStart" >= $1 AND "scheduledStart" <= $2
+      GROUP BY EXTRACT(DOW FROM "scheduledStart")
       ORDER BY day_of_week
     `
 
