@@ -27,24 +27,24 @@ export async function GET(
           SELECT 
             te.id,
             te."userId",
-            te."startTime",
+            te."clockInTime" as "startTime",
             u.name as "userName",
             j."jobNumber",
             j.description as "jobTitle",
-            EXTRACT(EPOCH FROM (NOW() - te."startTime")) / 3600 as "currentHours",
+            EXTRACT(EPOCH FROM (NOW() - te."clockInTime")) / 3600 as "currentHours",
             -- Use default rate of $75/hour for estimates
             CASE 
-              WHEN EXTRACT(EPOCH FROM (NOW() - te."startTime")) / 3600 > 8 
+              WHEN EXTRACT(EPOCH FROM (NOW() - te."clockInTime")) / 3600 > 8 
               THEN (8 * 75.00) + 
-                   ((EXTRACT(EPOCH FROM (NOW() - te."startTime")) / 3600 - 8) * 75.00 * 1.5)
-              ELSE (EXTRACT(EPOCH FROM (NOW() - te."startTime")) / 3600) * 75.00
+                   ((EXTRACT(EPOCH FROM (NOW() - te."clockInTime")) / 3600 - 8) * 75.00 * 1.5)
+              ELSE (EXTRACT(EPOCH FROM (NOW() - te."clockInTime")) / 3600) * 75.00
             END as "estimatedCost",
-            NULL as "clockInLatitude",
-            NULL as "clockInLongitude"
+            te."clockInLatitude",
+            te."clockInLongitude"
           FROM "TimeEntry" te
           JOIN "User" u ON te."userId" = u.id
           LEFT JOIN "Job" j ON te."jobId" = j.id
-          WHERE te."jobId" = $1 AND te."endTime" IS NULL
+          WHERE te."jobId" = $1 AND te."clockOutTime" IS NULL
           ORDER BY te."startTime" ASC
         `, [resolvedParams.id]),
         
@@ -52,14 +52,14 @@ export async function GET(
         client.query(`
           SELECT 
             COUNT(*) as "completedEntries",
-            COALESCE(SUM("hours"), 0) as "totalHours",
+            COALESCE(SUM("totalHours"), 0) as "totalHours",
             -- Calculate cost at $75/hour default rate
-            COALESCE(SUM("hours" * 75.00), 0) as "totalCost",
+            COALESCE(SUM("totalHours" * 75.00), 0) as "totalCost",
             75.00 as "avgRate"
           FROM "TimeEntry"
           WHERE "jobId" = $1 
-            AND "endTime" IS NOT NULL
-            AND DATE("startTime") = CURRENT_DATE
+            AND "clockOutTime" IS NOT NULL
+            AND DATE("clockInTime") = CURRENT_DATE
         `, [resolvedParams.id]),
         
         // Budget comparison
@@ -69,7 +69,7 @@ export async function GET(
             j."billedAmount",
             -- Calculate actual costs from time entries and material usage
             COALESCE((
-              SELECT SUM(te."hours" * 75.00) 
+              SELECT SUM(te."totalHours" * 75.00) 
               FROM "TimeEntry" te 
               WHERE te."jobId" = j.id
             ), 0) as "laborCosts",
@@ -89,9 +89,9 @@ export async function GET(
             te.id,
             te."userId",
             u.name as "userName",
-            te."startTime",
-            te."endTime",
-            te."hours",
+            te."clockInTime" as "startTime",
+            te."clockOutTime" as "endTime",
+            te."totalHours" as "hours",
             -- Calculate cost at $75/hour default rate
             (te."hours" * 75.00) as "totalCost",
             te."description"
@@ -99,8 +99,8 @@ export async function GET(
           JOIN "User" u ON te."userId" = u.id
           WHERE te."jobId" = $1 
             AND te."endTime" IS NOT NULL
-            AND te."endTime" >= NOW() - INTERVAL '24 hours'
-          ORDER BY te."endTime" DESC
+            AND te."clockOutTime" >= NOW() - INTERVAL '24 hours'
+          ORDER BY te."clockOutTime" DESC
           LIMIT 10
         `, [resolvedParams.id])
       ])
@@ -112,7 +112,7 @@ export async function GET(
         userName: row.userName,
         jobNumber: row.jobNumber,
         jobTitle: row.jobTitle,
-        startTime: row.startTime,
+        clockInTime: row.startTime,
         currentHours: parseFloat(row.currentHours || 0),
         estimatedCost: parseFloat(row.estimatedCost || 0),
         hourlyRate: 75.00, // Default rate
@@ -157,8 +157,8 @@ export async function GET(
         id: row.id,
         userId: row.userId,
         userName: row.userName,
-        startTime: row.startTime,
-        endTime: row.endTime,
+        clockInTime: row.startTime,
+        clockOutTime: row.endTime,
         totalHours: parseFloat(row.hours || 0),
         totalCost: parseFloat(row.totalCost || 0),
         hourlyRate: 75.00, // Default rate
@@ -171,11 +171,11 @@ export async function GET(
           -- Calculate average cost per hour at $75/hour
           75.00 as "avgCostPerHour",
           COUNT(*) as "weeklyEntries",
-          COALESCE(SUM("hours" * 75.00), 0) as "weeklyTotal"
+          COALESCE(SUM("totalHours" * 75.00), 0) as "weeklyTotal"
         FROM "TimeEntry"
         WHERE "jobId" = $1 
-          AND "endTime" IS NOT NULL
-          AND "endTime" >= NOW() - INTERVAL '7 days'
+          AND "clockOutTime" IS NOT NULL
+          AND "clockOutTime" >= NOW() - INTERVAL '7 days'
       `, [resolvedParams.id])
 
       const burnRate = burnRateResult.rows[0]

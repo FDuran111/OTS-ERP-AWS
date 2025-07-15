@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Upload file to storage
     let uploadResult
-    if (FileStorageService.isImage(file.type)) {
+    if (FileStorageService.isImage(file.type) && category !== 'documents') {
       // Upload as image with thumbnail generation
       uploadResult = await fileStorage.uploadImage(
         file,
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         true // generate thumbnail
       )
     } else {
-      // Upload as regular file
+      // Upload as regular file (including documents category)
       uploadResult = await fileStorage.uploadFile(
         file,
         category as 'jobs' | 'customers' | 'materials' | 'documents'
