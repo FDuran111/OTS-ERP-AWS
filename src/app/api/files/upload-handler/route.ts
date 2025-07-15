@@ -29,9 +29,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload file to storage
-    // Use Supabase Storage in production, local storage in development
+    // Use Supabase Storage in production (if available), local storage in development
     const isProduction = process.env.NODE_ENV === 'production'
-    const storageService = isProduction ? supabaseStorage : fileStorage
+    const hasSupabaseKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    const storageService = (isProduction && hasSupabaseKey) ? supabaseStorage : fileStorage
     
     let uploadResult
     if (FileStorageService.isImage(file.type) && category !== 'documents') {

@@ -3,16 +3,31 @@ import { FileUploadResult, ImageProcessingResult } from './file-storage'
 import path from 'path'
 import crypto from 'crypto'
 
-// Initialize Supabase client for storage operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xudcmdliqyarbfdqufbq.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+// Storage configuration
+const SUPABASE_URL = 'https://xudcmdliqyarbfdqufbq.supabase.co'
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+// Lazy initialization of Supabase client
+let supabase: ReturnType<typeof createClient> | null = null
+
+function getSupabaseClient() {
+  if (!supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    
+    // Only create client if we have a service key
+    if (!supabaseServiceKey) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
+    }
+    
+    supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
   }
-})
+  return supabase
+}
 
 // Storage bucket names
 const BUCKET_NAME = 'uploads'
@@ -31,12 +46,12 @@ export class SupabaseStorageService {
   async initialize(): Promise<void> {
     try {
       // Check if main bucket exists
-      const { data: buckets } = await supabase.storage.listBuckets()
+      const { data: buckets } = await getSupabaseClient().storage.listBuckets()
       const bucketExists = buckets?.some(b => b.name === this.bucketName)
       
       if (!bucketExists) {
         // Create public bucket for uploads
-        await supabase.storage.createBucket(this.bucketName, {
+        await getSupabaseClient().storage.createBucket(this.bucketName, {
           public: true,
           fileSizeLimit: 10485760, // 10MB
           allowedMimeTypes: [
@@ -59,7 +74,7 @@ export class SupabaseStorageService {
       // Check if thumbnail bucket exists
       const thumbnailExists = buckets?.some(b => b.name === THUMBNAIL_BUCKET)
       if (!thumbnailExists) {
-        await supabase.storage.createBucket(THUMBNAIL_BUCKET, {
+        await getSupabaseClient().storage.createBucket(THUMBNAIL_BUCKET, {
           public: true,
           fileSizeLimit: 5242880, // 5MB
           allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
@@ -97,7 +112,7 @@ export class SupabaseStorageService {
     const fileData = new Uint8Array(arrayBuffer)
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { data, error } = await getSupabaseClient().storage
       .from(this.bucketName)
       .upload(filePath, fileData, {
         contentType: file.type,
@@ -109,7 +124,7 @@ export class SupabaseStorageService {
     }
 
     // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = getSupabaseClient().storage
       .from(this.bucketName)
       .getPublicUrl(filePath)
 
@@ -154,7 +169,7 @@ export class SupabaseStorageService {
         const arrayBuffer = await file.arrayBuffer()
         const fileData = new Uint8Array(arrayBuffer)
         
-        const { data, error } = await supabase.storage
+        const { data, error } = await getSupabaseClient().storage
           .from(THUMBNAIL_BUCKET)
           .upload(thumbPath, fileData, {
             contentType: file.type,
@@ -162,7 +177,7 @@ export class SupabaseStorageService {
           })
 
         if (!error && data) {
-          const { data: { publicUrl } } = supabase.storage
+          const { data: { publicUrl } } = getSupabaseClient().storage
             .from(THUMBNAIL_BUCKET)
             .getPublicUrl(thumbPath)
           
@@ -187,7 +202,7 @@ export class SupabaseStorageService {
    */
   async deleteFile(filePath: string): Promise<void> {
     try {
-      const { error } = await supabase.storage
+      const { error } = await getSupabaseClient().storage
         .from(this.bucketName)
         .remove([filePath])
       
@@ -203,7 +218,7 @@ export class SupabaseStorageService {
    * Get signed URL for temporary access (useful for private files)
    */
   async getSignedUrl(filePath: string, expiresIn: number = 3600): Promise<string | null> {
-    const { data, error } = await supabase.storage
+    const { data, error } = await getSupabaseClient().storage
       .from(this.bucketName)
       .createSignedUrl(filePath, expiresIn)
     
