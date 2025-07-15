@@ -32,7 +32,17 @@ export async function POST(request: NextRequest) {
     // Use Supabase Storage in production (if available), local storage in development
     const isProduction = process.env.NODE_ENV === 'production'
     const hasSupabaseKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
-    const storageService = (isProduction && hasSupabaseKey) ? supabaseStorage : fileStorage
+    
+    // Debug logging
+    console.log('Upload environment:', {
+      NODE_ENV: process.env.NODE_ENV,
+      isProduction,
+      hasSupabaseKey,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT SET'
+    })
+    
+    // In production, always try to use Supabase Storage
+    const storageService = isProduction ? supabaseStorage : fileStorage
     
     let uploadResult
     if (FileStorageService.isImage(file.type) && category !== 'documents') {
@@ -128,6 +138,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: error.message },
         { status: 415 }
+      )
+    }
+    
+    // Handle Supabase configuration error
+    if (error.message.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+      return NextResponse.json(
+        { 
+          error: 'File storage is not configured. Please set SUPABASE_SERVICE_ROLE_KEY environment variable in production.',
+          details: error.message 
+        },
+        { status: 500 }
+      )
+    }
+    
+    // Handle permission errors
+    if (error.message.includes('EACCES') || error.message.includes('permission denied')) {
+      return NextResponse.json(
+        { 
+          error: 'File storage permission error. The server cannot write to the local filesystem in production. Please configure Supabase Storage.',
+          details: error.message 
+        },
+        { status: 500 }
       )
     }
 

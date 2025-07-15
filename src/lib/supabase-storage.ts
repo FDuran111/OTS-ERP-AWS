@@ -16,7 +16,8 @@ function getSupabaseClient() {
     
     // Only create client if we have a service key
     if (!supabaseServiceKey) {
-      throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not set in environment variables')
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set. Please set it in your environment variables.')
     }
     
     supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -120,7 +121,8 @@ export class SupabaseStorageService {
       })
 
     if (error) {
-      throw new Error(`Failed to upload file: ${error.message}`)
+      console.error('Supabase upload error:', error)
+      throw new Error(`Failed to upload file to Supabase: ${error.message}`)
     }
 
     // Get public URL
