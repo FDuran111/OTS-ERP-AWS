@@ -134,7 +134,7 @@ export class FileStorageService {
     const fileName = this.generateFileName(file.name)
     const uploadPath = this.getUploadPath(category)
     const filePath = path.join(uploadPath, fileName)
-    const fileUrl = `/uploads/${category}/${fileName}`
+    const fileUrl = `/api/uploads/${category}/${fileName}`
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer()
@@ -267,7 +267,7 @@ export class FileStorageService {
     const thumbnailDir = path.join(this.uploadDir, 'thumbnails')
     const thumbnailFileName = `thumb_${originalFileName}`
     const thumbnailPath = path.join(thumbnailDir, thumbnailFileName)
-    const thumbnailUrl = `/uploads/thumbnails/${thumbnailFileName}`
+    const thumbnailUrl = `/api/uploads/thumbnails/${thumbnailFileName}`
 
     // Ensure thumbnail directory exists
     if (!existsSync(thumbnailDir)) {
