@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { fileStorage, FileStorageService } from '@/lib/file-storage'
+import { supabaseStorage, SupabaseStorageService } from '@/lib/supabase-storage'
 
 // POST handle file upload with storage
 export async function POST(request: NextRequest) {
@@ -28,17 +29,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload file to storage
+    // Use Supabase Storage in production, local storage in development
+    const isProduction = process.env.NODE_ENV === 'production'
+    const storageService = isProduction ? supabaseStorage : fileStorage
+    
     let uploadResult
     if (FileStorageService.isImage(file.type) && category !== 'documents') {
       // Upload as image with thumbnail generation
-      uploadResult = await fileStorage.uploadImage(
+      uploadResult = await storageService.uploadImage(
         file,
         category as 'jobs' | 'customers' | 'materials',
         true // generate thumbnail
       )
     } else {
       // Upload as regular file (including documents category)
-      uploadResult = await fileStorage.uploadFile(
+      uploadResult = await storageService.uploadFile(
         file,
         category as 'jobs' | 'customers' | 'materials' | 'documents'
       )

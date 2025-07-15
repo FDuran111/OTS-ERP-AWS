@@ -71,9 +71,16 @@ export async function GET(
       },
     })
     
-    // Add content-disposition header for downloads (non-images)
-    if (!mimeType.startsWith('image/')) {
-      const fileName = path.basename(fullPath)
+    // Add content-disposition header based on file type
+    const fileName = path.basename(fullPath)
+    if (mimeType === 'application/pdf') {
+      // For PDFs, use inline to display in browser with download option
+      response.headers.set(
+        'Content-Disposition',
+        `inline; filename="${fileName}"`
+      )
+    } else if (!mimeType.startsWith('image/')) {
+      // For other non-image files, force download
       response.headers.set(
         'Content-Disposition',
         `attachment; filename="${fileName}"`
