@@ -204,15 +204,44 @@ export class SupabaseStorageService {
    */
   async deleteFile(filePath: string): Promise<void> {
     try {
-      const { error } = await getSupabaseClient().storage
+      console.log('Attempting to delete file from Supabase:', filePath)
+      
+      const { data, error } = await getSupabaseClient().storage
         .from(this.bucketName)
         .remove([filePath])
       
       if (error) {
-        console.error('Failed to delete file:', error)
+        console.error('Supabase delete error:', error)
+        throw new Error(`Failed to delete file from Supabase: ${error.message}`)
       }
+      
+      console.log('Successfully deleted file from Supabase:', data)
     } catch (error) {
       console.error('Failed to delete file:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Delete thumbnail from storage
+   */
+  async deleteThumbnail(filePath: string): Promise<void> {
+    try {
+      console.log('Attempting to delete thumbnail from Supabase:', filePath)
+      
+      const { data, error } = await getSupabaseClient().storage
+        .from(THUMBNAIL_BUCKET)
+        .remove([filePath])
+      
+      if (error) {
+        console.error('Supabase thumbnail delete error:', error)
+        throw new Error(`Failed to delete thumbnail from Supabase: ${error.message}`)
+      }
+      
+      console.log('Successfully deleted thumbnail from Supabase:', data)
+    } catch (error) {
+      console.error('Failed to delete thumbnail:', error)
+      throw error
     }
   }
 

@@ -153,10 +153,22 @@ export default function FileUpload({
 
   const handleDeleteFile = async (fileId: string) => {
     try {
+      // Call the API to delete the file
+      const response = await fetch(`/api/files/${fileId}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete file')
+      }
+      
+      // Remove from local state only after successful deletion
       setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
       onFileDeleted?.(fileId)
     } catch (error) {
-      setError('Failed to delete file')
+      console.error('Error deleting file:', error)
+      setError(error instanceof Error ? error.message : 'Failed to delete file')
     }
   }
 
