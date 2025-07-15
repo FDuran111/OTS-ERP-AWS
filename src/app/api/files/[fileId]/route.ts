@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { fileStorage } from '@/lib/file-storage'
 import { supabaseStorage } from '@/lib/supabase-storage'
-import { auth } from '@/lib/auth'
+import { verifyToken } from '@/lib/auth'
 import path from 'path'
 
 // DELETE file and its database record
@@ -12,10 +12,19 @@ export async function DELETE(
 ) {
   try {
     // Check authentication
-    const session = await auth()
-    if (!session) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json(
         { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    
+    try {
+      verifyToken(token)
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid token' },
         { status: 401 }
       )
     }
