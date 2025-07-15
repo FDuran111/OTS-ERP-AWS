@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { verifyToken } from '@/lib/auth'
 import { z } from 'zod'
 
 const jobAttachmentSchema = z.object({
@@ -462,6 +463,85 @@ export async function POST(request: NextRequest) {
     console.error('Error creating attachment:', error)
     return NextResponse.json(
       { error: 'Failed to create attachment' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE attachment
+export async function DELETE(request: NextRequest) {
+  try {
+    // Check authentication
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    
+    try {
+      verifyToken(token)
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid token' },
+        { status: 401 }
+      )
+    }
+
+    const { searchParams } = new URL(request.url)
+    const attachmentId = searchParams.get('attachmentId')
+    
+    if (!attachmentId) {
+      return NextResponse.json(
+        { error: 'Attachment ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Check which type of attachment it is
+    const jobAttachment = await query(
+      'SELECT * FROM "JobAttachment" WHERE id = $1',
+      [attachmentId]
+    )
+    
+    if (jobAttachment.rows.length > 0) {
+      await query('DELETE FROM "JobAttachment" WHERE id = $1', [attachmentId])
+      return NextResponse.json({ success: true, type: 'job' })
+    }
+    
+    const customerAttachment = await query(
+      'SELECT * FROM "CustomerAttachment" WHERE id = $1',
+      [attachmentId]
+    )
+    
+    if (customerAttachment.rows.length > 0) {
+      await query('DELETE FROM "CustomerAttachment" WHERE id = $1', [attachmentId])
+      return NextResponse.json({ success: true, type: 'customer' })
+    }
+    
+    const materialAttachment = await query(
+      'SELECT * FROM "MaterialAttachment" WHERE id = $1',
+      [attachmentId]
+    )
+    
+    if (materialAttachment.rows.length > 0) {
+      await query('DELETE FROM "MaterialAttachment" WHERE id = $1', [attachmentId])
+      return NextResponse.json({ success: true, type: 'material' })
+    }
+
+    return NextResponse.json(
+      { error: 'Attachment not found' },
+      { status: 404 }
+    )
+
+  } catch (error: any) {
+    console.error('Error deleting attachment:', error)
+    return NextResponse.json(
+      { 
+        error: 'Failed to delete attachment',
+        details: error.message 
+      },
       { status: 500 }
     )
   }

@@ -217,8 +217,34 @@ export default function FileAttachmentManager({
   }
 
   const handleDeleteAttachment = async (attachmentId: string) => {
+    if (!confirm('Are you sure you want to delete this attachment?')) {
+      return
+    }
+    
     try {
-      // In a real implementation, you'd call DELETE /api/files/attachments/{id}
+      // Find the attachment to get the file ID
+      const attachment = attachments.find(a => a.attachmentId === attachmentId)
+      if (!attachment) return
+      
+      // First delete the attachment record
+      const attachmentResponse = await fetch(`/api/files/attachments?attachmentId=${attachmentId}`, {
+        method: 'DELETE'
+      })
+      
+      if (!attachmentResponse.ok) {
+        throw new Error('Failed to delete attachment record')
+      }
+      
+      // Then delete the actual file
+      const fileResponse = await fetch(`/api/files/${attachment.file.id}`, {
+        method: 'DELETE'
+      })
+      
+      if (!fileResponse.ok) {
+        console.error('Failed to delete file from storage')
+      }
+      
+      // Update UI
       setAttachments(prev => prev.filter(a => a.attachmentId !== attachmentId))
       onAttachmentChange?.()
     } catch (error) {
