@@ -1,0 +1,455 @@
+name: Deploy Staging Infrastructure & Migrations
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+    inputs:
+      deploy_infra:
+        description: 'Deploy infrastructure changes'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  AWS_REGION: us-east-1
+  ENVIRONMENT: staging
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # Infrastructure deployment (when needed)
+  infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy_infra == 'true' || contains(github.event.head_commit.message, '[deploy-infra]')
+    
+    outputs:
+      amplify_app_id: ${{ steps.terraform.outputs.amplify_app_id }}
+      rds_endpoint: ${{ steps.terraform.outputs.rds_endpoint }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE_ARN }}
+          role-session-name: GitHubActions-Terraform
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+          terraform_wrapper: false
+      
+      - name: Terraform Init
+        working-directory: infra/terraform/envs/staging
+        run: terraform init
+      
+      - name: Terraform Plan
+        working-directory: infra/terraform/envs/staging
+        run: |
+          terraform plan \
+            -var="github_personal_access_token=${{ secrets.GITHUB_PAT }}" \
+            -out=tfplan
+      
+      - name: Terraform Apply
+        id: terraform
+        working-directory: infra/terraform/envs/staging
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+        run: |
+          terraform apply -auto-approve tfplan
+          
+          # Capture outputs
+          echo "amplify_app_id=$(terraform output -raw amplify_app_id)" >> $GITHUB_OUTPUT
+          echo "rds_endpoint=$(terraform output -raw rds_endpoint)" >> $GITHUB_OUTPUT
+
+  # Database migrations using Lambda (no NAT required!)
+  migrations:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    needs: [infrastructure]
+    if: always() && (needs.infrastructure.result == 'success' || needs.infrastructure.result == 'skipped')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE_ARN }}
+          role-session-name: GitHubActions-Migrations
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Build and deploy Lambda migrator package
+        run: |
+          echo "📦 Building Lambda migration package..."
+          
+          # Make build script executable
+          chmod +x scripts/build-migrator.sh
+          
+          # Build the package
+          ./scripts/build-migrator.sh
+          
+          # Update Lambda function code
+          aws lambda update-function-code \
+            --function-name ots-arp-aws-staging-migrate \
+            --zip-file fileb://functions/migrate/migrator.zip \
+            --no-cli-pager
+          
+          # Wait for update to complete
+          aws lambda wait function-updated \
+            --function-name ots-arp-aws-staging-migrate
+          
+          echo "✅ Lambda migrator updated"
+      
+      - name: Run database migrations via Lambda
+        id: migrations
+        run: |
+          echo "🚀 Invoking Lambda migrator..."
+          
+          # Invoke the Lambda function
+          aws lambda invoke \
+            --function-name ots-arp-aws-staging-migrate \
+            --invocation-type RequestResponse \
+            --log-type Tail \
+            --payload '{"action": "migrate"}' \
+            /tmp/migration_result.json \
+            --no-cli-pager
+          
+          # Check results
+          RESULT=$(cat /tmp/migration_result.json)
+          echo "Migration result:"
+          echo "$RESULT" | jq '.'
+          
+          # Extract status
+          STATUS=$(echo "$RESULT" | jq -r '.status')
+          
+          if [[ "$STATUS" == "success" ]] || [[ "$STATUS" == "no_changes" ]]; then
+            echo "✅ Migrations completed successfully"
+            echo "migration_status=success" >> $GITHUB_OUTPUT
+          elif [[ "$STATUS" == "partial" ]]; then
+            echo "⚠️ Some migrations failed - check logs"
+            echo "migration_status=partial" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "❌ Migrations failed"
+            echo "migration_status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+      
+      - name: Get Lambda logs
+        if: always()
+        run: |
+          echo "📝 Fetching Lambda execution logs..."
+          
+          # Get the log stream name
+          LOG_GROUP="/aws/lambda/ots-arp-aws-staging-migrate"
+          LOG_STREAM=$(aws logs describe-log-streams \
+            --log-group-name "$LOG_GROUP" \
+            --order-by LastEventTime \
+            --descending \
+            --limit 1 \
+            --query 'logStreams[0].logStreamName' \
+            --output text)
+          
+          if [ -n "$LOG_STREAM" ]; then
+            echo "Log stream: $LOG_STREAM"
+            aws logs get-log-events \
+              --log-group-name "$LOG_GROUP" \
+              --log-stream-name "$LOG_STREAM" \
+              --start-from-head \
+              --query 'events[*].message' \
+              --output text
+          else
+            echo "No log stream found"
+          fi
+      
+      - name: Seed staging data via Lambda
+        if: (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[seed-data]')) && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main')
+        run: |
+          echo "🌱 Seeding staging database via Lambda..."
+          
+          # Safety check - only seed in staging environment
+          if [[ "${{ env.ENVIRONMENT }}" != "staging" ]]; then
+            echo "❌ ERROR: Seeding is only allowed in staging environment"
+            echo "Current environment: ${{ env.ENVIRONMENT }}"
+            exit 1
+          fi
+          
+          # Invoke Lambda with seed action
+          aws lambda invoke \
+            --function-name ots-arp-aws-staging-migrate \
+            --invocation-type RequestResponse \
+            --log-type Tail \
+            --payload '{"action": "seed"}' \
+            /tmp/seed_result.json \
+            --no-cli-pager
+          
+          # Check results
+          RESULT=$(cat /tmp/seed_result.json)
+          echo "Seed result:"
+          echo "$RESULT" | jq '.'
+          
+          # Extract status and counts
+          STATUS=$(echo "$RESULT" | jq -r '.status')
+          
+          if [[ "$STATUS" == "success" ]]; then
+            echo "✅ Database seeded successfully"
+            echo ""
+            echo "Created records:"
+            echo "$RESULT" | jq '.seeding'
+          else
+            echo "❌ Seeding failed"
+            echo "$RESULT" | jq '.errors'
+            exit 1
+          fi
+
+  # Code hygiene checks
+  code-hygiene:
+    name: Code Hygiene Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Verify no debug routes
+        run: |
+          chmod +x scripts/verify-no-debug-routes.sh
+          ./scripts/verify-no-debug-routes.sh
+
+  # Update Amplify environment variables
+  update-amplify-env:
+    name: Update Amplify Environment
+    runs-on: ubuntu-latest
+    needs: [migrations]
+    if: success()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE_ARN }}
+          role-session-name: GitHubActions-AmplifyEnv
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Update Amplify environment variables
+        run: |
+          # Get Amplify app ID
+          AMPLIFY_APP_ID=$(aws amplify list-apps \
+            --query "apps[?name=='ots-arp-aws-staging-app'].appId" \
+            --output text)
+          
+          if [ -z "$AMPLIFY_APP_ID" ]; then
+            echo "❌ Amplify app not found"
+            exit 1
+          fi
+          
+          # Fetch secrets
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id ots-arp-aws-staging-app-secrets \
+            --query SecretString --output text)
+          
+          # Parse values
+          DB_HOST=$(echo "$SECRET_JSON" | jq -r '.DB_HOST')
+          DB_NAME=$(echo "$SECRET_JSON" | jq -r '.DB_NAME')
+          DB_USER=$(echo "$SECRET_JSON" | jq -r '.DB_USER')
+          DB_PASSWORD=$(echo "$SECRET_JSON" | jq -r '.DB_PASSWORD')
+          JWT_SECRET=$(echo "$SECRET_JSON" | jq -r '.JWT_SECRET')
+          
+          # Build DATABASE_URL
+          DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
+          
+          # Update Amplify environment variables
+          aws amplify update-app \
+            --app-id "$AMPLIFY_APP_ID" \
+            --environment-variables \
+              "DATABASE_URL=$DATABASE_URL" \
+              "JWT_SECRET=$JWT_SECRET" \
+              "NEXT_PUBLIC_ENV=staging" \
+              "NODE_ENV=production" \
+              "AWS_REGION=${{ env.AWS_REGION }}"
+          
+          echo "✅ Amplify environment variables updated"
+      
+      - name: Trigger Amplify deployment (optional)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # Get webhook URL from Terraform output or Amplify
+          AMPLIFY_APP_ID=$(aws amplify list-apps \
+            --query "apps[?name=='ots-arp-aws-staging-app'].appId" \
+            --output text)
+          
+          WEBHOOK_URL=$(aws amplify get-webhook \
+            --webhook-id $(aws amplify list-webhooks \
+              --app-id "$AMPLIFY_APP_ID" \
+              --query "webhooks[0].webhookId" \
+              --output text) \
+            --query "webhook.webhookUrl" \
+            --output text)
+          
+          if [ -n "$WEBHOOK_URL" ]; then
+            curl -X POST "$WEBHOOK_URL"
+            echo "✅ Amplify deployment triggered"
+          fi
+
+  # Smoke tests
+  smoke-tests:
+    name: Run Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [update-amplify-env, migrations]
+    if: success()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE_ARN }}
+          role-session-name: GitHubActions-SmokeTests
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Get staging URL and credentials
+        id: staging_info
+        run: |
+          # Get Amplify app info
+          AMPLIFY_APP_ID=$(aws amplify list-apps \
+            --query "apps[?name=='ots-arp-aws-staging-app'].appId" \
+            --output text)
+          
+          # Get default domain
+          AMPLIFY_DOMAIN=$(aws amplify get-app \
+            --app-id "$AMPLIFY_APP_ID" \
+            --query "app.defaultDomain" \
+            --output text)
+          
+          # Get branch name (should be main or staging)
+          BRANCH_NAME=$(aws amplify list-branches \
+            --app-id "$AMPLIFY_APP_ID" \
+            --query "branches[0].branchName" \
+            --output text)
+          
+          # Construct URL
+          STAGING_URL="https://${BRANCH_NAME}.${AMPLIFY_DOMAIN}"
+          echo "staging_url=$STAGING_URL" >> $GITHUB_OUTPUT
+          
+          # Get basic auth credentials from Secrets Manager
+          BASIC_AUTH_SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id ots-arp-aws-staging-basic-auth \
+            --query SecretString \
+            --output text 2>/dev/null || echo "{}")
+          
+          if [ "$BASIC_AUTH_SECRET" != "{}" ]; then
+            USERNAME=$(echo "$BASIC_AUTH_SECRET" | jq -r '.username')
+            PASSWORD=$(echo "$BASIC_AUTH_SECRET" | jq -r '.password')
+            echo "::add-mask::$PASSWORD"
+            echo "basic_auth=${USERNAME}:${PASSWORD}" >> $GITHUB_OUTPUT
+          else
+            echo "basic_auth=" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Staging URL: $STAGING_URL"
+      
+      - name: Wait for Amplify deployment
+        run: |
+          echo "Waiting 30 seconds for Amplify deployment to stabilize..."
+          sleep 30
+      
+      - name: Run smoke tests
+        env:
+          STAGING_BASE_URL: ${{ steps.staging_info.outputs.staging_url }}
+          STAGING_BASIC_AUTH: ${{ steps.staging_info.outputs.basic_auth }}
+        run: |
+          echo "🔥 Running smoke tests against staging..."
+          echo "URL: $STAGING_BASE_URL"
+          
+          # Run the smoke tests
+          node scripts/smoke-staging.mjs
+      
+      - name: Report smoke test results
+        if: always()
+        run: |
+          if [ $? -eq 0 ]; then
+            echo "✅ Smoke tests passed - staging is healthy!"
+          else
+            echo "❌ Smoke tests failed - check staging deployment"
+          fi
+
+  # Summary
+  summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [infrastructure, migrations, update-amplify-env, smoke-tests]
+    if: always()
+    
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🚀 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Infrastructure status
+          if [[ "${{ needs.infrastructure.result }}" == "success" ]]; then
+            echo "✅ Infrastructure: Deployed" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.infrastructure.result }}" == "skipped" ]]; then
+            echo "⏭️ Infrastructure: Skipped (no changes)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Infrastructure: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Migrations status
+          if [[ "${{ needs.migrations.result }}" == "success" ]]; then
+            echo "✅ Migrations: Completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Migrations: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Amplify env status
+          if [[ "${{ needs.update-amplify-env.result }}" == "success" ]]; then
+            echo "✅ Amplify Environment: Updated" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Amplify Environment: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Smoke tests status
+          if [[ "${{ needs.smoke-tests.result }}" == "success" ]]; then
+            echo "✅ Smoke Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.smoke-tests.result }}" == "skipped" ]]; then
+            echo "⏭️ Smoke Tests: Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Smoke Tests: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Staging" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Amplify will auto-build from the git push" >> $GITHUB_STEP_SUMMARY
+          echo "2. Monitor build at: https://console.aws.amazon.com/amplify/" >> $GITHUB_STEP_SUMMARY
+          echo "3. Check application health after deployment" >> $GITHUB_STEP_SUMMARY
