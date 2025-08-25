@@ -2,6 +2,10 @@ import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
 import crypto from 'crypto'
+import { assertEnvIsolation } from './assertEnvIsolation'
+
+// Check environment isolation before initializing file storage
+assertEnvIsolation()
 
 export interface FileUploadResult {
   fileName: string

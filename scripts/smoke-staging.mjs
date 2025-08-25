@@ -343,6 +343,50 @@ async function testDatabaseConnectivity() {
   };
 }
 
+// Test 7: Storage Provider Verification (AWS S3 for staging)
+async function testStorageProvider() {
+  // Check health endpoint for environment info
+  const response = await makeRequest('/api/health');
+  
+  if (!response.ok) {
+    return { 
+      success: false, 
+      message: `Health check failed: Status ${response.status}` 
+    };
+  }
+  
+  const envData = response.data;
+  
+  // For staging/production, verify S3 is being used
+  if (envData?.environment === 'staging' || envData?.environment === 'production') {
+    // Check if storage provider is S3
+    if (envData?.storageProvider && envData.storageProvider !== 's3') {
+      return { 
+        success: false, 
+        message: `Invalid storage provider for ${envData.environment}: ${envData.storageProvider} (must be S3)` 
+      };
+    }
+    
+    // Verify no Supabase configuration present
+    if (envData?.hasSupabaseConfig === true) {
+      return { 
+        success: false, 
+        message: `Supabase configuration detected in ${envData.environment} environment (not allowed)` 
+      };
+    }
+    
+    return { 
+      success: true, 
+      message: `S3 storage correctly configured for ${envData.environment}` 
+    };
+  }
+  
+  return { 
+    success: true, 
+    message: 'Storage provider check passed' 
+  };
+}
+
 // Main test runner
 async function main() {
   console.log('========================================');
@@ -356,6 +400,7 @@ async function main() {
   await runTest('Health Check', testHealthCheck);
   await runTest('Authentication', testAuthentication);
   await runTest('Database Connectivity', testDatabaseConnectivity);
+  await runTest('Storage Provider', testStorageProvider);
   await runTest('Get Jobs List', testGetJobs);
   await runTest('Create and Get Job', testCreateJob);
   await runTest('File Upload', testFileUpload);

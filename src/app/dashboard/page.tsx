@@ -159,7 +159,22 @@ export default function DashboardPage() {
     router.push(path)
   }
 
-  if (authLoading || !user) return null
+  // Show loading state while auth is checking
+  if (authLoading) {
+    return (
+      <ResponsiveLayout>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <Typography>Loading...</Typography>
+        </Box>
+      </ResponsiveLayout>
+    )
+  }
+
+  // Redirect if not authenticated
+  if (!user) {
+    router.push('/login')
+    return null
+  }
 
   // Quick action buttons for mobile and desktop
   const quickActions = user.role === 'EMPLOYEE' ? (
@@ -426,17 +441,7 @@ export default function DashboardPage() {
                               {job.title}
                             </Typography>
                           }
-                          secondary={
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              sx={{
-                                fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                              }}
-                            >
-                              {job.customer}
-                            </Typography>
-                          }
+                          secondary={job.customer}
                           sx={{ mb: { xs: 1, sm: 0 } }}
                         />
                         <Chip
@@ -588,21 +593,22 @@ export default function DashboardPage() {
                             <ListItemText
                               primary={`${update.jobNumber} - ${update.phaseName}`}
                               secondary={
-                                <Stack>
-                                  <Typography variant="body2">
+                                <>
+                                  <span style={{ display: 'block' }}>
                                     {update.customer}
-                                  </Typography>
-                                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  </span>
+                                  <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                                     <Chip
                                       label={update.status.replace('_', ' ')}
                                       color={update.status === 'COMPLETED' ? 'success' : 'warning'}
                                       size="small"
+                                      component="span"
                                     />
-                                    <Typography variant="caption" color="text.secondary">
+                                    <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
                                       {new Date(update.updatedAt).toLocaleDateString()}
-                                    </Typography>
-                                  </Box>
-                                </Stack>
+                                    </span>
+                                  </span>
+                                </>
                               }
                             />
                           </ListItem>

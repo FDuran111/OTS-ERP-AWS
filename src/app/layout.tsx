@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import LayoutDebugger from "@/components/debug/LayoutDebugger";
+import StagingRibbon from "@/components/layout/StagingRibbon";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -48,6 +49,7 @@ export default function RootLayout({
         <meta name="HandheldFriendly" content="true" />
       </head>
       <body className="overflow-x-hidden">
+        <StagingRibbon />
         <ThemeProvider>
           <AuthProvider>
             {children}

@@ -1,0 +1,254 @@
+name: Billing Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      vpc_id:
+        description: 'VPC ID to check (optional, will auto-detect if not provided)'
+        required: false
+        type: string
+      save_report:
+        description: 'Save detailed JSON report as artifact'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-2
+
+jobs:
+  billing-check:
+    name: Check Billing Signals
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE_ARN }}
+          role-session-name: GitHubActions-BillingCheck
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Run billing signals check
+        id: billing_check
+        env:
+          VPC_ID: ${{ github.event.inputs.vpc_id }}
+        run: |
+          echo "🔍 Running billing signals check..."
+          
+          # Make script executable
+          chmod +x scripts/check-billing-signals.sh
+          
+          # Run the check (continue on error to capture output)
+          set +e
+          ./scripts/check-billing-signals.sh
+          CHECK_RESULT=$?
+          set -e
+          
+          # Set output
+          echo "exit_code=$CHECK_RESULT" >> $GITHUB_OUTPUT
+          
+          if [ $CHECK_RESULT -eq 0 ]; then
+            echo "check_status=pass" >> $GITHUB_OUTPUT
+            echo "✅ All billing checks passed"
+          else
+            echo "check_status=fail" >> $GITHUB_OUTPUT
+            echo "❌ Billing issues detected"
+          fi
+      
+      - name: Get current costs
+        id: costs
+        run: |
+          # Get current month costs
+          START_DATE=$(date -u +"%Y-%m-01")
+          TOMORROW=$(date -u -d "+1 day" +"%Y-%m-%d")
+          
+          # Get total cost
+          TOTAL_COST=$(aws ce get-cost-and-usage \
+            --time-period Start=$START_DATE,End=$TOMORROW \
+            --granularity MONTHLY \
+            --metrics "UnblendedCost" \
+            --query "ResultsByTime[0].Total.UnblendedCost.Amount" \
+            --output text 2>/dev/null || echo "0")
+          
+          # Round to 2 decimal places
+          TOTAL_COST=$(printf "%.2f" "$TOTAL_COST")
+          
+          echo "total_mtd=$TOTAL_COST" >> $GITHUB_OUTPUT
+          
+          # Calculate projection
+          DAY_OF_MONTH=$(date +%d)
+          DAYS_IN_MONTH=$(date -d "$START_DATE +1 month -1 day" +%d)
+          PROJECTED=$(echo "scale=2; $TOTAL_COST * $DAYS_IN_MONTH / $DAY_OF_MONTH" | bc 2>/dev/null || echo "0")
+          
+          echo "projected=$PROJECTED" >> $GITHUB_OUTPUT
+          
+          # Check if over budget
+          if (( $(echo "$PROJECTED > 35" | bc -l) )); then
+            echo "budget_status=over" >> $GITHUB_OUTPUT
+          else
+            echo "budget_status=under" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create detailed report
+        if: github.event.inputs.save_report == 'true' || github.event_name == 'schedule'
+        run: |
+          # Create JSON report
+          REPORT_FILE="billing-report-$(date +%Y%m%d-%H%M%S).json"
+          
+          # Get service breakdown
+          START_DATE=$(date -u +"%Y-%m-01")
+          TOMORROW=$(date -u -d "+1 day" +"%Y-%m-%d")
+          
+          SERVICE_COSTS=$(aws ce get-cost-and-usage \
+            --time-period Start=$START_DATE,End=$TOMORROW \
+            --granularity MONTHLY \
+            --metrics "UnblendedCost" \
+            --group-by Type=DIMENSION,Key=SERVICE \
+            --query "ResultsByTime[0].Groups" \
+            --output json)
+          
+          # Check for NAT gateways
+          if [ -n "${{ github.event.inputs.vpc_id }}" ]; then
+            NAT_COUNT=$(aws ec2 describe-nat-gateways \
+              --filter "Name=vpc-id,Values=${{ github.event.inputs.vpc_id }}" \
+              --query "length(NatGateways)" \
+              --output text)
+          else
+            NAT_COUNT=$(aws ec2 describe-nat-gateways \
+              --query "length(NatGateways)" \
+              --output text)
+          fi
+          
+          # Create report
+          cat > "$REPORT_FILE" << EOF
+          {
+            "report_date": "$(date -u -Iseconds)",
+            "environment": "staging",
+            "region": "${{ env.AWS_REGION }}",
+            "billing": {
+              "total_mtd": ${{ steps.costs.outputs.total_mtd }},
+              "projected_month_end": ${{ steps.costs.outputs.projected }},
+              "budget_limit": 35,
+              "budget_status": "${{ steps.costs.outputs.budget_status }}",
+              "nat_gateway_count": ${NAT_COUNT:-0},
+              "nat_gateway_monthly_cost": $(echo "${NAT_COUNT:-0} * 45" | bc)
+            },
+            "service_breakdown": $SERVICE_COSTS,
+            "check_status": "${{ steps.billing_check.outputs.check_status }}",
+            "recommendations": [
+              $([ ${NAT_COUNT:-0} -gt 0 ] && echo '"Remove NAT gateways to save ~$45/month each",' || echo '')
+              $([ "${{ steps.costs.outputs.budget_status }}" = "over" ] && echo '"Review and optimize high-cost services",' || echo '')
+              "Monitor Amplify build minutes",
+              "Review RDS instance size",
+              "Clean up unused S3 objects"
+            ]
+          }
+          EOF
+          
+          echo "📊 Report saved to: $REPORT_FILE"
+          echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
+      
+      - name: Upload billing report
+        if: github.event.inputs.save_report == 'true' || github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: billing-report-${{ github.run_number }}
+          path: billing-report-*.json
+          retention-days: 30
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 💰 Billing Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Status
+          if [ "${{ steps.billing_check.outputs.check_status }}" = "pass" ]; then
+            echo "✅ **Status**: All checks passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Status**: Issues detected" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Costs
+          echo "### 📊 Cost Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Month-to-Date** | \$${{ steps.costs.outputs.total_mtd }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Projected Month End** | \$${{ steps.costs.outputs.projected }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Budget Limit** | \$35.00 |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.costs.outputs.budget_status }}" = "over" ]; then
+            echo "| **Budget Status** | ⚠️ Over Budget |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| **Budget Status** | ✅ Within Budget |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Top services
+          echo "### 🎯 Top Services" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get top 5 services
+          START_DATE=$(date -u +"%Y-%m-01")
+          TOMORROW=$(date -u -d "+1 day" +"%Y-%m-%d")
+          
+          aws ce get-cost-and-usage \
+            --time-period Start=$START_DATE,End=$TOMORROW \
+            --granularity MONTHLY \
+            --metrics "UnblendedCost" \
+            --group-by Type=DIMENSION,Key=SERVICE \
+            --query "ResultsByTime[0].Groups" \
+            --output json | jq -r '
+              sort_by(-.Metrics.UnblendedCost.Amount | tonumber) |
+              .[0:5] |
+              .[] |
+              "| \(.Keys[0]) | $\(.Metrics.UnblendedCost.Amount | tonumber | . * 100 | round / 100) |"
+          ' >> $GITHUB_STEP_SUMMARY || echo "| No data available | - |" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Recommendations
+          echo "### 💡 Recommendations" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.billing_check.outputs.exit_code }}" != "0" ]; then
+            echo "- 🚨 **NAT gateways detected** - Remove to save ~\$45/month each" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ steps.costs.outputs.budget_status }}" = "over" ]; then
+            echo "- ⚠️ **Over budget** - Review high-cost services" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "- Monitor Amplify build minutes and storage" >> $GITHUB_STEP_SUMMARY
+          echo "- Review RDS instance size and utilization" >> $GITHUB_STEP_SUMMARY
+          echo "- Clean up unused S3 objects and old backups" >> $GITHUB_STEP_SUMMARY
+          echo "- Review CloudWatch log retention policies" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Run Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Fail if issues detected
+        if: steps.billing_check.outputs.exit_code != '0'
+        run: |
+          echo "❌ Billing check failed - NAT gateways detected"
+          echo "Please review the summary above for details"
+          exit 1

@@ -1,16 +1,23 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getStorageConfig } from '@/lib/storage/config';
 
 export async function GET() {
   try {
+    // Get storage configuration
+    const storageConfig = getStorageConfig();
+    
     // Basic health check
     const checks = {
       ok: true,
       timestamp: new Date().toISOString(),
       environment: process.env.NEXT_PUBLIC_ENV || 'unknown',
+      storageProvider: storageConfig.provider,
+      hasSupabaseConfig: !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_SERVICE_ROLE_KEY),
       checks: {
         api: true,
-        database: false
+        database: false,
+        storageConfig: true
       }
     };
     

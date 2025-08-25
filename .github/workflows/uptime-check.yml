@@ -1,0 +1,339 @@
+name: Staging Uptime Check
+
+on:
+  schedule:
+    # Run every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      force_failure:
+        description: 'Force a failure for testing'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: write
+  issues: write
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  ENVIRONMENT: staging
+  MAX_FAILURES: 3
+
+jobs:
+  health-check:
+    name: Check Staging Health
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE_ARN }}
+          role-session-name: GitHubActions-UptimeCheck
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Get staging URL and credentials
+        id: staging_info
+        run: |
+          # Get Amplify app info
+          AMPLIFY_APP_ID=$(aws amplify list-apps \
+            --query "apps[?name=='ots-arp-aws-staging-app'].appId" \
+            --output text)
+          
+          if [ -z "$AMPLIFY_APP_ID" ]; then
+            echo "❌ Amplify app not found"
+            exit 1
+          fi
+          
+          # Get default domain
+          AMPLIFY_DOMAIN=$(aws amplify get-app \
+            --app-id "$AMPLIFY_APP_ID" \
+            --query "app.defaultDomain" \
+            --output text)
+          
+          # Get branch name
+          BRANCH_NAME=$(aws amplify list-branches \
+            --app-id "$AMPLIFY_APP_ID" \
+            --query "branches[0].branchName" \
+            --output text)
+          
+          # Construct URL
+          STAGING_URL="https://${BRANCH_NAME}.${AMPLIFY_DOMAIN}"
+          echo "staging_url=$STAGING_URL" >> $GITHUB_OUTPUT
+          
+          # Get basic auth credentials from Secrets Manager
+          BASIC_AUTH_SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id ots-arp-aws-staging-basic-auth \
+            --query SecretString \
+            --output text 2>/dev/null || echo "{}")
+          
+          if [ "$BASIC_AUTH_SECRET" != "{}" ]; then
+            USERNAME=$(echo "$BASIC_AUTH_SECRET" | jq -r '.username // "staging"')
+            PASSWORD=$(echo "$BASIC_AUTH_SECRET" | jq -r '.password // ""')
+            echo "::add-mask::$PASSWORD"
+            echo "has_basic_auth=true" >> $GITHUB_OUTPUT
+            echo "basic_auth_header=Authorization: Basic $(echo -n "${USERNAME}:${PASSWORD}" | base64)" >> $GITHUB_OUTPUT
+          else
+            echo "has_basic_auth=false" >> $GITHUB_OUTPUT
+            echo "basic_auth_header=" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Staging URL: $STAGING_URL"
+      
+      - name: Download failure count
+        uses: actions/download-artifact@v4
+        with:
+          name: uptime-failure-count
+          path: ./
+        continue-on-error: true
+      
+      - name: Read failure count
+        id: failure_count
+        run: |
+          if [ -f failure_count.txt ]; then
+            COUNT=$(cat failure_count.txt)
+            echo "Current failure count: $COUNT"
+          else
+            COUNT=0
+            echo "No previous failures"
+          fi
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+      
+      - name: Perform health check
+        id: health_check
+        run: |
+          URL="${{ steps.staging_info.outputs.staging_url }}/api/health"
+          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          
+          echo "🔍 Checking health at $URL"
+          echo "Timestamp: $TIMESTAMP"
+          
+          # Force failure for testing if requested
+          if [ "${{ github.event.inputs.force_failure }}" = "true" ]; then
+            echo "⚠️ Forcing failure for testing"
+            RESPONSE='{"ok":false,"forced":true}'
+            STATUS_CODE=500
+          else
+            # Perform actual health check
+            if [ "${{ steps.staging_info.outputs.has_basic_auth }}" = "true" ]; then
+              RESPONSE=$(curl -sS -w "\n%{http_code}" \
+                -H "${{ steps.staging_info.outputs.basic_auth_header }}" \
+                -H "Accept: application/json" \
+                "$URL" 2>&1 || echo "CURL_ERROR")
+            else
+              RESPONSE=$(curl -sS -w "\n%{http_code}" \
+                -H "Accept: application/json" \
+                "$URL" 2>&1 || echo "CURL_ERROR")
+            fi
+            
+            # Extract status code and body
+            if [ "$RESPONSE" = "CURL_ERROR" ]; then
+              STATUS_CODE=0
+              BODY="Connection failed"
+            else
+              STATUS_CODE=$(echo "$RESPONSE" | tail -n1)
+              BODY=$(echo "$RESPONSE" | sed '$d')
+            fi
+          fi
+          
+          echo "Status Code: $STATUS_CODE"
+          echo "Response Body: $BODY"
+          
+          # Check if response is healthy
+          if [ "$STATUS_CODE" = "200" ] || [ "$STATUS_CODE" = "201" ]; then
+            # Parse JSON to check ok field
+            OK_STATUS=$(echo "$BODY" | jq -r '.ok // false' 2>/dev/null || echo "false")
+            
+            if [ "$OK_STATUS" = "true" ]; then
+              echo "✅ Health check passed"
+              echo "success=true" >> $GITHUB_OUTPUT
+              echo "message=Health check passed at $TIMESTAMP" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Health check failed - ok: $OK_STATUS"
+              echo "success=false" >> $GITHUB_OUTPUT
+              echo "message=Health check failed at $TIMESTAMP - Response: $BODY" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "❌ Health check failed - HTTP $STATUS_CODE"
+            echo "success=false" >> $GITHUB_OUTPUT
+            echo "message=Health check failed at $TIMESTAMP - HTTP $STATUS_CODE - Response: $BODY" >> $GITHUB_OUTPUT
+          fi
+          
+          # Save failure details for issue creation
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "status_code=$STATUS_CODE" >> $GITHUB_OUTPUT
+          echo "response=$BODY" >> $GITHUB_OUTPUT
+      
+      - name: Update failure count
+        id: update_count
+        run: |
+          if [ "${{ steps.health_check.outputs.success }}" = "true" ]; then
+            # Reset count on success
+            echo "0" > failure_count.txt
+            echo "new_count=0" >> $GITHUB_OUTPUT
+            echo "📊 Reset failure count to 0"
+          else
+            # Increment count on failure
+            OLD_COUNT=${{ steps.failure_count.outputs.count }}
+            NEW_COUNT=$((OLD_COUNT + 1))
+            echo "$NEW_COUNT" > failure_count.txt
+            echo "new_count=$NEW_COUNT" >> $GITHUB_OUTPUT
+            echo "📊 Incremented failure count to $NEW_COUNT"
+          fi
+      
+      - name: Upload failure count
+        uses: actions/upload-artifact@v4
+        with:
+          name: uptime-failure-count
+          path: failure_count.txt
+          retention-days: 1
+          overwrite: true
+      
+      - name: Create or update issue on consecutive failures
+        if: steps.health_check.outputs.success == 'false' && steps.update_count.outputs.new_count >= env.MAX_FAILURES
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 Staging health check failing';
+            const timestamp = '${{ steps.health_check.outputs.timestamp }}';
+            const statusCode = '${{ steps.health_check.outputs.status_code }}';
+            const response = '${{ steps.health_check.outputs.response }}';
+            const failureCount = '${{ steps.update_count.outputs.new_count }}';
+            const url = '${{ steps.staging_info.outputs.staging_url }}/api/health';
+            
+            // Search for existing issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'uptime-check,staging'
+            });
+            
+            const existingIssue = issues.data.find(issue => issue.title === title);
+            
+            const body = `## Staging Health Check Alert
+            
+            The staging environment health check has failed **${failureCount} consecutive times**.
+            
+            ### Latest Failure Details
+            - **Timestamp**: ${timestamp}
+            - **URL**: ${url}
+            - **HTTP Status**: ${statusCode}
+            - **Response**: \`\`\`json
+            ${response}
+            \`\`\`
+            
+            ### Action Required
+            1. Check the [Amplify Console](https://console.aws.amazon.com/amplify/) for deployment status
+            2. Review [Recent Commits](${context.payload.repository.html_url}/commits/main)
+            3. Check [CloudWatch Logs](https://console.aws.amazon.com/cloudwatch/) for errors
+            4. Run manual smoke tests: \`npm run test:smoke:staging\`
+            
+            ### Resolution
+            Once the issue is resolved, this issue will be automatically closed when the health check passes.
+            
+            ---
+            *This issue was automatically created by the uptime monitoring workflow.*`;
+            
+            if (existingIssue) {
+              // Update existing issue with new failure info
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `### Health Check Still Failing
+            
+            - **Failure #${failureCount}** at ${timestamp}
+            - **HTTP Status**: ${statusCode}
+            - **Response**: \`${response}\``
+              });
+              
+              console.log(`Updated existing issue #${existingIssue.number}`);
+            } else {
+              // Create new issue
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['uptime-check', 'staging', 'automated', 'high-priority']
+              });
+              
+              console.log(`Created new issue #${newIssue.data.number}`);
+            }
+      
+      - name: Close issue on recovery
+        if: steps.health_check.outputs.success == 'true' && steps.failure_count.outputs.count > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 Staging health check failing';
+            
+            // Search for existing open issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'uptime-check,staging'
+            });
+            
+            const existingIssue = issues.data.find(issue => issue.title === title);
+            
+            if (existingIssue) {
+              // Add recovery comment and close
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `### ✅ Health Check Recovered
+            
+            The staging environment is now healthy again!
+            
+            - **Recovery Time**: ${{ steps.health_check.outputs.timestamp }}
+            - **Status**: Health check passing
+            
+            This issue is being automatically closed.`
+              });
+              
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                state: 'closed'
+              });
+              
+              console.log(`Closed issue #${existingIssue.number} - staging recovered`);
+            }
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🏥 Uptime Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.health_check.outputs.success }}" = "true" ]; then
+            echo "✅ **Status**: Healthy" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Status**: Unhealthy" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ steps.staging_info.outputs.staging_url }}/api/health" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: ${{ steps.health_check.outputs.timestamp }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **HTTP Status**: ${{ steps.health_check.outputs.status_code }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Consecutive Failures**: ${{ steps.update_count.outputs.new_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Threshold for Issue**: ${{ env.MAX_FAILURES }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.update_count.outputs.new_count }}" -ge "${{ env.MAX_FAILURES }}" ] && [ "${{ steps.health_check.outputs.success }}" = "false" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **GitHub Issue created/updated** due to consecutive failures" >> $GITHUB_STEP_SUMMARY
+          fi

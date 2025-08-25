@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
         SELECT 
           COUNT(*) as "totalReservations",
           COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) as "activeReservations",
-          SUM(CASE WHEN status = 'ACTIVE' THEN "quantityReserved" - COALESCE("fulfilledQuantity", 0) ELSE 0 END) as "totalReservedQuantity"
+          SUM(CASE WHEN status = 'ACTIVE' THEN quantity ELSE 0 END) as "totalReservedQuantity"
         FROM "MaterialReservation"
       `)
     ])

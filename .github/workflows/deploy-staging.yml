@@ -272,10 +272,17 @@ jobs:
           DB_PASSWORD=$(echo "$SECRET_JSON" | jq -r '.DB_PASSWORD')
           JWT_SECRET=$(echo "$SECRET_JSON" | jq -r '.JWT_SECRET')
           
-          # Build DATABASE_URL
+          # Build DATABASE_URL - verify it's RDS
+          if [[ ! "$DB_HOST" =~ \.rds\.amazonaws\.com$ ]]; then
+            echo "❌ ERROR: Database host is not AWS RDS: $DB_HOST"
+            echo "Staging MUST use AWS RDS for database"
+            exit 1
+          fi
+          
           DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
           
           # Update Amplify environment variables
+          # IMPORTANT: No Supabase variables allowed in staging/production
           aws amplify update-app \
             --app-id "$AMPLIFY_APP_ID" \
             --environment-variables \
@@ -283,9 +290,11 @@ jobs:
               "JWT_SECRET=$JWT_SECRET" \
               "NEXT_PUBLIC_ENV=staging" \
               "NODE_ENV=production" \
+              "STORAGE_PROVIDER=s3" \
+              "AWS_S3_BUCKET=ots-arp-aws-staging-uploads" \
               "AWS_REGION=${{ env.AWS_REGION }}"
           
-          echo "✅ Amplify environment variables updated"
+          echo "✅ Amplify environment variables updated (AWS services only)"
       
       - name: Trigger Amplify deployment (optional)
         if: github.event_name == 'workflow_dispatch'

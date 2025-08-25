@@ -1,7 +1,7 @@
-# Smoke Tests Documentation
+# Smoke Tests & Monitoring Documentation
 
 ## Overview
-Automated smoke tests verify core functionality after staging deployment. These tests run automatically in CI/CD and can be run manually for debugging.
+The OTS-ARP-AWS project includes comprehensive smoke tests and uptime monitoring to ensure staging environment health. Tests run automatically in CI/CD and continuously monitor staging availability.
 
 ## Test Coverage
 
@@ -35,6 +35,11 @@ Automated smoke tests verify core functionality after staging deployment. These 
 - **Endpoint:** `POST /api/files/upload`
 - **Verifies:** File upload to S3 works
 - **Expected:** File uploaded successfully
+
+### 7. Storage Provider Check
+- **Endpoint:** `GET /api/health`
+- **Verifies:** S3 is being used (not Supabase) in staging
+- **Expected:** `storageProvider: "s3"` for AWS environments
 
 ## Running Smoke Tests
 
@@ -234,8 +239,108 @@ The smoke tests are integrated into `.github/workflows/deploy-staging.yml`:
 - Monitor test execution time
 - Clean up old test data periodically
 
+## Uptime Check (Scheduled)
+
+### Overview
+Automated health monitoring runs every 10 minutes via GitHub Actions to ensure staging availability.
+
+### Configuration
+- **Workflow:** `.github/workflows/uptime-check.yml`
+- **Schedule:** Every 10 minutes (cron: `*/10 * * * *`)
+- **Failure Threshold:** 3 consecutive failures trigger issue creation
+
+### Features
+
+#### Automatic Issue Creation
+After 3 consecutive health check failures:
+1. Creates GitHub issue with `uptime-check` and `staging` labels
+2. Includes failure timestamps and response details
+3. Provides troubleshooting links
+
+#### Automatic Recovery
+When health check recovers:
+1. Adds recovery comment to open issue
+2. Automatically closes the issue
+3. Resets failure counter
+
+### Finding Uptime Issues
+- Search: [Open Uptime Issues](../../issues?q=is%3Aissue+is%3Aopen+label%3Auptime-check)
+- Labels: `uptime-check`, `staging`, `automated`, `high-priority`
+
+### Manual Trigger
+1. Go to [Actions](../../actions)
+2. Select "Staging Uptime Check"
+3. Click "Run workflow"
+4. Optional: Force failure for testing
+
+## Local Uptime Script
+
+### Quick Health Check
+Use the local script for manual health verification:
+
+```bash
+# Auto-fetch from AWS
+./scripts/uptime-local.sh --aws
+
+# Manual URL
+./scripts/uptime-local.sh --url https://staging.example.com
+
+# With credentials
+./scripts/uptime-local.sh \
+  --url https://staging.example.com \
+  --username staging \
+  --password secret123
+```
+
+### Script Options
+- `--url URL`: Staging URL
+- `--username USER`: Basic auth username  
+- `--password PASS`: Basic auth password
+- `--aws`: Fetch config from AWS
+- `--help`: Show usage
+
+### Output Example
+```
+=========================================
+   🏥 Staging Uptime Check
+=========================================
+
+📍 Target: https://staging.example.com/api/health
+🔐 Using basic authentication
+
+🚀 Performing health check...
+----------------------------------------
+⏰ Timestamp: 2024-01-01 12:00:00 UTC
+📊 HTTP Status: 200
+
+📝 Response:
+{
+  "ok": true,
+  "environment": "staging",
+  "storageProvider": "s3",
+  "checks": {
+    "api": true,
+    "database": true
+  }
+}
+
+=========================================
+   📈 Results
+=========================================
+
+✅ Health check PASSED
+
+📋 Details:
+  • Environment: staging
+  • Database: true
+  • Storage: s3
+
+✅ Staging is healthy! 🎉
+```
+
 ## Related Documentation
 
+- [AWS Services Lock](./AWS_SERVICES_LOCK.md)
 - [Migration & Seeding](./MIGRATION_SEEDING.md)
 - [Staging Runbook](./RUNBOOK_STAGING.md)
 - [Network Verification](./NAT_FREE_ARCHITECTURE.md)

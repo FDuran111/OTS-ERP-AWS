@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { fileStorage, FileStorageService } from '@/lib/file-storage'
-import { supabaseStorage, SupabaseStorageService } from '@/lib/supabase-storage'
+import { getStorageProvider } from '@/lib/storage'
+import { getStoragePath } from '@/lib/storage/config'
+import crypto from 'crypto'
+
+// Helper to check if file is an image
+function isImage(mimeType: string): boolean {
+  return mimeType.startsWith('image/')
+}
+
+// Helper to get file extension
+function getFileExtension(filename: string): string {
+  const parts = filename.split('.')
+  return parts.length > 1 ? `.${parts[parts.length - 1]}` : ''
+}
 
 // POST handle file upload with storage
 export async function POST(request: NextRequest) {
@@ -28,36 +40,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Upload file to storage
-    // Use Supabase Storage in production (if available), local storage in development
-    const isProduction = process.env.NODE_ENV === 'production'
-    const hasSupabaseKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    // Get storage provider (async for dynamic imports)
+    const storage = await getStorageProvider()
     
-    // Debug logging
-    console.log('Upload environment:', {
-      NODE_ENV: process.env.NODE_ENV,
-      isProduction,
-      hasSupabaseKey,
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT SET'
+    // Generate unique filename
+    const timestamp = Date.now()
+    const randomId = crypto.randomBytes(8).toString('hex')
+    const extension = getFileExtension(file.name)
+    const fileName = `${timestamp}-${randomId}${extension}`
+    
+    // Build storage key with category
+    const storageKey = `${category}/${fileName}`
+    
+    // Convert File to Buffer for upload
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    
+    // Upload file to storage with environment prefix automatically applied
+    const uploadResult = await storage.upload(storageKey, buffer, {
+      contentType: file.type,
+      metadata: {
+        originalName: file.name,
+        category: category,
+        uploadedAt: new Date().toISOString()
+      },
+      public: true // Make files publicly accessible
     })
     
-    // In production, always try to use Supabase Storage
-    const storageService = isProduction ? supabaseStorage : fileStorage
-    
-    let uploadResult
-    if (FileStorageService.isImage(file.type) && category !== 'documents') {
-      // Upload as image with thumbnail generation
-      uploadResult = await storageService.uploadImage(
-        file,
-        category as 'jobs' | 'customers' | 'materials',
-        true // generate thumbnail
-      )
-    } else {
-      // Upload as regular file (including documents category)
-      uploadResult = await storageService.uploadFile(
-        file,
-        category as 'jobs' | 'customers' | 'materials' | 'documents'
-      )
+    // Get public URL if available
+    let fileUrl = ''
+    try {
+      if (storage.getPublicUrl) {
+        fileUrl = storage.getPublicUrl(storageKey)
+      } else {
+        // Fall back to signed URL with long expiration
+        fileUrl = await storage.getSignedUrl(storageKey, 365 * 24 * 60 * 60) // 1 year
+      }
+    } catch (error) {
+      console.warn('Could not generate public URL:', error)
+      // Generate a signed URL with shorter expiration as fallback
+      fileUrl = await storage.getSignedUrl(storageKey, 7 * 24 * 60 * 60) // 1 week
     }
 
     // Parse tags if provided
@@ -75,26 +97,25 @@ export async function POST(request: NextRequest) {
     const result = await query(`
       INSERT INTO "FileAttachment" (
         "fileName", "originalName", "mimeType", "fileSize", "fileExtension",
-        "filePath", "fileUrl", "isImage", "imageWidth", "imageHeight",
-        "thumbnailPath", "thumbnailUrl", "description", "tags", "metadata"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        "filePath", "fileUrl", "isImage", "description", "tags", "metadata"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `, [
-      uploadResult.fileName,
-      uploadResult.originalName,
-      uploadResult.mimeType,
-      uploadResult.fileSize,
-      uploadResult.fileExtension,
-      uploadResult.filePath,
-      uploadResult.fileUrl,
-      'isImage' in uploadResult ? uploadResult.isImage : FileStorageService.isImage(file.type),
-      'imageWidth' in uploadResult ? uploadResult.imageWidth : null,
-      'imageHeight' in uploadResult ? uploadResult.imageHeight : null,
-      'thumbnailPath' in uploadResult ? uploadResult.thumbnailPath : null,
-      'thumbnailUrl' in uploadResult ? uploadResult.thumbnailUrl : null,
+      fileName,
+      file.name,
+      file.type,
+      file.size,
+      extension,
+      uploadResult.key, // Full key with environment prefix
+      fileUrl,
+      isImage(file.type),
       description || null,
       parsedTags,
-      uploadResult.metadata ? JSON.stringify(uploadResult.metadata) : null
+      JSON.stringify({
+        category,
+        storageProvider: process.env.STORAGE_PROVIDER || 'default',
+        environment: process.env.NEXT_PUBLIC_ENV || 'development'
+      })
     ])
 
     const fileRecord = result.rows[0]
@@ -111,10 +132,6 @@ export async function POST(request: NextRequest) {
         filePath: fileRecord.filePath,
         fileUrl: fileRecord.fileUrl,
         isImage: fileRecord.isImage,
-        imageWidth: fileRecord.imageWidth,
-        imageHeight: fileRecord.imageHeight,
-        thumbnailPath: fileRecord.thumbnailPath,
-        thumbnailUrl: fileRecord.thumbnailUrl,
         description: fileRecord.description,
         tags: fileRecord.tags || [],
         metadata: fileRecord.metadata,
@@ -127,118 +144,23 @@ export async function POST(request: NextRequest) {
     console.error('File upload error:', error)
     
     // Handle specific error types
-    if (error.message.includes('File size exceeds')) {
+    if (error.message?.includes('File too large')) {
       return NextResponse.json(
-        { error: error.message },
+        { error: 'File size exceeds maximum allowed' },
         { status: 413 }
       )
     }
     
-    if (error.message.includes('File type') && error.message.includes('not allowed')) {
+    if (error.message?.includes('Invalid file type')) {
       return NextResponse.json(
-        { error: error.message },
+        { error: 'File type not allowed' },
         { status: 415 }
       )
     }
     
-    // Handle Supabase configuration error
-    if (error.message.includes('SUPABASE_SERVICE_ROLE_KEY')) {
-      return NextResponse.json(
-        { 
-          error: 'File storage is not configured. Please set SUPABASE_SERVICE_ROLE_KEY environment variable in production.',
-          details: error.message 
-        },
-        { status: 500 }
-      )
-    }
-    
-    // Handle permission errors
-    if (error.message.includes('EACCES') || error.message.includes('permission denied')) {
-      return NextResponse.json(
-        { 
-          error: 'File storage permission error. The server cannot write to the local filesystem in production. Please configure Supabase Storage.',
-          details: error.message 
-        },
-        { status: 500 }
-      )
-    }
-
     return NextResponse.json(
-      { error: 'Failed to upload file: ' + error.message },
+      { error: 'Failed to upload file', details: error.message },
       { status: 500 }
     )
   }
-}
-
-// GET upload configuration and limits
-export async function GET() {
-  return NextResponse.json({
-    maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760'), // 10MB
-    allowedMimeTypes: [
-      // Images
-      'image/jpeg',
-      'image/jpg', 
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'image/svg+xml',
-      // Documents
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain',
-      'text/csv',
-      // Archives
-      'application/zip',
-      'application/x-rar-compressed',
-      'application/x-7z-compressed'
-    ],
-    categories: ['jobs', 'customers', 'materials', 'documents'],
-    attachmentTypes: {
-      jobs: [
-        'BEFORE_PHOTO',
-        'AFTER_PHOTO', 
-        'PROGRESS_PHOTO',
-        'PROBLEM_PHOTO',
-        'SOLUTION_PHOTO',
-        'PERMIT',
-        'INVOICE',
-        'CONTRACT',
-        'SPEC_SHEET',
-        'DIAGRAM',
-        'RECEIPT'
-      ],
-      customers: [
-        'PROFILE_PHOTO',
-        'ID_DOCUMENT',
-        'CONTRACT',
-        'AGREEMENT',
-        'SIGNATURE'
-      ],
-      materials: [
-        'PRODUCT_PHOTO',
-        'SPEC_SHEET',
-        'WARRANTY',
-        'MANUAL',
-        'CERTIFICATE',
-        'INVOICE'
-      ]
-    },
-    jobCategories: [
-      'ELECTRICAL',
-      'PERMITS',
-      'SAFETY',
-      'DOCUMENTATION',
-      'BILLING'
-    ],
-    jobPhases: [
-      'PLANNING',
-      'INSTALLATION',
-      'TESTING',
-      'COMPLETION',
-      'FOLLOW_UP'
-    ]
-  })
 }
