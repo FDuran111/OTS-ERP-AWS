@@ -36,8 +36,10 @@ import {
   Description as DocumentIcon,
   Attachment as AttachmentIcon,
   Close as CloseIcon,
+  RequestQuote as BidIcon,
 } from '@mui/icons-material'
 import FileUpload from './FileUpload'
+import BidSheetForm from './jobs/BidSheetForm'
 
 interface FileAttachment {
   attachmentId: string
@@ -128,6 +130,7 @@ export default function FileAttachmentManager({
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedAttachment, setSelectedAttachment] = useState<FileAttachment | null>(null)
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null)
+  const [bidSheetOpen, setBidSheetOpen] = useState(false)
   const [tabValue, setTabValue] = useState(0)
 
   // Form state for attaching uploaded files
@@ -296,13 +299,24 @@ export default function FileAttachmentManager({
         <Typography variant="h6">
           📎 File Attachments ({attachments.length})
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setUploadDialogOpen(true)}
-        >
-          Add Files
-        </Button>
+        <Stack direction="row" spacing={1}>
+          {entityType === 'job' && (
+            <Button
+              variant="outlined"
+              startIcon={<BidIcon />}
+              onClick={() => setBidSheetOpen(true)}
+            >
+              Create Bid Sheet
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setUploadDialogOpen(true)}
+          >
+            Add Files
+          </Button>
+        </Stack>
       </Box>
 
       {error && (
@@ -563,6 +577,20 @@ export default function FileAttachmentManager({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Bid Sheet Dialog */}
+      {entityType === 'job' && (
+        <BidSheetForm
+          open={bidSheetOpen}
+          onClose={() => setBidSheetOpen(false)}
+          jobId={entityId}
+          onBidSheetCreated={(bidSheet) => {
+            // Refresh attachments after bid sheet is created
+            fetchAttachments()
+            setBidSheetOpen(false)
+          }}
+        />
+      )}
     </Box>
   )
 }

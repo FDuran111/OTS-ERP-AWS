@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { getStorageProvider } from '@/lib/storage'
-import { getStoragePath } from '@/lib/storage/config'
+import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
 // Helper to check if file is an image
@@ -40,8 +39,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get storage provider (async for dynamic imports)
-    const storage = await getStorageProvider()
+    // Initialize Supabase client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json(
+        { error: 'Storage configuration missing' },
+        { status: 500 }
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
     // Generate unique filename
     const timestamp = Date.now()
@@ -49,38 +58,35 @@ export async function POST(request: NextRequest) {
     const extension = getFileExtension(file.name)
     const fileName = `${timestamp}-${randomId}${extension}`
     
-    // Build storage key with category
-    const storageKey = `${category}/${fileName}`
+    // Build storage path with category
+    const storagePath = `${category}/${fileName}`
     
     // Convert File to Buffer for upload
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     
-    // Upload file to storage with environment prefix automatically applied
-    const uploadResult = await storage.upload(storageKey, buffer, {
-      contentType: file.type,
-      metadata: {
-        originalName: file.name,
-        category: category,
-        uploadedAt: new Date().toISOString()
-      },
-      public: true // Make files publicly accessible
-    })
-    
-    // Get public URL if available
-    let fileUrl = ''
-    try {
-      if (storage.getPublicUrl) {
-        fileUrl = storage.getPublicUrl(storageKey)
-      } else {
-        // Fall back to signed URL with long expiration
-        fileUrl = await storage.getSignedUrl(storageKey, 365 * 24 * 60 * 60) // 1 year
-      }
-    } catch (error) {
-      console.warn('Could not generate public URL:', error)
-      // Generate a signed URL with shorter expiration as fallback
-      fileUrl = await storage.getSignedUrl(storageKey, 7 * 24 * 60 * 60) // 1 week
+    // Upload file to Supabase storage
+    const { error: uploadError } = await supabase.storage
+      .from('uploads')
+      .upload(storagePath, buffer, {
+        contentType: file.type,
+        upsert: false
+      })
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError)
+      return NextResponse.json(
+        { error: 'Failed to upload file', details: uploadError.message },
+        { status: 500 }
+      )
     }
+    
+    // Get public URL for the uploaded file
+    const { data: { publicUrl } } = supabase.storage
+      .from('uploads')
+      .getPublicUrl(storagePath)
+    
+    const fileUrl = publicUrl
 
     // Parse tags if provided
     let parsedTags: string[] = []
@@ -106,15 +112,14 @@ export async function POST(request: NextRequest) {
       file.type,
       file.size,
       extension,
-      uploadResult.key, // Full key with environment prefix
+      storagePath, // Storage path in Supabase
       fileUrl,
       isImage(file.type),
       description || null,
       parsedTags,
       JSON.stringify({
         category,
-        storageProvider: process.env.STORAGE_PROVIDER || 'default',
-        environment: process.env.NEXT_PUBLIC_ENV || 'development'
+        storageProvider: 'supabase'
       })
     ])
 

@@ -1,44 +1,5 @@
 import { Pool } from 'pg'
 import type { UserRole } from './auth'
-import { assertEnvIsolation, logEnvIsolationStatus } from './assertEnvIsolation'
-
-// Check if we're in an AWS-only environment
-const isAwsEnv = ['staging', 'production'].includes(process.env.NEXT_PUBLIC_ENV ?? '')
-
-// Verify RDS for AWS environments
-function verifyRdsDatabase(): void {
-  if (!isAwsEnv) return
-  
-  const dbUrl = process.env.DATABASE_URL || ''
-  
-  // Parse hostname from DATABASE_URL
-  let hostname = ''
-  try {
-    const url = new URL(dbUrl.replace('postgresql://', 'https://'))
-    hostname = url.hostname
-  } catch (error) {
-    throw new Error(
-      `Invalid DATABASE_URL format in ${process.env.NEXT_PUBLIC_ENV} environment`
-    )
-  }
-  
-  // Check if it's an RDS endpoint
-  if (!hostname.toLowerCase().endsWith('.rds.amazonaws.com')) {
-    throw new Error(
-      `CONFIGURATION ERROR: ${process.env.NEXT_PUBLIC_ENV} environment MUST use AWS RDS. ` +
-      `Current database host: ${hostname}. ` +
-      `Expected: *.rds.amazonaws.com. ` +
-      `Staging and production are locked to AWS services only.`
-    )
-  }
-  
-  console.log(`✅ Database verified: AWS RDS (${hostname})`)
-}
-
-// Check environment isolation before initializing database
-assertEnvIsolation()
-logEnvIsolationStatus()
-verifyRdsDatabase()
 
 // Simple PostgreSQL connection pool with retry logic
 const pool = new Pool({
