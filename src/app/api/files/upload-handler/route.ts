@@ -42,15 +42,31 @@ export async function POST(request: NextRequest) {
     // Initialize Supabase client
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    // Debug logging (remove in production)
+    console.log('Supabase URL exists:', !!supabaseUrl)
+    console.log('Service key exists:', !!supabaseServiceKey)
+    console.log('Anon key exists:', !!supabaseAnonKey)
+
+    if (!supabaseUrl) {
       return NextResponse.json(
-        { error: 'Storage configuration missing' },
+        { error: 'Storage configuration missing: Supabase URL not configured' },
         { status: 500 }
       )
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    // Use service role key if available, otherwise fall back to anon key
+    const supabaseKey = supabaseServiceKey || supabaseAnonKey
+    
+    if (!supabaseKey) {
+      return NextResponse.json(
+        { error: 'Storage configuration missing: No Supabase keys configured' },
+        { status: 500 }
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey)
     
     // Generate unique filename
     const timestamp = Date.now()
