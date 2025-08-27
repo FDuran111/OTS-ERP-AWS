@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "jest",
     "test:env": "jest src/lib/__tests__/assertEnvIsolation.test.ts",
-    "test:smoke": "tsx tests/storage-driver.smoke.ts"
+    "test:smoke": "tsx tests/storage-driver.smoke.ts",
+    "migrate:storage": "tsx scripts/migrate-storage.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.876.0",
@@ -40,6 +41,8 @@
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "csv-parse": "^6.1.0",
+    "csv-stringify": "^6.6.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "dotenv": "^16.5.0",
