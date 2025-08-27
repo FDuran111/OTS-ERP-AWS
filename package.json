@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
-    "test:env": "jest src/lib/__tests__/assertEnvIsolation.test.ts"
+    "test:env": "jest src/lib/__tests__/assertEnvIsolation.test.ts",
+    "test:smoke": "tsx tests/storage-driver.smoke.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -54,3 +54,22 @@
 8. **Storage initialization** → Create S3 bucket structure with proper CORS and policies
 9. **Thumbnail generation** → Use AWS Lambda for serverless image processing or maintain client-side
 10. **Environment checks** → Replace SUPABASE_SERVICE_ROLE_KEY checks with AWS credential checks
+
+## Adapter Migration Status
+
+### Files Refactored to Use getStorage()
+- ✅ `src/app/api/files/upload-handler/route.ts` - Fully migrated to storage adapter
+
+### Remaining Direct Supabase Storage References
+The following files still have direct Supabase imports that need migration:
+
+| File | Status | TODO |
+|------|--------|------|
+| src/lib/supabase.ts | Not migrated | TODO: Remove after all RPC calls migrated to direct pg |
+| src/lib/supabase-storage.ts | Wrapped by adapter | Keep for now, used by SupabaseStorage adapter |
+| test-supabase-client.js | Test file | TODO: Create equivalent S3 test or remove |
+
+### Environment Check Updates
+- ✅ Created pluggable storage system with `STORAGE_DRIVER` flag
+- ✅ Health endpoint checks storage driver dynamically
+- TODO: Update other files checking for `SUPABASE_SERVICE_ROLE_KEY`

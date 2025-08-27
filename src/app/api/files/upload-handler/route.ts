@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { supabaseStorage, SupabaseStorageService } from '@/lib/supabase-storage'
+import { getStorage } from '@/lib/storage'
+import crypto from 'crypto'
+import path from 'path'
 
-// POST handle file upload with Supabase storage
+// Helper function to check if file is an image
+function isImage(mimeType: string): boolean {
+  return mimeType.startsWith('image/')
+}
+
+// Helper function to generate unique filename
+function generateFileName(originalName: string): string {
+  const ext = path.extname(originalName)
+  const hash = crypto.randomBytes(16).toString('hex')
+  const timestamp = Date.now()
+  return `${timestamp}-${hash}${ext}`
+}
+
+// POST handle file upload with pluggable storage
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -27,21 +42,60 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Upload file to Supabase storage
-    let uploadResult
-    if (SupabaseStorageService.isImage(file.type) && category !== 'documents') {
-      // Upload as image with thumbnail generation
-      uploadResult = await supabaseStorage.uploadImage(
-        file,
-        category as 'jobs' | 'customers' | 'materials',
-        true // generate thumbnail
-      )
-    } else {
-      // Upload as regular file (including documents category)
-      uploadResult = await supabaseStorage.uploadFile(
-        file,
-        category as 'jobs' | 'customers' | 'materials' | 'documents'
-      )
+    // Get storage driver
+    const storage = getStorage()
+    
+    // Generate file info
+    const fileName = generateFileName(file.name)
+    const key = `${category}/${fileName}`
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    
+    // Upload main file
+    const uploadResult = await storage.upload({
+      bucket: 'uploads',
+      key: key,
+      contentType: file.type,
+      body: buffer
+    })
+    
+    // Generate thumbnail for images
+    let thumbnailPath = null
+    let thumbnailUrl = null
+    if (isImage(file.type) && category !== 'documents') {
+      const thumbnailKey = `${category}/thumb_${fileName}`
+      try {
+        await storage.upload({
+          bucket: 'thumbnails',
+          key: thumbnailKey,
+          contentType: file.type,
+          body: buffer // In production, this should be resized
+        })
+        thumbnailPath = thumbnailKey
+        thumbnailUrl = await storage.getSignedUrl({
+          bucket: 'thumbnails',
+          key: thumbnailKey,
+          expiresInSeconds: 86400, // 24 hours
+          operation: 'get'
+        })
+      } catch (error) {
+        console.warn('Thumbnail generation failed:', error)
+      }
+    }
+    
+    // Get signed URL for the main file
+    const fileUrl = await storage.getSignedUrl({
+      bucket: uploadResult.bucket,
+      key: uploadResult.key,
+      expiresInSeconds: 86400, // 24 hours
+      operation: 'get'
+    })
+    
+    // Prepare metadata
+    const metadata = {
+      bucket: uploadResult.bucket,
+      category,
+      uploadedAt: new Date().toISOString()
     }
 
     // Parse tags if provided
@@ -64,21 +118,21 @@ export async function POST(request: NextRequest) {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `, [
-      uploadResult.fileName,
-      uploadResult.originalName,
-      uploadResult.mimeType,
-      uploadResult.fileSize,
-      uploadResult.fileExtension,
-      uploadResult.filePath,
-      uploadResult.fileUrl,
-      'isImage' in uploadResult ? uploadResult.isImage : SupabaseStorageService.isImage(file.type),
-      'imageWidth' in uploadResult ? uploadResult.imageWidth : null,
-      'imageHeight' in uploadResult ? uploadResult.imageHeight : null,
-      'thumbnailPath' in uploadResult ? uploadResult.thumbnailPath : null,
-      'thumbnailUrl' in uploadResult ? uploadResult.thumbnailUrl : null,
+      fileName,
+      file.name,
+      file.type,
+      file.size,
+      path.extname(file.name),
+      uploadResult.key,
+      fileUrl,
+      isImage(file.type),
+      null, // imageWidth - would need image processing library
+      null, // imageHeight - would need image processing library
+      thumbnailPath,
+      thumbnailUrl,
       description || null,
       parsedTags,
-      uploadResult.metadata ? JSON.stringify(uploadResult.metadata) : null
+      JSON.stringify(metadata)
     ])
 
     const fileRecord = result.rows[0]
@@ -125,9 +179,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (error.message?.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+    if (error.message?.includes('SUPABASE_SERVICE_ROLE_KEY') || error.message?.includes('storage configuration')) {
       return NextResponse.json(
-        { error: 'Storage configuration missing. Please set SUPABASE_SERVICE_ROLE_KEY in environment variables.' },
+        { error: 'Storage configuration missing. Please check environment variables.' },
         { status: 500 }
       )
     }
