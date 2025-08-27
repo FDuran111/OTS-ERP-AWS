@@ -16,7 +16,10 @@
     "infra:init": "cd infra/terraform && terraform init",
     "infra:plan": "cd infra/terraform && terraform plan -var='aws_region=us-east-2'",
     "infra:apply": "cd infra/terraform && terraform apply -auto-approve -var='aws_region=us-east-2'",
-    "aws:validate:s3": "bash scripts/aws/validate-s3.sh $(terraform -chdir=infra/terraform output -raw s3_bucket_name) us-east-2"
+    "aws:validate:s3": "bash scripts/aws/validate-s3.sh $(terraform -chdir=infra/terraform output -raw s3_bucket_name) us-east-2",
+    "db:migrate": "tsx scripts/migrate-db.ts",
+    "db:migrate:verify": "tsx scripts/migrate-db.ts --verify",
+    "db:migrate:seed": "tsx scripts/migrate-db.ts --seed"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.876.0",
