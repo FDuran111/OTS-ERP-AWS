@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { fileStorage } from '@/lib/file-storage'
-import { supabaseStorage } from '@/lib/supabase-storage'
+import { getStorage } from '@/lib/storage'
+import { bucketFor, keyFor } from '@/lib/file-keys'
+import { urlFor } from '@/lib/file-urls'
 import { verifyToken } from '@/lib/auth'
-import path from 'path'
 
 // DELETE file and its database record
 export async function DELETE(
@@ -47,70 +47,71 @@ export async function DELETE(
 
     const file = fileResult.rows[0]
 
-    // Delete from storage (both local and Supabase)
-    const isProduction = process.env.NODE_ENV === 'production'
-    const hasSupabaseKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    // Delete from storage using the adapter
+    const storage = getStorage()
     
     try {
-      if (isProduction && hasSupabaseKey) {
-        // Delete from Supabase Storage
-        // Extract the path from the URL
-        let filePath = file.filePath
-        
-        // If we have a fileUrl (Supabase URL), extract the path from it
-        if (file.fileUrl && file.fileUrl.includes('supabase')) {
-          const url = new URL(file.fileUrl)
-          const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)/)
-          if (pathMatch) {
-            filePath = pathMatch[1]
+      // Determine bucket and key from file path
+      let bucket = 'uploads'
+      let key = file.filePath
+      
+      // Handle different path formats
+      if (file.filePath) {
+        // If it's a full URL, extract the key
+        if (file.filePath.startsWith('http')) {
+          if (file.fileUrl && file.fileUrl.includes('supabase')) {
+            const url = new URL(file.fileUrl)
+            const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/)
+            if (pathMatch) {
+              bucket = pathMatch[1]
+              key = pathMatch[2]
+            }
           }
-        } else if (file.filePath && !file.filePath.startsWith('http')) {
-          // Use filePath as is if it's not a URL
-          filePath = file.filePath
+        } else {
+          // Use path as-is for key
+          // Check if it starts with a bucket prefix
+          if (file.filePath.startsWith('uploads/')) {
+            bucket = 'uploads'
+            key = file.filePath.replace('uploads/', '')
+          } else if (file.filePath.startsWith('thumbnails/')) {
+            bucket = 'thumbnails'
+            key = file.filePath.replace('thumbnails/', '')
+          } else {
+            // Assume it's just the key
+            key = file.filePath
+          }
         }
         
         // Delete main file
-        if (filePath) {
-          await supabaseStorage.deleteFile(filePath)
-        }
-        
-        // Delete thumbnail if exists
-        if (file.thumbnailUrl || file.thumbnailPath) {
-          let thumbnailPath = file.thumbnailPath
+        await storage.delete({ bucket, key })
+      }
+      
+      // Delete thumbnail if exists
+      if (file.thumbnailPath || file.thumbnailUrl) {
+        try {
+          let thumbBucket = 'thumbnails'
+          let thumbKey = file.thumbnailPath
           
-          // Try to extract from thumbnailUrl first
           if (file.thumbnailUrl && file.thumbnailUrl.includes('supabase')) {
             const url = new URL(file.thumbnailUrl)
-            const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)/)
+            const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/)
             if (pathMatch) {
-              thumbnailPath = pathMatch[1]
+              thumbBucket = pathMatch[1]
+              thumbKey = pathMatch[2]
             }
-          } else if (file.thumbnailPath && !file.thumbnailPath.startsWith('http')) {
-            // Use thumbnailPath as is if it's not a URL
-            thumbnailPath = file.thumbnailPath
+          } else if (file.thumbnailPath) {
+            if (file.thumbnailPath.startsWith('thumbnails/')) {
+              thumbKey = file.thumbnailPath.replace('thumbnails/', '')
+            } else {
+              thumbKey = file.thumbnailPath
+            }
           }
           
-          try {
-            if (thumbnailPath) {
-              await supabaseStorage.deleteThumbnail(thumbnailPath)
-            }
-          } catch (error) {
-            console.warn('Failed to delete thumbnail:', error)
+          if (thumbKey) {
+            await storage.delete({ bucket: thumbBucket, key: thumbKey })
           }
-        }
-      } else {
-        // Delete from local storage
-        if (file.filePath) {
-          await fileStorage.deleteFile(file.filePath)
-        }
-        
-        // Delete thumbnail if exists
-        if (file.thumbnailPath) {
-          try {
-            await fileStorage.deleteFile(file.thumbnailPath)
-          } catch (error) {
-            console.warn('Failed to delete thumbnail:', error)
-          }
+        } catch (error) {
+          console.warn('Failed to delete thumbnail:', error)
         }
       }
     } catch (storageError) {

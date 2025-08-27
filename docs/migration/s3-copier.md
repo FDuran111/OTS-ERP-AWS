@@ -158,3 +158,70 @@ If migration fails partially:
 3. Resume with: `npm run migrate:storage -- --resume migration-log.csv`
 
 The script will skip already successful files and retry failures.
+
+## Post-migration URL Rewrite
+
+After successfully migrating files from Supabase to S3, you may need to update stored URLs in your database.
+
+### When to Run URL Rewrite
+
+1. **If storing static URLs**: If your application stores file URLs in the database (rather than generating them dynamically)
+2. **After successful migration**: Only after all files have been copied to S3
+3. **Before switching storage driver**: Update URLs while still on STORAGE_DRIVER=SUPABASE
+
+### Using the URL Rewrite Script
+
+1. **Prepare the script**:
+   ```bash
+   cp scripts/sql/rewrite_file_urls.template.sql scripts/sql/rewrite_file_urls.sql
+   ```
+   
+2. **Edit the script**:
+   - Replace `<CLOUDFRONT_BASE>` with your CloudFront URL (e.g., `https://cdn.ots-erp.com`)
+   - Replace `<DATE>` with today's date (e.g., `20240120`)
+   
+3. **Create backup**:
+   ```sql
+   CREATE TABLE "FileAttachment_backup_20240120" AS 
+   SELECT * FROM "FileAttachment";
+   ```
+   
+4. **Run the rewrite**:
+   ```bash
+   psql $DATABASE_URL < scripts/sql/rewrite_file_urls.sql
+   ```
+   
+5. **Verify results**:
+   ```sql
+   -- Check for any remaining Supabase URLs
+   SELECT COUNT(*) FROM "FileAttachment" 
+   WHERE "fileUrl" LIKE '%supabase.co%';
+   ```
+
+### Dynamic URL Generation (Recommended)
+
+Instead of storing static URLs, the application now uses the `urlFor()` helper which:
+- Returns CloudFront URLs when available (public access)
+- Falls back to presigned S3 URLs (secure access)
+- Handles both Supabase and S3 storage drivers
+
+This approach means:
+- No URL rewriting needed after migration
+- URLs always valid (presigned URLs regenerated as needed)
+- Easy switch between storage providers
+
+### Rollback Procedure
+
+If issues occur after URL rewrite:
+
+1. **Restore from backup**:
+   ```sql
+   TRUNCATE "FileAttachment";
+   INSERT INTO "FileAttachment" 
+   SELECT * FROM "FileAttachment_backup_20240120";
+   ```
+   
+2. **Drop backup table**:
+   ```sql
+   DROP TABLE "FileAttachment_backup_20240120";
+   ```

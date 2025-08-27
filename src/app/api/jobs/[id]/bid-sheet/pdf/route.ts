@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { query } from '@/lib/db'
-import { fileStorage } from '@/lib/file-storage'
-import { supabaseStorage } from '@/lib/supabase-storage'
+import { getStorage } from '@/lib/storage'
+import { bucketFor, keyFor } from '@/lib/file-keys'
+import { urlFor } from '@/lib/file-urls'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 
@@ -223,25 +224,23 @@ export async function POST(
     
     // Save PDF to storage and create file record
     const fileName = `bid-sheet-${bidData.jobNumber}-${Date.now()}.pdf`
-    const isProduction = process.env.NODE_ENV === 'production'
-    const hasSupabaseKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    const storage = getStorage()
     
-    let fileUrl: string
-    let filePath: string
+    // Generate key for the file
+    const key = keyFor('jobs', [bidData.jobNumber, fileName])
+    const bucket = bucketFor('jobs')
     
-    if (isProduction && hasSupabaseKey) {
-      // Create a File-like object from the buffer for Supabase
-      const pdfFile = new File([pdfBuffer], fileName, { type: 'application/pdf' })
-      const result = await supabaseStorage.uploadFile(pdfFile, 'jobs')
-      fileUrl = result.fileUrl
-      filePath = result.filePath
-    } else {
-      // Save to local storage
-      const pdfFile = new File([pdfBuffer], fileName, { type: 'application/pdf' })
-      const result = await fileStorage.uploadFile(pdfFile, 'jobs')
-      fileUrl = result.fileUrl
-      filePath = result.filePath
-    }
+    // Upload PDF to storage
+    const uploadResult = await storage.upload({
+      bucket,
+      key,
+      contentType: 'application/pdf',
+      body: pdfBuffer
+    })
+    
+    // Get URL for the uploaded file
+    const fileUrl = await urlFor('jobs', uploadResult.key, { forceSigned: true })
+    const filePath = uploadResult.key
     
     // Create file record in database
     const fileResult = await query(`

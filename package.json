@@ -11,6 +11,7 @@
     "test:env": "jest src/lib/__tests__/assertEnvIsolation.test.ts",
     "test:smoke": "tsx tests/storage-driver.smoke.ts",
     "test:smoke:db": "tsx tests/db-driver.smoke.ts",
+    "test:smoke:urls": "tsx tests/file-urls.smoke.ts",
     "migrate:storage": "tsx scripts/migrate-storage.ts"
   },
   "dependencies": {
