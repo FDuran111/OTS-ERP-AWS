@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { healthCheck } from '@/lib/db'
 import { getStorage } from '@/lib/storage'
 
 /**
@@ -11,19 +11,22 @@ export async function GET(request: NextRequest) {
   
   // Initialize service statuses
   let dbStatus: 'ok' | 'fail' | 'skipped' = 'skipped'
+  let dbDriver = process.env.DB_DRIVER || 'SUPABASE'
   let storageStatus: 'ok' | 'fail' = 'fail'
   let storageDriver = process.env.STORAGE_DRIVER || 'SUPABASE'
   
-  // Check database connectivity
+  // Check database connectivity using healthCheck function
   try {
-    if (process.env.DATABASE_URL) {
-      await query('SELECT 1')
+    const dbHealth = await healthCheck()
+    if (dbHealth.ok) {
       dbStatus = 'ok'
+      dbDriver = dbHealth.driver || dbDriver
     } else {
-      dbStatus = 'skipped' // No database configured
+      dbStatus = 'fail'
+      console.error('Database health check failed:', dbHealth.error)
     }
   } catch (error) {
-    console.error('Database health check failed:', error)
+    console.error('Database health check error:', error)
     dbStatus = 'fail'
   }
   
@@ -64,7 +67,8 @@ export async function GET(request: NextRequest) {
     services: {
       db: dbStatus,
       storage: storageStatus,
-      driver: storageDriver.toUpperCase()
+      driver: storageDriver.toUpperCase(),
+      dbDriver: dbDriver.toUpperCase()
     },
     version: process.env.APP_VERSION || null,
     responseTime: Date.now() - startTime

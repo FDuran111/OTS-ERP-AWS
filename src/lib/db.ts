@@ -1,22 +1,60 @@
 import { Pool } from 'pg'
 import type { UserRole } from './auth'
 
-// Simple PostgreSQL connection pool with retry logic
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Simple connection settings for Supabase
-  max: 10, // Increase max connections
-  idleTimeoutMillis: 30000, // Close idle connections after 30s
-  connectionTimeoutMillis: 30000, // Increase to 30s connection timeout
-  // Add retry logic for DNS issues
-  query_timeout: 60000, // Increase to 60s query timeout
-  statement_timeout: 60000, // Increase to 60s statement timeout
-})
+/**
+ * Database Driver Configuration
+ * Supports both Supabase (via DATABASE_URL) and AWS RDS (via explicit config)
+ */
+const DB_DRIVER = (process.env.DB_DRIVER || 'SUPABASE').toUpperCase()
+
+// Create pool based on driver configuration
+function createPool(): Pool {
+  if (DB_DRIVER === 'RDS') {
+    // AWS RDS configuration with explicit parameters
+    if (!process.env.RDS_PROXY_ENDPOINT) {
+      throw new Error('RDS_PROXY_ENDPOINT is required when DB_DRIVER=RDS')
+    }
+    
+    return new Pool({
+      host: process.env.RDS_PROXY_ENDPOINT,
+      port: 5432,
+      database: process.env.RDS_DB || 'ortmeier',
+      user: process.env.RDS_USER,
+      password: process.env.RDS_PASSWORD,
+      ssl: { rejectUnauthorized: true },
+      max: 10,
+      idleTimeoutMillis: 10000, // 10 seconds for RDS Proxy
+      connectionTimeoutMillis: 5000, // 5 seconds for RDS
+    })
+  } else {
+    // Supabase/Standard PostgreSQL configuration
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL is required when DB_DRIVER=SUPABASE')
+    }
+    
+    return new Pool({
+      connectionString: process.env.DATABASE_URL,
+      // Simple connection settings for Supabase
+      max: 10,
+      idleTimeoutMillis: 30000, // 30s for Supabase
+      connectionTimeoutMillis: 30000, // 30s for Supabase
+      // Add retry logic for DNS issues
+      query_timeout: 60000,
+      statement_timeout: 60000,
+    })
+  }
+}
+
+// Initialize the pool
+const pool = createPool()
 
 // Log pool errors
 pool.on('error', (err) => {
   console.error('Unexpected error on idle database client', err)
 })
+
+// Export the pool for direct access if needed
+export { pool }
 
 // Enhanced query function with better error handling
 export async function query(text: string, params?: any[]) {
@@ -66,6 +104,24 @@ export async function testConnection() {
   } catch (error) {
     console.error('Database connection test failed:', error)
     return false
+  }
+}
+
+// Health check function for monitoring
+export async function healthCheck(): Promise<{ ok: boolean; error?: string; driver?: string }> {
+  try {
+    const result = await query('SELECT 1 as health_check')
+    if (result.rows && result.rows[0]?.health_check === 1) {
+      return { ok: true, driver: DB_DRIVER }
+    }
+    return { ok: false, error: 'Unexpected query result', driver: DB_DRIVER }
+  } catch (error: any) {
+    console.error('Database health check failed:', error)
+    return { 
+      ok: false, 
+      error: error.message || 'Unknown database error',
+      driver: DB_DRIVER 
+    }
   }
 }
 

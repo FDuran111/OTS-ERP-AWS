@@ -150,3 +150,37 @@ VALUES
 3. **Parameter Groups**: May need custom parameter group for extensions
 4. **Backup Strategy**: Configure automated backups
 5. **Multi-AZ**: Consider for production high availability
+
+## DB Driver Migration Status
+
+### Current Implementation
+The database layer (`src/lib/db.ts`) now supports dual-mode operation:
+
+1. **SUPABASE Mode** (Default):
+   - Uses `DATABASE_URL` connection string
+   - Compatible with existing Supabase PostgreSQL
+   - 30-second timeouts for connection and idle
+   - No changes required for existing deployments
+
+2. **RDS Mode**:
+   - Uses explicit configuration parameters
+   - Connects via RDS Proxy endpoint
+   - SSL enforced with certificate validation
+   - Optimized timeouts for RDS Proxy (10s idle, 5s connection)
+   - Required environment variables:
+     - `DB_DRIVER=RDS`
+     - `RDS_PROXY_ENDPOINT`
+     - `RDS_DB`
+     - `RDS_USER`
+     - `RDS_PASSWORD`
+
+### Health Check Integration
+- `/api/health` endpoint now reports database driver type
+- `healthCheck()` function exported from `db.ts`
+- Returns driver information in health status
+
+### Migration Path
+1. Keep `DB_DRIVER=SUPABASE` during initial deployment
+2. Set up RDS with schema migrations
+3. Test with `DB_DRIVER=RDS` in staging
+4. Switch production after validation
