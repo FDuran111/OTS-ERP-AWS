@@ -1,20 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { createClient } from '@supabase/supabase-js'
-import crypto from 'crypto'
+import { supabaseStorage, SupabaseStorageService } from '@/lib/supabase-storage'
 
-// Helper to check if file is an image
-function isImage(mimeType: string): boolean {
-  return mimeType.startsWith('image/')
-}
-
-// Helper to get file extension
-function getFileExtension(filename: string): string {
-  const parts = filename.split('.')
-  return parts.length > 1 ? `.${parts[parts.length - 1]}` : ''
-}
-
-// POST handle file upload with storage
+// POST handle file upload with Supabase storage
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -39,70 +27,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    // Debug logging (remove in production)
-    console.log('Supabase URL exists:', !!supabaseUrl)
-    console.log('Service key exists:', !!supabaseServiceKey)
-    console.log('Anon key exists:', !!supabaseAnonKey)
-
-    if (!supabaseUrl) {
-      return NextResponse.json(
-        { error: 'Storage configuration missing: Supabase URL not configured' },
-        { status: 500 }
-      )
-    }
-
-    // Use service role key if available, otherwise fall back to anon key
-    const supabaseKey = supabaseServiceKey || supabaseAnonKey
-    
-    if (!supabaseKey) {
-      return NextResponse.json(
-        { error: 'Storage configuration missing: No Supabase keys configured' },
-        { status: 500 }
-      )
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey)
-    
-    // Generate unique filename
-    const timestamp = Date.now()
-    const randomId = crypto.randomBytes(8).toString('hex')
-    const extension = getFileExtension(file.name)
-    const fileName = `${timestamp}-${randomId}${extension}`
-    
-    // Build storage path with category
-    const storagePath = `${category}/${fileName}`
-    
-    // Convert File to Buffer for upload
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    
     // Upload file to Supabase storage
-    const { error: uploadError } = await supabase.storage
-      .from('uploads')
-      .upload(storagePath, buffer, {
-        contentType: file.type,
-        upsert: false
-      })
-
-    if (uploadError) {
-      console.error('Upload error:', uploadError)
-      return NextResponse.json(
-        { error: 'Failed to upload file', details: uploadError.message },
-        { status: 500 }
+    let uploadResult
+    if (SupabaseStorageService.isImage(file.type) && category !== 'documents') {
+      // Upload as image with thumbnail generation
+      uploadResult = await supabaseStorage.uploadImage(
+        file,
+        category as 'jobs' | 'customers' | 'materials',
+        true // generate thumbnail
+      )
+    } else {
+      // Upload as regular file (including documents category)
+      uploadResult = await supabaseStorage.uploadFile(
+        file,
+        category as 'jobs' | 'customers' | 'materials' | 'documents'
       )
     }
-    
-    // Get public URL for the uploaded file
-    const { data: { publicUrl } } = supabase.storage
-      .from('uploads')
-      .getPublicUrl(storagePath)
-    
-    const fileUrl = publicUrl
 
     // Parse tags if provided
     let parsedTags: string[] = []
@@ -119,24 +59,26 @@ export async function POST(request: NextRequest) {
     const result = await query(`
       INSERT INTO "FileAttachment" (
         "fileName", "originalName", "mimeType", "fileSize", "fileExtension",
-        "filePath", "fileUrl", "isImage", "description", "tags", "metadata"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        "filePath", "fileUrl", "isImage", "imageWidth", "imageHeight",
+        "thumbnailPath", "thumbnailUrl", "description", "tags", "metadata"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `, [
-      fileName,
-      file.name,
-      file.type,
-      file.size,
-      extension,
-      storagePath, // Storage path in Supabase
-      fileUrl,
-      isImage(file.type),
+      uploadResult.fileName,
+      uploadResult.originalName,
+      uploadResult.mimeType,
+      uploadResult.fileSize,
+      uploadResult.fileExtension,
+      uploadResult.filePath,
+      uploadResult.fileUrl,
+      'isImage' in uploadResult ? uploadResult.isImage : SupabaseStorageService.isImage(file.type),
+      'imageWidth' in uploadResult ? uploadResult.imageWidth : null,
+      'imageHeight' in uploadResult ? uploadResult.imageHeight : null,
+      'thumbnailPath' in uploadResult ? uploadResult.thumbnailPath : null,
+      'thumbnailUrl' in uploadResult ? uploadResult.thumbnailUrl : null,
       description || null,
       parsedTags,
-      JSON.stringify({
-        category,
-        storageProvider: 'supabase'
-      })
+      uploadResult.metadata ? JSON.stringify(uploadResult.metadata) : null
     ])
 
     const fileRecord = result.rows[0]
@@ -153,6 +95,10 @@ export async function POST(request: NextRequest) {
         filePath: fileRecord.filePath,
         fileUrl: fileRecord.fileUrl,
         isImage: fileRecord.isImage,
+        imageWidth: fileRecord.imageWidth,
+        imageHeight: fileRecord.imageHeight,
+        thumbnailPath: fileRecord.thumbnailPath,
+        thumbnailUrl: fileRecord.thumbnailUrl,
         description: fileRecord.description,
         tags: fileRecord.tags || [],
         metadata: fileRecord.metadata,
@@ -176,6 +122,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'File type not allowed' },
         { status: 415 }
+      )
+    }
+
+    if (error.message?.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+      return NextResponse.json(
+        { error: 'Storage configuration missing. Please set SUPABASE_SERVICE_ROLE_KEY in environment variables.' },
+        { status: 500 }
       )
     }
     
