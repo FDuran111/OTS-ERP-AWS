@@ -1,9 +1,6 @@
-variable "vpc_id" { type = string }
-variable "subnet_ids" { type = list(string) }
-
 resource "aws_db_subnet_group" "rds_subnet_group" {
   name       = "${var.project_name}-${var.env}-rds-subnets"
-  subnet_ids = var.subnet_ids
+  subnet_ids = local.subnet_ids
 
   tags = { Project = var.project_name, Env = var.env }
 }

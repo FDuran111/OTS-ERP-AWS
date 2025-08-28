@@ -8,3 +8,8 @@ variable "cloudfront_domain" { type = string default = "" } # OPTIONAL nice-to-h
 
 # Secrets (placeholders — values added via aws cli later)
 variable "create_placeholder_secrets" { type = bool default = true }
+
+# VPC Configuration
+variable "create_vpc"   { type = bool   default = true }
+variable "vpc_id"       { type = string default = "" }
+variable "subnet_ids"   { type = list(string) default = [] }

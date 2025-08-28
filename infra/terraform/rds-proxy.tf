@@ -5,7 +5,7 @@ resource "aws_db_proxy" "rds_proxy" {
   require_tls            = true
   role_arn               = aws_iam_role.app_role.arn
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  vpc_subnet_ids         = var.subnet_ids
+  vpc_subnet_ids         = local.subnet_ids
 }
 
 resource "aws_db_proxy_default_target_group" "default" {
@@ -27,6 +27,6 @@ resource "aws_db_proxy_target" "rds_target" {
 resource "aws_db_proxy_endpoint" "readwrite" {
   db_proxy_name = aws_db_proxy.rds_proxy.name
   db_proxy_endpoint_name = "${var.project_name}-${var.env}-proxy-endpoint"
-  vpc_subnet_ids         = var.subnet_ids
+  vpc_subnet_ids         = local.subnet_ids
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
 }

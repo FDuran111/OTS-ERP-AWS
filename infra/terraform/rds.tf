@@ -8,7 +8,7 @@ variable "db_engine_version" { type = string default = "16.3" }
 resource "aws_security_group" "rds_sg" {
   name        = "${var.project_name}-${var.env}-rds-sg"
   description = "RDS security group"
-  vpc_id      = var.vpc_id
+  vpc_id      = local.vpc_id
 
   tags = { Project = var.project_name, Env = var.env }
 }
