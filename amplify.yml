@@ -6,13 +6,19 @@ frontend:
         - nvm use 20
         - rm -rf node_modules package-lock.json
         - npm install
-        - npm install typescript@latest eslint@latest @types/node@latest @types/react@latest @types/react-dom@latest
+        - npm install typescript eslint eslint-config-next
+        - echo "Checking TypeScript installation:"
+        - ls -la node_modules/typescript || echo "TypeScript not found"
+        - npx tsc --version || echo "tsc not working"
+        - echo "Checking for .ts/.tsx files:"
+        - find . -name "*.ts" -o -name "*.tsx" | head -5
     build:
       commands:
         - echo "Node version:" && node --version
         - echo "NPM version:" && npm --version
+        - echo "Current directory:" && pwd
         - echo "Building Next.js app..."
-        - npm run build
+        - NODE_ENV=production npm run build
   artifacts:
     baseDirectory: .next
     files:
