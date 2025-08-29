@@ -4,10 +4,12 @@ frontend:
     preBuild:
       commands:
         - nvm use 20
-        - npm ci --cache .npm --prefer-offline
+        - rm -rf node_modules package-lock.json
+        - npm install
         - echo "Checking file existence..."
         - ls -la src/hooks/useAuth.tsx || echo "useAuth.tsx not found"
         - ls -la src/components/layout/ResponsiveLayout.tsx || echo "ResponsiveLayout not found"
+        - npm list tailwindcss || echo "Tailwind not found"
     build:
       commands:
         - echo "Node version:" && node --version
