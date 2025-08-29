@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Enable standalone output for Docker deployment
-  output: 'standalone',
+  // Comment out standalone for Amplify deployment
+  // output: 'standalone',
   
   // Disable aggressive caching that's causing navigation issues
   experimental: {
