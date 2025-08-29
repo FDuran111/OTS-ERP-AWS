@@ -4,15 +4,7 @@ frontend:
     preBuild:
       commands:
         - nvm use 20
-        - echo "Current directory:" && pwd
-        - echo "Package.json content:" && cat package.json
-        - rm -rf node_modules package-lock.json
-        - npm install
-        - npm install -D tailwindcss@3.4.17 autoprefixer@10.4.21 postcss@8.5.6
-        - echo "Checking node_modules..."
-        - ls -la node_modules | grep tailwind || echo "No tailwind in node_modules"
-        - ls -la node_modules/tailwindcss || echo "Tailwindcss dir not found"
-        - echo "Package.json after install:" && grep tailwind package.json || echo "No tailwind in package.json"
+        - npm ci --cache .npm --prefer-offline
     build:
       commands:
         - echo "Node version:" && node --version
