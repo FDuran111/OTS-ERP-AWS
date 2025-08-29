@@ -4,15 +4,15 @@ frontend:
     preBuild:
       commands:
         - nvm use 20
-        - npm ci --cache .npm --prefer-offline
-        - mv tsconfig.json tsconfig.json.bak || true
+        - rm -rf node_modules package-lock.json
+        - npm install
+        - npm install typescript@latest eslint@latest @types/node@latest @types/react@latest @types/react-dom@latest
     build:
       commands:
         - echo "Node version:" && node --version
         - echo "NPM version:" && npm --version
         - echo "Building Next.js app..."
         - npm run build
-        - mv tsconfig.json.bak tsconfig.json || true
   artifacts:
     baseDirectory: .next
     files:
