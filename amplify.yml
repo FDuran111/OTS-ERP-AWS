@@ -6,10 +6,12 @@ frontend:
         - nvm use 20
         - rm -rf node_modules package-lock.json
         - npm install
+        - npm install -D tailwindcss@^3.4.0 autoprefixer postcss
+        - echo "Checking dependencies..."
+        - npm list tailwindcss autoprefixer postcss || echo "PostCSS deps not found"
         - echo "Checking file existence..."
         - ls -la src/hooks/useAuth.tsx || echo "useAuth.tsx not found"
         - ls -la src/components/layout/ResponsiveLayout.tsx || echo "ResponsiveLayout not found"
-        - npm list tailwindcss || echo "Tailwind not found"
     build:
       commands:
         - echo "Node version:" && node --version
