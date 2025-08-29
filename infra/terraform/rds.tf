@@ -1,8 +1,27 @@
-variable "db_instance_class" { type = string default = "db.t4g.medium" }
-variable "db_allocated_storage" { type = number default = 50 }
-variable "db_name" { type = string default = "ortmeier" }
-variable "db_username" { type = string default = "otsapp" }
-variable "db_engine_version" { type = string default = "16.3" }
+variable "db_instance_class" { 
+  type = string 
+  default = "db.t4g.medium" 
+}
+
+variable "db_allocated_storage" { 
+  type = number 
+  default = 50 
+}
+
+variable "db_name" { 
+  type = string 
+  default = "ortmeier" 
+}
+
+variable "db_username" { 
+  type = string 
+  default = "otsapp" 
+}
+
+variable "db_engine_version" { 
+  type = string 
+  default = "16.3" 
+}
 
 # Security group for RDS (will only allow app role SG later)
 resource "aws_security_group" "rds_sg" {
@@ -34,13 +53,15 @@ resource "aws_db_instance" "postgres" {
 }
 
 resource "random_password" "db_password" {
-  length           = 20
-  special          = false
-  override_characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  length  = 20
+  special = false
 }
 
 # Store password in Secrets Manager
 resource "aws_secretsmanager_secret_version" "rds_password_value" {
-  secret_id     = aws_secretsmanager_secret.rds_password.id
-  secret_string = random_password.db_password.result
+  secret_id = aws_secretsmanager_secret.rds_password.id
+  secret_string = jsonencode({
+    username = var.db_username
+    password = random_password.db_password.result
+  })
 }

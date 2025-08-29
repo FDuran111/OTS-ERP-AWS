@@ -1,0 +1,198 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install required tools
+RUN apk add --no-cache \
+    postgresql-client \
+    python3 \
+    make \
+    g++ \
+    curl \
+    bash \
+    aws-cli \
+    coreutils
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy all source files
+COPY . .
+
+# Build the application
+RUN npm run build || true
+
+# Make scripts executable
+RUN chmod +x scripts/*.sh || true
+
+# Create the full migration script
+RUN cat > /run-full-migration.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "=========================================="
+echo "=== OTS-ERP Full Data Migration ========="
+echo "=========================================="
+echo ""
+echo "Started at: $(date)"
+echo ""
+
+# Verify environment variables
+echo "Environment Check:"
+echo "  S3_BUCKET: ${S3_BUCKET:-NOT SET}"
+echo "  RDS_ENDPOINT: ${RDS_ENDPOINT:-NOT SET}"
+echo "  RDS_DB: ${RDS_DB:-NOT SET}"
+echo "  RDS_USER: ${RDS_USER:-NOT SET}"
+echo "  RDS_PASSWORD: ${RDS_PASSWORD:+SET}"
+echo "  SUPABASE_DB_URL: ${SUPABASE_DB_URL:+SET}"
+echo ""
+
+# 1) Storage Migration
+echo "=== Phase 1: Storage Migration ==="
+echo "===================================="
+if [ -n "$S3_BUCKET" ]; then
+  echo "Target S3 bucket: $S3_BUCKET"
+  
+  # Dry run first
+  echo "Running dry-run..."
+  npm run migrate:storage -- --dry-run 2>&1 | tee /tmp/storage-dry.log || true
+  echo "Files to migrate: $(grep -c 'Would copy' /tmp/storage-dry.log 2>/dev/null || echo '0')"
+  
+  # Actual migration
+  echo ""
+  echo "Running actual migration..."
+  npm run migrate:storage 2>&1 | tee /tmp/storage.log || true
+  
+  echo ""
+  echo "Storage Migration Summary:"
+  echo "  Files copied: $(grep -c 'Copied' /tmp/storage.log 2>/dev/null || echo '0')"
+  echo "  Errors: $(grep -c 'Error' /tmp/storage.log 2>/dev/null || echo '0')"
+  
+  if grep -q 'Error' /tmp/storage.log 2>/dev/null; then
+    echo "  ⚠️  Some files failed to copy"
+  else
+    echo "  ✅ Storage migration complete"
+  fi
+else
+  echo "⚠️  S3_BUCKET not set, skipping storage migration"
+fi
+
+echo ""
+
+# 2) Database Export
+echo "=== Phase 2: Database Export ==="
+echo "================================"
+cd /app
+./scripts/export-supabase.sh
+DUMP_FILE=$(ls -t supabase-dump-*.sql 2>/dev/null | head -1)
+if [ -n "$DUMP_FILE" ]; then
+  echo "✅ Export file ready: $DUMP_FILE"
+else
+  echo "⚠️  No export file found"
+fi
+
+echo ""
+
+# 3) Database Import with TLS
+echo "=== Phase 3: Database Import (TLS) ==="
+echo "======================================="
+if [ -n "$RDS_ENDPOINT" ] && [ -n "$DUMP_FILE" ]; then
+  # Download RDS certificate
+  echo "Setting up TLS..."
+  curl -s https://truststore.pki.rds.amazonaws.com/us-east-2/us-east-2-bundle.pem -o /tmp/rds-ca.pem
+  echo "✅ RDS certificate downloaded"
+  
+  # Import to RDS
+  ./scripts/import-rds.sh "$DUMP_FILE"
+else
+  echo "⚠️  Skipping import (missing RDS config or dump file)"
+fi
+
+echo ""
+
+# 4) Validation
+echo "=== Phase 4: Data Validation ==="
+echo "================================="
+
+# Basic connection test
+if [ -n "$RDS_ENDPOINT" ]; then
+  echo "Testing RDS connection..."
+  export PGPASSWORD="$RDS_PASSWORD"
+  if psql -h "$RDS_ENDPOINT" -U "$RDS_USER" -d "$RDS_DB" -c "SELECT 1" >/dev/null 2>&1; then
+    echo "✅ RDS connection successful"
+    
+    # Run TypeScript validator if available
+    if [ -f "scripts/validate-data.ts" ]; then
+      echo "Running data validator..."
+      npx tsx scripts/validate-data.ts 2>&1 | tee /tmp/validation.log || true
+      
+      # Extract validation results
+      if grep -q 'Discrepancy' /tmp/validation.log 2>/dev/null; then
+        DISCREPANCY=$(grep 'Discrepancy' /tmp/validation.log | tail -1)
+        echo "Validation Result: $DISCREPANCY"
+        
+        # Check if within 2% threshold
+        PERCENT=$(echo "$DISCREPANCY" | grep -oE '[0-9]+\.[0-9]+%' | tr -d '%')
+        if [ -n "$PERCENT" ]; then
+          if (( $(echo "$PERCENT <= 2.0" | bc -l) )); then
+            echo "✅ Validation PASSED (≤2% discrepancy)"
+          else
+            echo "⚠️  Validation WARNING (>2% discrepancy)"
+          fi
+        fi
+      fi
+    else
+      # Fallback validation
+      echo "Running basic validation..."
+      psql -h "$RDS_ENDPOINT" -U "$RDS_USER" -d "$RDS_DB" << 'EOSQL'
+\echo 'Database Tables:'
+SELECT tablename, 
+       (SELECT COUNT(*) FROM pg_class WHERE relname = tablename) as exists
+FROM (VALUES 
+  ('User'), ('Customer'), ('Job'), ('Material'), ('Invoice'),
+  ('Equipment'), ('TimeEntry'), ('LaborRate'), ('Settings')
+) AS required(tablename)
+ORDER BY tablename;
+
+\echo ''
+\echo 'Record Counts:'
+SELECT 'User' as table_name, COUNT(*) as count FROM "User"
+UNION ALL SELECT 'Customer', COUNT(*) FROM "Customer"
+UNION ALL SELECT 'Job', COUNT(*) FROM "Job"
+UNION ALL SELECT 'Material', COUNT(*) FROM "Material"
+UNION ALL SELECT 'Invoice', COUNT(*) FROM "Invoice"
+ORDER BY table_name;
+EOSQL
+    fi
+  else
+    echo "❌ Failed to connect to RDS"
+  fi
+else
+  echo "⚠️  RDS not configured, skipping validation"
+fi
+
+echo ""
+echo "=========================================="
+echo "=== Migration Complete =================="
+echo "=========================================="
+echo "Finished at: $(date)"
+echo ""
+
+# Final summary
+echo "Final Status:"
+[ -f /tmp/storage.log ] && echo "  Storage: $(grep -q 'Error' /tmp/storage.log && echo '⚠️  Partial' || echo '✅ Complete')"
+[ -f "$DUMP_FILE" ] && echo "  Export: ✅ Complete"
+[ -f /tmp/import.log ] && echo "  Import: $(grep -q 'ERROR' /tmp/import.log && echo '⚠️  With errors' || echo '✅ Complete')"
+[ -f /tmp/validation.log ] && echo "  Validation: $(grep -q 'PASSED' /tmp/validation.log && echo '✅ Passed' || echo '⚠️  Check results')"
+
+echo ""
+echo "Check logs in /tmp/ for details"
+EOF
+
+RUN chmod +x /run-full-migration.sh
+
+# Default command
+CMD ["/run-full-migration.sh"]

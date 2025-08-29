@@ -1,0 +1,27 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install PostgreSQL client and build tools
+RUN apk add --no-cache postgresql-client python3 make g++ curl
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy migration files and scripts
+COPY src/lib/db-migrations ./src/lib/db-migrations
+COPY scripts ./scripts
+COPY src/lib/db.ts ./src/lib/db.ts
+COPY tsconfig.json ./tsconfig.json
+
+# Copy and set up migration script
+COPY run-final-migration.sh ./
+RUN chmod +x run-final-migration.sh
+
+# Install tsx globally
+RUN npm install -g tsx
+
+CMD ["./run-final-migration.sh"]

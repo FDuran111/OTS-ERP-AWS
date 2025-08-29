@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install PostgreSQL client
+RUN apk add --no-cache postgresql-client curl
+
+# Copy init schema
+COPY scripts/init-complete-db.sql /init-schema.sql
+
+# Create run script
+RUN echo '#!/bin/sh' > /run.sh && \
+    echo 'echo "Initializing database schema..."' >> /run.sh && \
+    echo 'PGPASSWORD=LPiSvMCtjszj35aZfRJL psql -h ots-erp-prod-rds.c5cymmac2hya.us-east-2.rds.amazonaws.com -U otsapp -d ortmeier -f /init-schema.sql' >> /run.sh && \
+    echo 'echo "Schema initialization complete!"' >> /run.sh && \
+    chmod +x /run.sh
+
+CMD ["/run.sh"]

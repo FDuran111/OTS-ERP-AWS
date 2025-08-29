@@ -1,0 +1,57 @@
+{
+  "family": "ots-erp-data-migrator",
+  "taskRoleArn": "arn:aws:iam::928805968684:role/ots-erp-prod-app-role",
+  "executionRoleArn": "arn:aws:iam::928805968684:role/ots-erp-prod-app-role",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "containerDefinitions": [
+    {
+      "name": "data-migrator",
+      "image": "928805968684.dkr.ecr.us-east-2.amazonaws.com/ots-erp/migrator:latest",
+      "essential": true,
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "RDS_ENDPOINT",
+          "value": "ots-erp-prod-rds.c5cymmac2hya.us-east-2.rds.amazonaws.com"
+        },
+        {
+          "name": "RDS_DB",
+          "value": "ortmeier"
+        },
+        {
+          "name": "S3_BUCKET",
+          "value": "ots-erp-prod-uploads"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-2"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "RDS_USER",
+          "valueFrom": "arn:aws:secretsmanager:us-east-2:928805968684:secret:ots-erp/prod/rds/password-min-xYcQKp:username::"
+        },
+        {
+          "name": "RDS_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:us-east-2:928805968684:secret:ots-erp/prod/rds/password-min-xYcQKp:password::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ots-erp-data-migrator",
+          "awslogs-region": "us-east-2",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}

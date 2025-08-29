@@ -22,6 +22,20 @@ COPY . .
 # Environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# Dummy values for build time only (will be overridden at runtime)
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+ENV DB_DRIVER=RDS
+ENV STORAGE_DRIVER=S3
+ENV RDS_PROXY_ENDPOINT=localhost
+ENV RDS_ENDPOINT=localhost
+ENV RDS_DB=build
+ENV RDS_USER=build
+ENV RDS_PASSWORD=build
+ENV S3_BUCKET=build-bucket
+ENV S3_REGION=us-east-2
+ENV JWT_SECRET=build-secret
+ENV NEXTAUTH_SECRET=build-secret
+ENV NEXTAUTH_URL=http://localhost:3000
 
 # Build the application
 RUN npm run build

@@ -13,7 +13,9 @@ resource "aws_s3_bucket" "uploads" {
 
 resource "aws_s3_bucket_versioning" "uploads" {
   bucket = aws_s3_bucket.uploads.id
-  versioning_configuration { status = "Enabled" }
+  versioning_configuration { 
+    status = "Enabled" 
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "uploads" {
@@ -29,7 +31,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
   rule {
     id = "expire-mpu"
     status = "Enabled"
-    abort_incomplete_multipart_upload { days_after_initiation = 7 }
+    filter {}
+    abort_incomplete_multipart_upload { 
+      days_after_initiation = 7 
+    }
   }
 }
 

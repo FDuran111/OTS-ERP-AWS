@@ -1,0 +1,5 @@
+FROM node:20-alpine
+RUN apk add --no-cache postgresql-client
+COPY verify-db.sh /verify-db.sh
+RUN chmod +x /verify-db.sh
+CMD ["/verify-db.sh"]

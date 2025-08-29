@@ -1,0 +1,25 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install required tools
+RUN apk add --no-cache postgresql-client curl bash
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci
+
+# Copy source files
+COPY src ./src
+COPY scripts ./scripts
+COPY tsconfig.json ./
+
+# Install tsx
+RUN npm install -g tsx
+
+# Create migration script
+COPY run-data-migration.sh /run-data-migration.sh
+RUN chmod +x /run-data-migration.sh
+
+ENTRYPOINT ["/bin/bash"]
+CMD ["/run-data-migration.sh"]

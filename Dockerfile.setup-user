@@ -1,0 +1,8 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache postgresql-client curl
+
+COPY setup-db-user.sh /setup-db-user.sh
+RUN chmod +x /setup-db-user.sh
+
+CMD ["/setup-db-user.sh"]

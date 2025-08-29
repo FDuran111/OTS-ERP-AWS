@@ -1,0 +1,26 @@
+{
+  "family": "ots-erp-init-schema",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::928805968684:role/ots-erp-migrator-execution-role",
+  "taskRoleArn": "arn:aws:iam::928805968684:role/ots-erp-migrator-task-role",
+  "containerDefinitions": [
+    {
+      "name": "init",
+      "image": "928805968684.dkr.ecr.us-east-2.amazonaws.com/ots-erp/migrator:init-schema",
+      "cpu": 512,
+      "memory": 1024,
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ots-erp-migrator",
+          "awslogs-region": "us-east-2",
+          "awslogs-stream-prefix": "init"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install PostgreSQL client
+RUN apk add --no-cache postgresql-client
+
+# Test script
+RUN echo '#!/bin/sh' > /test.sh && \
+    echo 'echo "Testing PostgreSQL connection..."' >> /test.sh && \
+    echo 'PGPASSWORD=$RDS_PASSWORD psql -h $RDS_PROXY_ENDPOINT -U $RDS_USER -d $RDS_DB -c "SELECT version();"' >> /test.sh && \
+    chmod +x /test.sh
+
+CMD ["/test.sh"]

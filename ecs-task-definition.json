@@ -1,0 +1,58 @@
+{
+  "family": "ots-erp-migrator",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::928805968684:role/ots-erp-migrator-execution-role",
+  "taskRoleArn": "arn:aws:iam::928805968684:role/ots-erp-migrator-task-role",
+  "containerDefinitions": [
+    {
+      "name": "migrator",
+      "image": "928805968684.dkr.ecr.us-east-2.amazonaws.com/ots-erp/migrator:latest",
+      "cpu": 512,
+      "memory": 1024,
+      "essential": true,
+      "environment": [
+        {
+          "name": "DB_DRIVER",
+          "value": "RDS"
+        },
+        {
+          "name": "RDS_PROXY_ENDPOINT",
+          "value": "ots-erp-prod-rds-proxy.proxy-c5cymmac2hya.us-east-2.rds.amazonaws.com"
+        },
+        {
+          "name": "RDS_DB",
+          "value": "ortmeier"
+        },
+        {
+          "name": "RDS_USER",
+          "value": "otsapp"
+        },
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "RDS_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:us-east-2:928805968684:secret:ots-erp/prod/rds/password-4lkrnB"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:us-east-2:928805968684:secret:ots-erp/prod/jwt/secret-Oj7mzA"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ots-erp-migrator",
+          "awslogs-region": "us-east-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
