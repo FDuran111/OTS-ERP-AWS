@@ -1,0 +1,3 @@
+# ECS-ALB Infrastructure for OTS-ERP
+
+This Terraform module provisions the production-ready infrastructure for the OTS-ERP application using AWS ECS Fargate with an Application Load Balancer, enabling secure deployment in private subnets while maintaining public accessibility through the ALB, effectively replacing the temporary Amplify deployment and allowing RDS to return to private-only access for enhanced security and scalability.
