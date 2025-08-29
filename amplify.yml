@@ -5,6 +5,7 @@ frontend:
       commands:
         - nvm use 20
         - npm ci --cache .npm --prefer-offline
+        - npm install --save-dev typescript
     build:
       commands:
         - echo "Node version:" && node --version
