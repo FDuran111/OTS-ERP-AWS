@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Comment out standalone for Amplify deployment
-  // output: 'standalone',
+  // Enable standalone for Docker/ECS deployment
+  output: 'standalone',
   
   // Skip linting and type checking during builds
   eslint: {
