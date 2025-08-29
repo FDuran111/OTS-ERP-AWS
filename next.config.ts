@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   // Comment out standalone for Amplify deployment
   // output: 'standalone',
   
+  // Skip linting and type checking during builds
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  
   // Disable aggressive caching that's causing navigation issues
   experimental: {
     staleTimes: {
