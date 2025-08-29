@@ -11,19 +11,21 @@ const DB_DRIVER = (process.env.DB_DRIVER || 'SUPABASE').toUpperCase()
 function createPool(): Pool {
   if (DB_DRIVER === 'RDS') {
     // AWS RDS configuration with explicit parameters
-    if (!process.env.RDS_PROXY_ENDPOINT) {
-      throw new Error('RDS_PROXY_ENDPOINT is required when DB_DRIVER=RDS')
+    // Support both RDS_ENDPOINT (direct) and RDS_PROXY_ENDPOINT
+    const rdsHost = process.env.RDS_ENDPOINT || process.env.RDS_PROXY_ENDPOINT
+    if (!rdsHost) {
+      throw new Error('RDS_ENDPOINT or RDS_PROXY_ENDPOINT is required when DB_DRIVER=RDS')
     }
     
     return new Pool({
-      host: process.env.RDS_PROXY_ENDPOINT,
+      host: rdsHost,
       port: 5432,
       database: process.env.RDS_DB || 'ortmeier',
       user: process.env.RDS_USER,
       password: process.env.RDS_PASSWORD,
-      ssl: { rejectUnauthorized: true },
+      ssl: { rejectUnauthorized: false }, // Set to false for public RDS
       max: 10,
-      idleTimeoutMillis: 10000, // 10 seconds for RDS Proxy
+      idleTimeoutMillis: 30000, // 30 seconds for direct RDS
       connectionTimeoutMillis: 5000, // 5 seconds for RDS
     })
   } else {
