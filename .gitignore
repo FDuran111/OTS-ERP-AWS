@@ -43,3 +43,11 @@ next-env.d.ts
 # uploaded files
 /public/uploads/
 infra/terraform/.terraform/
+infra/ecs-alb/.terraform/
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
+.terraform/
+tfplan

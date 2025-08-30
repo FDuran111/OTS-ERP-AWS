@@ -27,9 +27,47 @@ This Terraform module provisions the production-ready infrastructure for the OTS
      --output table
    ```
 
-4. **Initialize and apply:**
+4. **Initialize and plan infrastructure:**
    ```bash
    terraform init
-   terraform plan
-   terraform apply
+   terraform plan -out=tfplan
    ```
+   
+   **Wait for approval before applying!**
+
+5. **After approval, apply the infrastructure:**
+   ```bash
+   terraform apply tfplan
+   ```
+
+## Deployment
+
+After infrastructure is created:
+
+1. **Build and push Docker image to ECR:**
+   ```bash
+   bash scripts/build-push.sh us-east-2 ots-erp/app
+   ```
+
+2. **Deploy to ECS:**
+   ```bash
+   bash scripts/deploy-ecs.sh us-east-2 ots-erp-cluster ots-erp-svc
+   ```
+
+3. **Verify deployment:**
+   ```bash
+   # Get the ALB DNS name
+   ALB_DNS=$(terraform output -raw alb_dns_name)
+   
+   # Check health endpoint
+   curl http://${ALB_DNS}/api/healthz
+   ```
+
+## Outputs
+
+After applying, you can access these outputs:
+
+- `terraform output alb_dns_name` - Application Load Balancer URL
+- `terraform output ecr_repo_url` - ECR repository URL for Docker images
+- `terraform output ecs_cluster_name` - ECS cluster name
+- `terraform output ecs_service_name` - ECS service name

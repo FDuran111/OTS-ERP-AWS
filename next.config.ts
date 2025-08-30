@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // Disable aggressive caching that's causing navigation issues
+  // Experimental settings
   experimental: {
     staleTimes: {
       dynamic: 0,
