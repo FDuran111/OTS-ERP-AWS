@@ -1,0 +1,90 @@
+{
+  "alb": "ots-erp-alb-1229912979.us-east-2.elb.amazonaws.com",
+  "timestamp": "2025-08-30T18:10:09Z",
+  "status": "ok",
+  "infrastructure": {
+    "ecs_running": true,
+    "alb_healthy": true,
+    "target_group_healthy": true
+  },
+  "routes": {
+    "/": {
+      "status_code": 307,
+      "expected": 307,
+      "result": "PASS",
+      "description": "Redirects to login as expected"
+    },
+    "/login": {
+      "status_code": 200,
+      "expected": 200,
+      "result": "PASS",
+      "description": "Login page loads successfully"
+    },
+    "/dashboard": {
+      "status_code": 307,
+      "expected": 307,
+      "result": "PASS",
+      "description": "Redirects to login when unauthenticated"
+    },
+    "/api/healthz": {
+      "status_code": 200,
+      "expected": 200,
+      "result": "PASS",
+      "description": "Health check endpoint working"
+    }
+  },
+  "health_check": {
+    "ok": true,
+    "v": "dev",
+    "timestamp": "2025-08-30T18:10:09.474Z",
+    "database_connected": true
+  },
+  "auth_debug": {
+    "authenticated": false,
+    "error": "No token found",
+    "cookies": [],
+    "headers": {
+      "host": "ots-erp-alb-1229912979.us-east-2.elb.amazonaws.com",
+      "cookie": null,
+      "origin": null
+    }
+  },
+  "api_tests": {
+    "note": "API workflow tests require valid authentication credentials",
+    "auth_login": {
+      "tested": true,
+      "result": "FAILED",
+      "reason": "Credentials admin@admin.com/OTS123 not valid - may need database seeding"
+    },
+    "customer_creation": {
+      "tested": false,
+      "reason": "Requires authentication"
+    },
+    "job_creation": {
+      "tested": false,
+      "reason": "Requires authentication"
+    },
+    "time_tracking": {
+      "tested": false,
+      "reason": "Requires authentication"
+    },
+    "file_upload": {
+      "tested": false,
+      "reason": "Requires authentication"
+    },
+    "invoice_generation": {
+      "tested": false,
+      "reason": "Requires authentication"
+    }
+  },
+  "errors": [],
+  "warnings": [
+    "Authentication credentials not working - database may need user seeding",
+    "Full API workflow testing blocked by authentication"
+  ],
+  "recommendations": [
+    "Seed database with test admin user",
+    "Verify DATABASE_URL secret is correctly configured",
+    "Consider adding a test/demo mode for smoke testing"
+  ]
+}
