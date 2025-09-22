@@ -6,10 +6,10 @@ import { z } from 'zod'
 const scheduleJobSchema = z.object({
   jobId: z.string(),
   startDate: z.string(),
-  endDate: z.string().optional(),
+  endDate: z.string().optional().nullable(),
   estimatedHours: z.number().positive(),
   assignedCrew: z.array(z.string()).default([]),
-  notes: z.string().optional(),
+  notes: z.string().optional().nullable(),
 })
 
 export async function GET(request: NextRequest) {
@@ -222,6 +222,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('Schedule POST body:', body)
     const data = scheduleJobSchema.parse(body)
 
     // Check if job exists and is not already scheduled
@@ -264,7 +265,7 @@ export async function POST(request: NextRequest) {
         new Date(data.startDate),
         data.endDate ? new Date(data.endDate) : null,
         data.estimatedHours,
-        data.notes || null
+        data.notes === null ? null : (data.notes || null)
       ])
 
       const schedule = scheduleResult.rows[0]
@@ -276,7 +277,7 @@ export async function POST(request: NextRequest) {
             INSERT INTO "CrewAssignment" (
               "scheduleId", "userId", "jobId", role
             ) VALUES ($1, $2, $3, $4)
-          `, [schedule.id, userId, data.jobId, 'EMPLOYEE'])
+          `, [schedule.id, userId, data.jobId, 'TECHNICIAN'])
         }
       }
 
@@ -303,12 +304,13 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Schedule validation error:', error.errors)
       return NextResponse.json(
         { error: 'Invalid request data', details: error.errors },
         { status: 400 }
       )
     }
-    
+
     console.error('Error scheduling job:', error)
     return NextResponse.json(
       { error: 'Failed to schedule job' },

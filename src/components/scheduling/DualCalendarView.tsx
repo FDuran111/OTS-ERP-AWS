@@ -71,6 +71,7 @@ interface DualCalendarViewProps {
   onCrewAssignment: (entry: ScheduleEntry) => void
   onMaterialReservation: (entry: ScheduleEntry) => void
   onWeekChange: (newDate: Date) => void
+  onJobDrop?: (job: any, date: Date) => void
 }
 
 type ViewMode = 'BOTH' | 'LOW_VOLTAGE' | 'LINE_VOLTAGE'
@@ -83,6 +84,7 @@ export default function DualCalendarView({
   onCrewAssignment,
   onMaterialReservation,
   onWeekChange,
+  onJobDrop,
 }: DualCalendarViewProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -283,6 +285,7 @@ export default function DualCalendarView({
                   onDateClick={onDateClick}
                   onCrewAssignment={onCrewAssignment}
                   onMaterialReservation={onMaterialReservation}
+                  onJobDrop={onJobDrop}
                 />
               </Box>
             </Collapse>
@@ -351,6 +354,7 @@ export default function DualCalendarView({
                   onDateClick={onDateClick}
                   onCrewAssignment={onCrewAssignment}
                   onMaterialReservation={onMaterialReservation}
+                  onJobDrop={onJobDrop}
                 />
               </Box>
             </Collapse>
@@ -392,12 +396,13 @@ export default function DualCalendarView({
             days={days}
             currentDate={currentDate}
             getJobsForDate={(date) => getJobsForDate(
-              date, 
+              date,
               viewMode === 'BOTH' ? undefined : viewMode
             )}
             onDateClick={onDateClick}
             onCrewAssignment={onCrewAssignment}
             onMaterialReservation={onMaterialReservation}
+            onJobDrop={onJobDrop}
           />
         </Paper>
       )}

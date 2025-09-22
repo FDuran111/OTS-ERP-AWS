@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Box, Paper, Typography, Chip, Tooltip, IconButton } from '@mui/material'
 import { format } from 'date-fns'
 import { alpha } from '@mui/material/styles'
@@ -20,6 +21,7 @@ interface CalendarDayProps {
   onDateClick: (date: Date) => void
   onCrewAssignment: (entry: any) => void
   onMaterialReservation: (entry: any) => void
+  onJobDrop?: (job: any, date: Date) => void
 }
 
 const getPriorityColor = (priority: string) => {
@@ -48,11 +50,45 @@ export function CalendarDay({
   isCurrentMonth = true,
   onDateClick,
   onCrewAssignment,
-  onMaterialReservation
+  onMaterialReservation,
+  onJobDrop
 }: CalendarDayProps) {
+  const [isDragOver, setIsDragOver] = useState(false)
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+
+    const jobData = e.dataTransfer.getData('job')
+    if (jobData && onJobDrop) {
+      try {
+        const job = JSON.parse(jobData)
+        onJobDrop(job, date)
+      } catch (error) {
+        console.error('Error parsing job data:', error)
+      }
+    }
+  }
+
   return (
     <Paper
-      elevation={isToday ? 3 : 0}
+      elevation={isToday ? 3 : isDragOver ? 4 : 0}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       sx={{
         minHeight: 120,
         height: '100%',
@@ -60,21 +96,30 @@ export function CalendarDay({
         cursor: 'pointer',
         position: 'relative',
         border: 2,
-        borderColor: isToday ? 'primary.main' : isCurrentMonth ? 'grey.200' : 'grey.100',
-        bgcolor: isToday 
-          ? alpha('#1976d2', 0.03) 
-          : isCurrentMonth 
-            ? 'background.paper'
-            : 'grey.50',
+        borderColor: isDragOver
+          ? 'primary.main'
+          : isToday
+            ? 'primary.main'
+            : isCurrentMonth
+              ? 'grey.200'
+              : 'grey.100',
+        bgcolor: isDragOver
+          ? alpha('#1976d2', 0.1)
+          : isToday
+            ? alpha('#1976d2', 0.03)
+            : isCurrentMonth
+              ? 'background.paper'
+              : 'grey.50',
         opacity: isCurrentMonth ? 1 : 0.6,
         transition: 'all 0.2s ease-in-out',
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 2,
+        transform: isDragOver ? 'scale(1.02)' : 'scale(1)',
         '&:hover': {
-          bgcolor: isToday 
+          bgcolor: isToday
             ? alpha('#1976d2', 0.06)
-            : isCurrentMonth 
+            : isCurrentMonth
               ? 'grey.50'
               : 'grey.100',
           boxShadow: 2,

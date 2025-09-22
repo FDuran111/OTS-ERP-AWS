@@ -11,6 +11,7 @@ interface CalendarGridProps {
   onDateClick: (date: Date) => void
   onCrewAssignment: (entry: any) => void
   onMaterialReservation: (entry: any) => void
+  onJobDrop?: (job: any, date: Date) => void
 }
 
 const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -21,7 +22,8 @@ export function CalendarGrid({
   getJobsForDate,
   onDateClick,
   onCrewAssignment,
-  onMaterialReservation
+  onMaterialReservation,
+  onJobDrop
 }: CalendarGridProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -201,6 +203,7 @@ export function CalendarGrid({
                   onDateClick={onDateClick}
                   onCrewAssignment={onCrewAssignment}
                   onMaterialReservation={onMaterialReservation}
+                  onJobDrop={onJobDrop}
                 />
               )
             })}

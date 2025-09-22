@@ -254,8 +254,23 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
     setMaterialDialogOpen(true)
   }
 
+  const handleJobDrop = (job: Job, date: Date) => {
+    // Open the dialog with pre-filled data
+    setSelectedJob(job)
+    setFormData({
+      jobId: job.id,
+      startDate: format(date, 'yyyy-MM-dd'),
+      endDate: '',
+      estimatedHours: job.estimatedHours?.toString() || '',
+      assignedCrew: [],
+      notes: '',
+    })
+    setSelectedDate(date)
+    setDialogOpen(true)
+  }
+
   const getJobsForDate = (date: Date) => {
-    return scheduleEntries.filter(entry => 
+    return scheduleEntries.filter(entry =>
       isSameDay(parseISO(entry.startDate), date)
     )
   }
@@ -449,6 +464,7 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
           onCrewAssignment={handleCrewAssignment}
           onMaterialReservation={handleMaterialReservation}
           onWeekChange={setCurrentDate}
+          onJobDrop={handleJobDrop}
         />
 
         {/* Schedule Job Dialog */}

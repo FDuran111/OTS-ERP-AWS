@@ -79,15 +79,15 @@ export function UnscheduledJobsSection({
       </Box>
       
       <CardContent sx={{ p: 3 }}>
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            color: 'text.secondary', 
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
             mb: 3,
             fontStyle: 'italic'
           }}
         >
-          Click on any job to schedule it on the calendar
+          Drag and drop jobs onto calendar days or click to schedule
         </Typography>
         
         <Box 
@@ -104,12 +104,25 @@ export function UnscheduledJobsSection({
               label={`${job.jobNumber} - ${job.customer}`}
               color={getPriorityColor(job.priority) as any}
               variant="outlined"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('job', JSON.stringify(job))
+                e.dataTransfer.effectAllowed = 'copy'
+                // Add visual feedback
+                const target = e.target as HTMLElement
+                target.style.opacity = '0.5'
+              }}
+              onDragEnd={(e) => {
+                // Reset visual feedback
+                const target = e.target as HTMLElement
+                target.style.opacity = '1'
+              }}
               onClick={() => {
                 onJobSelect(job)
                 onDialogOpen()
               }}
-              sx={{ 
-                cursor: 'pointer',
+              sx={{
+                cursor: 'move',
                 fontSize: '0.8rem',
                 height: 'auto',
                 py: 1,
