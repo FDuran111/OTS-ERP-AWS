@@ -246,8 +246,8 @@ export default function ResponsiveSidebar({
           className={`
             transition-all duration-200
             ${isActive
-              ? 'bg-blue-50 dark:bg-blue-900/20 border-r-4 border-blue-500'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+              ? 'bg-blue-100 dark:bg-blue-900/30 border-r-4 border-blue-500'
+              : 'hover:bg-gray-200 dark:hover:bg-gray-800'
             }
           `}
           sx={{
@@ -306,7 +306,7 @@ export default function ResponsiveSidebar({
   }
 
   const drawerContent = (
-    <Box className="h-full flex flex-col bg-white dark:bg-gray-900">
+    <Box className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <Box
         className="p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white"

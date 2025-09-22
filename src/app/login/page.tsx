@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
@@ -29,6 +29,24 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me')
+        if (response.ok) {
+          router.push('/dashboard')
+        }
+      } catch (error) {
+        // User not logged in, stay on login page
+      } finally {
+        setIsCheckingAuth(false)
+      }
+    }
+    checkAuth()
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,6 +86,23 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show loading spinner while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'background.default',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    )
   }
 
   return (
@@ -176,6 +211,10 @@ export default function LoginPage() {
                       <EmailIcon sx={{ color: 'text.secondary' }} />
                     </InputAdornment>
                   ),
+                  style: { fontSize: 16 }, // Prevent iOS zoom
+                },
+                inputLabel: {
+                  style: { fontSize: 16 },
                 },
               }}
               sx={{ mb: 2 }}
@@ -206,6 +245,10 @@ export default function LoginPage() {
                       </IconButton>
                     </InputAdornment>
                   ),
+                  style: { fontSize: 16 }, // Prevent iOS zoom
+                },
+                inputLabel: {
+                  style: { fontSize: 16 },
                 },
               }}
               sx={{ mb: 3 }}
