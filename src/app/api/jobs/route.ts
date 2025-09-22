@@ -19,15 +19,53 @@ export const GET = withRBAC({
     const params: any[] = []
     let paramIndex = 1
 
+    // Get user info from token to check if they're an employee
+    const token = request.cookies.get('auth-token')?.value
+    let userId: string | null = null
+    let userRole: string | null = null
+
+    if (token) {
+      try {
+        const userPayload = verifyToken(token)
+        userRole = userPayload.role
+        userId = (userPayload as any).userId || userPayload.id
+      } catch (error) {
+        console.error('Error verifying token:', error)
+      }
+    }
+
+    // If user is an EMPLOYEE, filter to only show their assigned jobs
+    if (userRole === 'EMPLOYEE' && userId) {
+      // Add joins to check both JobAssignment and CrewAssignment
+      joinClause = `
+        LEFT JOIN "JobSchedule" js2 ON j.id = js2."jobId"
+        LEFT JOIN "CrewAssignment" ca ON js2.id = ca."scheduleId"
+      `
+
+      // Filter to only jobs where the employee is assigned
+      whereClause = `WHERE (
+        EXISTS (SELECT 1 FROM "JobAssignment" ja WHERE ja."jobId" = j.id AND ja."userId" = $${paramIndex})
+        OR ca."userId" = $${paramIndex}
+      )`
+      params.push(userId)
+      paramIndex++
+    }
+
     if (statusFilter) {
       const statuses = statusFilter.split(',').map(s => s.trim().toUpperCase())
       const statusPlaceholders = statuses.map(() => `$${paramIndex++}`).join(', ')
-      whereClause += `WHERE j.status::text IN (${statusPlaceholders})`
+      if (whereClause) {
+        whereClause += ` AND j.status::text IN (${statusPlaceholders})`
+      } else {
+        whereClause = `WHERE j.status::text IN (${statusPlaceholders})`
+      }
       params.push(...statuses)
     }
 
     if (unscheduled) {
-      joinClause = 'LEFT JOIN "JobSchedule" js ON j.id = js."jobId"'
+      if (!joinClause.includes('JobSchedule')) {
+        joinClause += ' LEFT JOIN "JobSchedule" js ON j.id = js."jobId"'
+      }
       if (whereClause) {
         whereClause += ' AND js.id IS NULL'
       } else {
@@ -37,12 +75,12 @@ export const GET = withRBAC({
 
     // Get jobs with customer info and aggregated data
     const jobsResult = await query(`
-      SELECT 
+      SELECT DISTINCT
         j.*,
         c."companyName",
         c."firstName",
         c."lastName",
-        COALESCE(SUM(te.hours), 0) as total_hours,
+        COALESCE(SUM(DISTINCT te.hours), 0) as total_hours,
         COUNT(DISTINCT ja."userId") as crew_count,
         array_agg(DISTINCT u.name) FILTER (WHERE u.name IS NOT NULL) as crew_names
       FROM "Job" j
@@ -105,20 +143,12 @@ export const GET = withRBAC({
       phases: [] // Legacy field
     }))
 
-    // Get user role to determine pricing visibility
-    const token = request.cookies.get('auth-token')?.value
-    if (token) {
-      try {
-        const userPayload = verifyToken(token)
-        const userRole = userPayload.role
-        
-        // Strip pricing data if user is EMPLOYEE
-        if (!permissions.canViewJobCosts(userRole)) {
-          const pricingFields = ['estimatedCost', 'actualCost']
-          return NextResponse.json(stripPricingFromArray(transformedJobs, userRole, pricingFields))
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error)
+    // Get user role to determine pricing visibility (use already retrieved userRole)
+    if (userRole) {
+      // Strip pricing data if user is EMPLOYEE
+      if (!permissions.canViewJobCosts(userRole)) {
+        const pricingFields = ['estimatedCost', 'actualCost']
+        return NextResponse.json(stripPricingFromArray(transformedJobs, userRole, pricingFields))
       }
     }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
+import { startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, format } from 'date-fns'
 import { permissions, stripPricingData } from '@/lib/permissions'
 import { verifyToken } from '@/lib/auth'
 
@@ -155,34 +155,87 @@ export async function GET(request: NextRequest) {
     // Get user role to determine what stats to show
     const token = request.cookies.get('auth-token')?.value
     let filteredStats = stats
-    
+    let jobsToReturn: any[] = []
+
     if (token) {
       try {
         const userPayload = verifyToken(token)
         const userRole = userPayload.role
-        
+        const userId = (userPayload as any).userId || userPayload.id
+
         // Filter stats based on role
         if (!permissions.canViewRevenueReports(userRole)) {
           // Remove revenue and purchase order stats for employees
-          filteredStats = stats.filter(stat => 
-            stat.title !== 'Revenue This Month' && 
+          filteredStats = stats.filter(stat =>
+            stat.title !== 'Revenue This Month' &&
             stat.title !== 'Pending Purchase Orders'
           )
+
+          // For employees, get upcoming scheduled jobs for this week
+          const weekStart = startOfWeek(now, { weekStartsOn: 0 }) // Sunday
+          const weekEnd = endOfWeek(now, { weekStartsOn: 0 })
+
+          const upcomingJobsResult = await query(
+            `SELECT
+              js.id,
+              js."startDate",
+              js."estimatedHours",
+              j.id as job_id,
+              j."jobNumber",
+              j.description,
+              j.status,
+              COALESCE(c."companyName", c."firstName" || ' ' || c."lastName") as customer_name
+            FROM "JobSchedule" js
+            INNER JOIN "Job" j ON js."jobId" = j.id
+            LEFT JOIN "Customer" c ON j."customerId" = c.id
+            WHERE js."startDate" >= $1
+              AND js."startDate" <= $2
+              AND EXISTS (
+                SELECT 1 FROM "CrewAssignment" ca
+                WHERE ca."scheduleId" = js.id
+                AND ca."userId" = $3
+                AND ca.status = 'ASSIGNED'
+              )
+            ORDER BY js."startDate" ASC
+            LIMIT 7`,
+            [weekStart, weekEnd, userId]
+          )
+
+          jobsToReturn = upcomingJobsResult.rows.map(job => ({
+            id: job.job_id,
+            title: job.description,
+            customer: job.customer_name,
+            date: format(new Date(job.startDate), 'MMM d'),
+            status: 'scheduled',
+            jobNumber: job.jobNumber,
+            estimatedHours: job.estimatedHours,
+          }))
+        } else {
+          // For managers/admins, show recent jobs
+          jobsToReturn = recentJobsResult.rows.map(job => ({
+            id: job.id,
+            title: job.description,
+            customer: job.customer_name,
+            status: job.status.toLowerCase(),
+            updatedAt: job.updatedAt,
+          }))
         }
       } catch (error) {
         console.error('Error verifying token:', error)
+        // Fallback to recent jobs if error
+        jobsToReturn = recentJobsResult.rows.map(job => ({
+          id: job.id,
+          title: job.description,
+          customer: job.customer_name,
+          status: job.status.toLowerCase(),
+          updatedAt: job.updatedAt,
+        }))
       }
     }
 
     return NextResponse.json({
       stats: filteredStats,
-      recentJobs: recentJobsResult.rows.map(job => ({
-        id: job.id,
-        title: job.description,
-        customer: job.customer_name,
-        status: job.status.toLowerCase(),
-        updatedAt: job.updatedAt,
-      }))
+      recentJobs: jobsToReturn,
     })
   } catch (error) {
     console.error('Dashboard stats error:', error)

@@ -246,10 +246,13 @@ export default function ResponsiveSidebar({
           className={`
             transition-all duration-200
             ${isActive
-              ? 'bg-blue-100 dark:bg-blue-900/30 border-r-4 border-blue-500'
-              : 'hover:bg-gray-200 dark:hover:bg-gray-800'
+              ? 'border-r-4 border-red-500'
+              : ''
             }
           `}
+          style={{
+            backgroundColor: isActive ? 'rgba(229, 62, 62, 0.1)' : 'transparent',
+          }}
           sx={{
             pl: 2 + depth * 2,
             py: 1.5,
@@ -259,10 +262,10 @@ export default function ResponsiveSidebar({
           }}
         >
           <ListItemIcon
-            className={`
-              min-w-10 mr-3
-              ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}
-            `}
+            className="min-w-10 mr-3"
+            style={{
+              color: isActive ? '#E53E3E' : '#A0AEC0'
+            }}
           >
             {item.badge ? (
               <Badge badgeContent={item.badge} color="error">
@@ -274,12 +277,9 @@ export default function ResponsiveSidebar({
           </ListItemIcon>
           <ListItemText
             primary={item.title}
-            className={`
-              ${isActive
-                ? 'text-blue-600 dark:text-blue-400 font-semibold'
-                : 'text-gray-700 dark:text-gray-300'
-              }
-            `}
+            style={{
+              color: isActive ? '#E53E3E' : '#CBD5E0'
+            }}
             sx={{
               '& .MuiListItemText-primary': {
                 fontSize: '0.95rem',
@@ -288,7 +288,7 @@ export default function ResponsiveSidebar({
             }}
           />
           {hasVisibleChildren && (
-            <Box className={isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}>
+            <Box style={{ color: isActive ? '#E53E3E' : '#A0AEC0' }}>
               {isExpanded ? <ExpandLess /> : <ExpandMore />}
             </Box>
           )}
@@ -306,12 +306,17 @@ export default function ResponsiveSidebar({
   }
 
   const drawerContent = (
-    <Box className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <Box
+      className="h-full flex flex-col"
+      style={{
+        backgroundColor: '#2D3748',
+        backgroundImage: 'none',
+      }}>
       {/* Header */}
       <Box
-        className="p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white"
-        sx={{
-          background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+        className="p-4 text-white"
+        style={{
+          background: 'linear-gradient(135deg, #E53E3E 0%, #C53030 100%)',
         }}
       >
         <Typography variant="h6" className="font-bold text-white">
@@ -323,7 +328,12 @@ export default function ResponsiveSidebar({
       </Box>
 
       {/* Navigation */}
-      <Box className="flex-1 overflow-auto py-2">
+      <Box
+        className="flex-1 overflow-auto py-2"
+        style={{
+          backgroundColor: '#2D3748',
+          boxShadow: 'none',
+        }}>
         <List disablePadding>
           {navigationItems
             .filter(item => hasRole(item.roles || []))
@@ -332,7 +342,12 @@ export default function ResponsiveSidebar({
       </Box>
 
       {/* Footer */}
-      <Box className="p-4 border-t border-gray-200 dark:border-gray-700">
+      <Box
+        className="p-4 border-t"
+        style={{
+          borderColor: '#4A5568',
+          backgroundColor: '#1A202C',
+        }}>
         <Box className="flex items-center mb-3">
           <IconButton
             onClick={handleMenuOpen}
@@ -349,13 +364,15 @@ export default function ResponsiveSidebar({
           <Box className="flex-1 min-w-0">
             <Typography
               variant="body2"
-              className="font-medium text-gray-900 dark:text-gray-100 truncate"
+              className="font-medium truncate"
+              style={{ color: '#FFFFFF' }}
             >
               {user.name}
             </Typography>
             <Typography
               variant="caption"
-              className="text-gray-500 dark:text-gray-400 capitalize"
+              className="capitalize"
+              style={{ color: '#A0AEC0' }}
             >
               {user.role.toLowerCase()}
             </Typography>
@@ -403,6 +420,8 @@ export default function ResponsiveSidebar({
           maxWidth: '100vw',
           boxSizing: 'border-box',
           border: 'none',
+          backgroundColor: '#2D3748 !important',
+          backgroundImage: 'none !important',
           boxShadow: isMobile ? theme.shadows[8] : theme.shadows[2],
           ...(isMobile && {
             marginTop: '64px',

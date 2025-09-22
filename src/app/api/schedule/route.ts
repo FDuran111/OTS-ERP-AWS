@@ -255,15 +255,16 @@ export async function POST(request: NextRequest) {
 
     try {
       // Create schedule entry
+      // Important: Treat the date string as local time, not UTC
       const scheduleResult = await query(`
         INSERT INTO "JobSchedule" (
           "jobId", "startDate", "endDate", "estimatedHours", notes
-        ) VALUES ($1, $2, $3, $4, $5)
+        ) VALUES ($1, $2::date, $3::date, $4, $5)
         RETURNING *
       `, [
         data.jobId,
-        new Date(data.startDate),
-        data.endDate ? new Date(data.endDate) : null,
+        data.startDate,  // Pass as string, let PostgreSQL handle it
+        data.endDate || null,
         data.estimatedHours,
         data.notes === null ? null : (data.notes || null)
       ])

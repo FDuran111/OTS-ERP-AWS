@@ -22,10 +22,12 @@ export async function POST(request: NextRequest) {
     try {
       await client.query('BEGIN')
       
-      // Find active time entry
+      // Find active time entry (where endTime is NULL)
       const activeResult = await client.query(`
-        SELECT * FROM "TimeEntry" 
-        WHERE "userId" = $1 AND status = 'ACTIVE'
+        SELECT * FROM "TimeEntry"
+        WHERE "userId" = $1 AND "endTime" IS NULL
+        ORDER BY "startTime" DESC
+        LIMIT 1
       `, [userId])
       
       if (activeResult.rows.length === 0) {
@@ -37,25 +39,28 @@ export async function POST(request: NextRequest) {
       
       const timeEntry = activeResult.rows[0]
       
+      // Calculate hours worked
+      const hoursWorked = (Date.now() - new Date(timeEntry.startTime).getTime()) / (1000 * 60 * 60)
+
       // Update time entry with clock out
       const updateResult = await client.query(`
-        UPDATE "TimeEntry" 
-        SET 
-          "clockOutTime" = NOW(),
-          "clockOutLatitude" = $1,
-          "clockOutLongitude" = $2,
-          "workDescription" = $3,
-          notes = $4,
-          status = 'COMPLETED'
+        UPDATE "TimeEntry"
+        SET
+          "endTime" = NOW(),
+          "hours" = $1,
+          "description" = COALESCE("description", '') || ' | ' || $2,
+          "gpsLatitude" = COALESCE("gpsLatitude", $3),
+          "gpsLongitude" = COALESCE("gpsLongitude", $4),
+          "updatedAt" = NOW()
         WHERE id = $5
         RETURNING *
-      `, [latitude, longitude, workDescription, notes, timeEntry.id])
+      `, [hoursWorked.toFixed(2), workDescription || 'Clock out', latitude, longitude, timeEntry.id])
       
       const updatedEntry = updateResult.rows[0]
       
       // Calculate hours and pay
-      const totalMinutes = Math.floor((new Date(updatedEntry.clockOutTime).getTime() - new Date(updatedEntry.clockInTime).getTime()) / 60000)
-      const totalHours = totalMinutes / 60.0
+      const totalMinutes = Math.floor((new Date(updatedEntry.endTime).getTime() - new Date(updatedEntry.startTime).getTime()) / 60000)
+      const totalHours = parseFloat(updatedEntry.hours)
       
       // Simple overtime calculation (over 8 hours)
       const regularHours = Math.min(totalHours, 8)

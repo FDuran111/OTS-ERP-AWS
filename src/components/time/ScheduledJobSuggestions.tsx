@@ -40,20 +40,56 @@ interface ScheduledJobSuggestionsProps {
 export default function ScheduledJobSuggestions({ onCreateTimeEntry }: ScheduledJobSuggestionsProps) {
   const [todaysSchedule, setTodaysSchedule] = useState<ScheduledJob[]>([])
   const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<{ id: string; name: string; role: string } | null>(null)
 
   useEffect(() => {
-    fetchTodaysSchedule()
+    // Get user from localStorage
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      const userData = JSON.parse(storedUser)
+      setUser(userData)
+    }
   }, [])
 
+  useEffect(() => {
+    if (user) {
+      fetchTodaysSchedule()
+    }
+  }, [user])
+
   const fetchTodaysSchedule = async () => {
+    if (!user) return
+
     try {
       setLoading(true)
       const today = format(new Date(), 'yyyy-MM-dd')
-      const response = await fetch(`/api/schedule?startDate=${today}&endDate=${today}`)
-      
+
+      // Build URL based on user role
+      let url = `/api/schedule?startDate=${today}&endDate=${today}`
+
+      // If user is EMPLOYEE, only fetch their assigned jobs
+      if (user.role === 'EMPLOYEE') {
+        url += `&userId=${user.id}`
+      }
+
+      const response = await fetch(url)
+
       if (response.ok) {
         const scheduleData = await response.json()
-        setTodaysSchedule(scheduleData)
+
+        // For employees, further filter to ensure they only see their assigned jobs
+        if (user.role === 'EMPLOYEE') {
+          const filteredData = scheduleData.filter((schedule: ScheduledJob) => {
+            // Check if the user is in the crew list
+            return schedule.crew?.some((crewMember: any) =>
+              crewMember.userId === user.id || crewMember.id === user.id
+            )
+          })
+          setTodaysSchedule(filteredData)
+        } else {
+          // Managers/Admins see all jobs
+          setTodaysSchedule(scheduleData)
+        }
       }
     } catch (error) {
       console.error('Error fetching schedule:', error)
@@ -82,7 +118,10 @@ export default function ScheduledJobSuggestions({ onCreateTimeEntry }: Scheduled
               No Jobs Scheduled Today
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Check the schedule page to assign jobs to today's date
+              {user?.role === 'EMPLOYEE'
+                ? "You don't have any jobs assigned for today. Check the schedule page for upcoming assignments."
+                : "No jobs are scheduled for today. Check the schedule page to assign jobs to today's date."
+              }
             </Typography>
           </Box>
         </CardContent>
@@ -96,18 +135,15 @@ export default function ScheduledJobSuggestions({ onCreateTimeEntry }: Scheduled
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
           <ScheduleIcon color="primary" />
           <Typography variant="h6">
-            Today's Scheduled Jobs
+            {user?.role === 'EMPLOYEE' ? 'Your Jobs Today' : "Today's Scheduled Jobs"}
           </Typography>
-          <Chip 
-            label={`${todaysSchedule.length} job${todaysSchedule.length !== 1 ? 's' : ''}`} 
-            size="small" 
+          <Chip
+            label={`${todaysSchedule.length} job${todaysSchedule.length !== 1 ? 's' : ''}`}
+            size="small"
             color="primary"
           />
         </Box>
-        
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          Quick-create time entries for jobs scheduled today
-        </Typography>
+
 
         <Grid container spacing={2}>
           {todaysSchedule.map((schedule) => (
@@ -124,18 +160,18 @@ export default function ScheduledJobSuggestions({ onCreateTimeEntry }: Scheduled
                     <Typography variant="caption" color="text.secondary">
                       {schedule.job.customer}
                     </Typography>
-                    
+
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      <Chip 
+                      <Chip
                         icon={<TimeIcon />}
-                        label={`${schedule.estimatedHours}h estimated`} 
-                        size="small" 
+                        label={`${schedule.estimatedHours}h estimated`}
+                        size="small"
                         variant="outlined"
                       />
                       {schedule.crew.length > 0 && (
-                        <Chip 
-                          label={`${schedule.crew.length} crew`} 
-                          size="small" 
+                        <Chip
+                          label={`${schedule.crew.length} crew`}
+                          size="small"
                           variant="outlined"
                           color="primary"
                         />

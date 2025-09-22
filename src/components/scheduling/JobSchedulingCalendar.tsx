@@ -57,26 +57,16 @@ const Grid = ({ children, container, spacing, xs, md, size, alignItems, justifyC
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
-import { 
-  format, 
-  startOfWeek, 
-  endOfWeek, 
-  startOfMonth, 
-  endOfMonth,
-  eachDayOfInterval,
-  isSameDay,
-  isSameMonth,
-  addDays,
-  subDays,
+import {
+  format,
   addMonths,
   subMonths,
   addWeeks,
   subWeeks,
-  parseISO
+  startOfDay
 } from 'date-fns'
 import CrewAssignmentDialog from './CrewAssignmentDialog'
 import MaterialReservationDialog from '../materials/MaterialReservationDialog'
-import { CalendarGrid } from './CalendarGrid'
 import { UnscheduledJobsSection } from './UnscheduledJobsSection'
 
 interface Job {
@@ -140,6 +130,7 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
   const [crewDialogOpen, setCrewDialogOpen] = useState(false)
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false)
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleEntry | null>(null)
+  const [user, setUser] = useState<User | null>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -152,29 +143,80 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
   })
 
   useEffect(() => {
-    fetchData()
-  }, [currentDate])
+    // Get user from localStorage
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      const userData = JSON.parse(storedUser)
+      setUser(userData)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (user) {
+      fetchData()
+    }
+  }, [currentDate, user])
 
   const fetchData = async () => {
+    if (!user) return
+
     try {
       setLoading(true)
-      const [scheduleRes, jobsRes, crewRes] = await Promise.all([
-        fetch(`/api/schedule?month=${format(currentDate, 'yyyy-MM')}`),
-        fetch('/api/jobs?status=estimate,scheduled,dispatched&unscheduled=true'),
-        fetch('/api/users?role=field_crew,admin')
-      ])
+
+      // Build schedule API URL based on user role
+      let scheduleUrl = `/api/schedule?month=${format(currentDate, 'yyyy-MM')}`
+
+      // If user is EMPLOYEE, only fetch their assigned jobs
+      if (user.role === 'EMPLOYEE') {
+        scheduleUrl += `&userId=${user.id}`
+      }
+
+      const promises: Promise<Response>[] = [
+        fetch(scheduleUrl)
+      ]
+
+      // Only fetch unscheduled jobs and crew list for non-employees
+      if (user.role !== 'EMPLOYEE') {
+        promises.push(
+          fetch('/api/jobs?status=estimate,scheduled,dispatched&unscheduled=true'),
+          fetch('/api/users?role=field_crew,admin')
+        )
+      }
+
+      const responses = await Promise.all(promises)
+      const [scheduleRes, jobsRes, crewRes] = responses
 
       if (scheduleRes.ok) {
         const scheduleData = await scheduleRes.json()
-        setScheduleEntries(scheduleData)
+
+        // Process the crew data to ensure it's in the correct format
+        const processedData = scheduleData.map((entry: any) => ({
+          ...entry,
+          crew: entry.crew?.filter((c: any) => c && c.userId).map((c: any) => ({
+            id: c.userId,
+            name: c.userName,
+            role: c.role,
+            status: c.status
+          })) || []
+        }))
+
+        // For employees, the API already filters, but double-check on client side
+        if (user.role === 'EMPLOYEE') {
+          const filteredData = processedData.filter((entry: any) =>
+            entry.crew?.some((crewMember: any) => crewMember.id === user.id)
+          )
+          setScheduleEntries(filteredData)
+        } else {
+          setScheduleEntries(processedData)
+        }
       }
 
-      if (jobsRes.ok) {
+      if (jobsRes?.ok) {
         const jobsData = await jobsRes.json()
         setUnscheduledJobs(jobsData)
       }
 
-      if (crewRes.ok) {
+      if (crewRes?.ok) {
         const crewData = await crewRes.json()
         setCrew(crewData)
       }
@@ -188,6 +230,9 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
 
   const handleScheduleJob = async () => {
     try {
+      // Debug: Log the date being sent
+      console.log('Scheduling job with date:', formData.startDate)
+
       const response = await fetch('/api/schedule', {
         method: 'POST',
         headers: {
@@ -225,10 +270,12 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
   }
 
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date)
+    // Ensure we're working with the start of the day in local timezone
+    const localDate = startOfDay(date)
+    setSelectedDate(localDate)
     setFormData({
       ...formData,
-      startDate: format(date, 'yyyy-MM-dd'),
+      startDate: format(localDate, 'yyyy-MM-dd'),
     })
     setDialogOpen(true)
   }
@@ -255,53 +302,30 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
   }
 
   const handleJobDrop = (job: Job, date: Date) => {
+    // Debug: Log the received date
+    console.log('Drop received date:', date)
+    console.log('Date as ISO:', date.toISOString())
+
+    // Ensure we're working with the start of the day in local timezone
+    const localDate = startOfDay(date)
+    const formattedDate = format(localDate, 'yyyy-MM-dd')
+
+    console.log('Formatted date for form:', formattedDate)
+
     // Open the dialog with pre-filled data
     setSelectedJob(job)
     setFormData({
       jobId: job.id,
-      startDate: format(date, 'yyyy-MM-dd'),
+      startDate: formattedDate,
       endDate: '',
       estimatedHours: job.estimatedHours?.toString() || '',
       assignedCrew: [],
       notes: '',
     })
-    setSelectedDate(date)
+    setSelectedDate(localDate)
     setDialogOpen(true)
   }
 
-  const getJobsForDate = (date: Date) => {
-    return scheduleEntries.filter(entry =>
-      isSameDay(parseISO(entry.startDate), date)
-    )
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'High': return 'error'
-      case 'Medium': return 'warning'
-      case 'Low': return 'info'
-      default: return 'default'
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'SCHEDULED': return 'primary'
-      case 'IN_PROGRESS': return 'warning'
-      case 'COMPLETED': return 'success'
-      case 'CANCELLED': return 'error'
-      default: return 'default'
-    }
-  }
-
-  const getCalendarDays = () => {
-    const monthStart = startOfMonth(currentDate)
-    const monthEnd = endOfMonth(currentDate)
-    const calendarStart = startOfWeek(monthStart)
-    const calendarEnd = endOfWeek(monthEnd)
-    
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
-  }
 
 
   if (loading) {
@@ -348,12 +372,12 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
             gap: { xs: 2, sm: 0 },
             mb: 3 
           }}>
-            <Typography variant="h4" sx={{ 
-              fontWeight: 700, 
+            <Typography variant="h4" sx={{
+              fontWeight: 700,
               color: 'primary.main',
               fontSize: { xs: '1.5rem', sm: '2rem' }
             }}>
-              Job Scheduling Calendar
+              {user?.role === 'EMPLOYEE' ? 'My Assigned Jobs' : 'Job Scheduling Calendar'}
             </Typography>
             <Box sx={{ 
               display: 'flex', 
@@ -448,12 +472,14 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
           </Box>
         </Paper>
 
-        {/* Unscheduled Jobs Section */}
-        <UnscheduledJobsSection
-          jobs={unscheduledJobs}
-          onJobSelect={handleJobSelect}
-          onDialogOpen={() => setDialogOpen(true)}
-        />
+        {/* Unscheduled Jobs Section - Only show for non-employees */}
+        {user?.role !== 'EMPLOYEE' && (
+          <UnscheduledJobsSection
+            jobs={unscheduledJobs}
+            onJobSelect={handleJobSelect}
+            onDialogOpen={() => setDialogOpen(true)}
+          />
+        )}
 
         {/* Calendar Grid */}
         <DualCalendarView
@@ -483,37 +509,40 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
                 renderInput={(params) => (
                   <TextField {...params} label="Select Job" required />
                 )}
-                renderOption={(props, option) => (
-                  <li {...props}>
-                    <Box>
-                      <Typography variant="body2">
-                        {option.jobNumber} - {option.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Customer: {option.customer} | Priority: {option.priority}
-                        {option.estimatedHours && ` | Est. Hours: ${option.estimatedHours}`}
-                      </Typography>
-                    </Box>
-                  </li>
-                )}
+                renderOption={(props, option) => {
+                  const { key, ...otherProps } = props as any
+                  return (
+                    <li key={key} {...otherProps}>
+                      <Box>
+                        <Typography variant="body2">
+                          {option.jobNumber} - {option.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Customer: {option.customer} | Priority: {option.priority}
+                          {option.estimatedHours && ` | Est. Hours: ${option.estimatedHours}`}
+                        </Typography>
+                      </Box>
+                    </li>
+                  )
+                }}
               />
 
               <DatePicker
                 label="Start Date"
-                value={formData.startDate ? new Date(formData.startDate) : null}
-                onChange={(date) => setFormData({ 
-                  ...formData, 
-                  startDate: date ? format(date, 'yyyy-MM-dd') : '' 
+                value={formData.startDate ? new Date(formData.startDate + 'T00:00:00') : null}
+                onChange={(date) => setFormData({
+                  ...formData,
+                  startDate: date ? format(startOfDay(date), 'yyyy-MM-dd') : ''
                 })}
                 slotProps={{ textField: { required: true } }}
               />
 
               <DatePicker
                 label="End Date (Optional)"
-                value={formData.endDate ? new Date(formData.endDate) : null}
-                onChange={(date) => setFormData({ 
-                  ...formData, 
-                  endDate: date ? format(date, 'yyyy-MM-dd') : '' 
+                value={formData.endDate ? new Date(formData.endDate + 'T00:00:00') : null}
+                onChange={(date) => setFormData({
+                  ...formData,
+                  endDate: date ? format(startOfDay(date), 'yyyy-MM-dd') : ''
                 })}
               />
 
@@ -523,7 +552,9 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
                 value={formData.estimatedHours}
                 onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
                 required
-                inputProps={{ min: 0, step: 0.5 }}
+                slotProps={{
+                  htmlInput: { min: 0, step: 0.5 }
+                }}
               />
 
               <Autocomplete
@@ -538,16 +569,19 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
                 renderInput={(params) => (
                   <TextField {...params} label="Assign Crew" />
                 )}
-                renderOption={(props, option) => (
-                  <li {...props}>
-                    <Box>
-                      <Typography variant="body2">{option.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {option.role} - {option.email}
-                      </Typography>
-                    </Box>
-                  </li>
-                )}
+                renderOption={(props, option) => {
+                  const { key, ...otherProps } = props as any
+                  return (
+                    <li key={key} {...otherProps}>
+                      <Box>
+                        <Typography variant="body2">{option.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {option.role} - {option.email}
+                        </Typography>
+                      </Box>
+                    </li>
+                  )
+                }}
               />
 
               <TextField

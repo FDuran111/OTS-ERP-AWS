@@ -22,6 +22,7 @@ interface CalendarDayProps {
   onCrewAssignment: (entry: any) => void
   onMaterialReservation: (entry: any) => void
   onJobDrop?: (job: any, date: Date) => void
+  showDivisionColors?: boolean
 }
 
 const getPriorityColor = (priority: string) => {
@@ -33,14 +34,24 @@ const getPriorityColor = (priority: string) => {
   }
 }
 
-const getJobTypeColor = (type: string, division?: string) => {
+const getJobTypeColor = (type: string, division?: string, showDivisionColors?: boolean) => {
+  // When showing division colors in unified view
+  if (showDivisionColors && division) {
+    if (division === 'LOW_VOLTAGE') {
+      return { bg: '#e3f2fd', text: '#1565c0', border: '#42a5f5', icon: 'low_voltage' }
+    } else {
+      return { bg: '#ffebee', text: '#c62828', border: '#ef5350', icon: 'line_voltage' }
+    }
+  }
+
+  // Default colors by job type
   if (division === 'LOW_VOLTAGE') {
-    return { bg: '#e3f2fd', text: '#1565c0', border: '#42a5f5' }
+    return { bg: '#e3f2fd', text: '#1565c0', border: '#42a5f5', icon: 'low_voltage' }
   }
   if (type === 'INSTALLATION') {
-    return { bg: '#e8f5e9', text: '#2e7d32', border: '#66bb6a' }
+    return { bg: '#e8f5e9', text: '#2e7d32', border: '#66bb6a', icon: 'installation' }
   }
-  return { bg: '#fff3e0', text: '#e65100', border: '#ff9800' }
+  return { bg: '#fff3e0', text: '#e65100', border: '#ff9800', icon: 'service' }
 }
 
 export function CalendarDay({
@@ -51,7 +62,8 @@ export function CalendarDay({
   onDateClick,
   onCrewAssignment,
   onMaterialReservation,
-  onJobDrop
+  onJobDrop,
+  showDivisionColors = false
 }: CalendarDayProps) {
   const [isDragOver, setIsDragOver] = useState(false)
 
@@ -199,7 +211,7 @@ export function CalendarDay({
         }
       }}>
         {jobs.slice(0, 2).map((entry) => {
-          const colors = getJobTypeColor(entry.job.type, entry.job.division)
+          const colors = getJobTypeColor(entry.job.type, entry.job.division, showDivisionColors)
           const priorityColor = getPriorityColor(entry.job.priority)
           
           return (

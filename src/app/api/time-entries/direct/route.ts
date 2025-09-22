@@ -68,9 +68,10 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Direct hours entry - create synthetic start/end times
-      const dateObj = new Date(data.date)
-      // Default to 8 AM start time
-      startTime = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), 8, 0)
+      // Parse date string as local date (YYYY-MM-DD format)
+      const [year, month, day] = data.date.split('-').map(Number)
+      // Default to 8 AM start time in local timezone
+      startTime = new Date(year, month - 1, day, 8, 0, 0)
       // Calculate end time based on hours
       endTime = new Date(startTime.getTime() + (data.hours * 60 * 60 * 1000))
     }
@@ -94,18 +95,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the time entry
+    // Create the time entry with a UUID
     const timeEntryResult = await query(
       `INSERT INTO "TimeEntry" (
-        id, "userId", "jobId", "phaseId", date, "startTime", "endTime", 
+        id, "userId", "jobId", "phaseId", date, "startTime", "endTime",
         hours, description, synced, "createdAt", "updatedAt"
-      ) VALUES (encode(gen_random_bytes(12), 'base64'), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *`,
       [
         data.userId,
         data.jobId,
         data.phaseId || null,
-        new Date(data.date),
+        data.date, // Pass date string directly, let PostgreSQL handle it
         startTime,
         endTime,
         finalHours,

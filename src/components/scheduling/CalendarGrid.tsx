@@ -12,6 +12,7 @@ interface CalendarGridProps {
   onCrewAssignment: (entry: any) => void
   onMaterialReservation: (entry: any) => void
   onJobDrop?: (job: any, date: Date) => void
+  showDivisionColors?: boolean
 }
 
 const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -23,7 +24,8 @@ export function CalendarGrid({
   onDateClick,
   onCrewAssignment,
   onMaterialReservation,
-  onJobDrop
+  onJobDrop,
+  showDivisionColors = false
 }: CalendarGridProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -204,6 +206,7 @@ export function CalendarGrid({
                   onCrewAssignment={onCrewAssignment}
                   onMaterialReservation={onMaterialReservation}
                   onJobDrop={onJobDrop}
+                  showDivisionColors={showDivisionColors}
                 />
               )
             })}

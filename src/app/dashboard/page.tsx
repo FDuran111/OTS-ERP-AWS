@@ -34,6 +34,7 @@ import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import LowStockNotification from '@/components/notifications/LowStockNotification'
 import EmployeeJobQuickAccess from '@/components/dashboard/EmployeeJobQuickAccess'
+import NewEmployeeJobs from '@/components/dashboard/NewEmployeeJobs'
 import { useAuthCheck } from '@/hooks/useAuthCheck'
 
 
@@ -270,10 +271,19 @@ export default function DashboardPage() {
           </Box>
         )}
 
-        {/* Low Stock Notification */}
-        <Box sx={{ mb: 3 }}>
-          <LowStockNotification refreshTrigger={loading ? 0 : 1} />
-        </Box>
+        {/* Low Stock Notification - Only for managers/admins */}
+        {user.role !== 'EMPLOYEE' && (
+          <Box sx={{ mb: 3 }}>
+            <LowStockNotification refreshTrigger={loading ? 0 : 1} />
+          </Box>
+        )}
+
+        {/* New Employee Jobs - Only for admins/managers - TEMPORARILY DISABLED */}
+        {false && user.role !== 'EMPLOYEE' && (
+          <Box sx={{ mb: 3 }}>
+            <NewEmployeeJobs />
+          </Box>
+        )}
 
         {/* Stats Cards - Responsive Grid */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -401,63 +411,172 @@ export default function DashboardPage() {
             }}>
               <CardContent sx={{ p: 2.5 }}>
                 <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-                  Recent Jobs
+                  {user.role === 'EMPLOYEE' ? 'Upcoming Jobs' : 'Recent Jobs'}
                 </Typography>
-                <List sx={{ px: 0 }}>
+                <Box sx={{ px: 0 }}>
                   {loading ? (
                     <ListItem sx={{ px: 0 }}>
-                      <ListItemText primary="Loading recent jobs..." />
+                      <ListItemText primary={`Loading ${user.role === 'EMPLOYEE' ? 'upcoming' : 'recent'} jobs...`} />
                     </ListItem>
                   ) : recentJobs.length === 0 ? (
                     <ListItem sx={{ px: 0 }}>
-                      <ListItemText primary="No recent jobs" />
+                      <ListItemText primary={`No ${user.role === 'EMPLOYEE' ? 'upcoming' : 'recent'} jobs`} />
                     </ListItem>
-                  ) : (
-                    recentJobs.map((job) => (
-                      <ListItem
-                        key={job.id}
-                        sx={{
-                          flexDirection: { xs: 'column', sm: 'row' },
-                          alignItems: { xs: 'stretch', sm: 'center' },
-                          py: { xs: 1.5, sm: 1 },
-                          px: 0,
-                          borderBottom: '1px solid',
-                          borderColor: 'divider',
-                          '&:last-child': {
-                            borderBottom: 'none',
-                          },
-                        }}
-                      >
-                        <ListItemText
-                          primary={
-                            <Typography
-                              variant="subtitle2"
-                              sx={{
-                                fontSize: { xs: '0.875rem', sm: '1rem' },
-                                fontWeight: 500,
-                                mb: { xs: 0.5, sm: 0 }
-                              }}
-                            >
-                              {job.title}
-                            </Typography>
-                          }
-                          secondary={job.customer}
-                          sx={{ mb: { xs: 1, sm: 0 } }}
-                        />
-                        <Chip
-                          label={job.status.replace('_', ' ')}
-                          color={job.status === 'completed' ? 'success' : 
-                                 job.status === 'in_progress' ? 'warning' : 'default'}
-                          size="small"
+                  ) : user.role === 'EMPLOYEE' ? (
+                    // Group jobs by date for employees
+                    (() => {
+                      const groupedJobs = recentJobs.reduce((groups: any, job: any) => {
+                        const date = job.date || 'No Date';
+                        if (!groups[date]) {
+                          groups[date] = [];
+                        }
+                        groups[date].push(job);
+                        return groups;
+                      }, {});
+
+                      return Object.entries(groupedJobs).map(([date, jobs]: [string, any]) => (
+                        <Box
+                          key={date}
                           sx={{
-                            alignSelf: { xs: 'flex-start', sm: 'center' },
-                            fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                            border: '2px solid',
+                            borderColor: '#000000',
+                            borderRadius: 2,
+                            mb: 2,
+                            p: 1.5,
+                            backgroundColor: 'background.paper',
+                            '&:last-child': {
+                              mb: 0,
+                            },
                           }}
-                        />
-                      </ListItem>
-                    ))
+                        >
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 600,
+                              color: 'primary.main',
+                              mb: 1,
+                              px: 1,
+                            }}
+                          >
+                            {date}
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {(jobs as any[]).map((job: any, index: number) => (
+                              <Box
+                                key={job.id}
+                                sx={{
+                                  border: '1px solid',
+                                  borderColor: '#000000',
+                                  borderRadius: 1,
+                                  p: 1.5,
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s',
+                                  backgroundColor: 'background.paper',
+                                  '&:hover': {
+                                    backgroundColor: 'action.hover',
+                                    boxShadow: 1,
+                                  },
+                                }}
+                                onClick={() => router.push(`/jobs/${job.id}`)}
+                              >
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <Box sx={{ flex: 1 }}>
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        fontSize: { xs: '0.875rem', sm: '0.95rem' },
+                                        fontWeight: 500,
+                                        mb: 0.25
+                                      }}
+                                    >
+                                      {job.title}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {job.customer}
+                                    </Typography>
+                                  </Box>
+                                  {job.estimatedHours && (
+                                    <Chip
+                                      label={`${job.estimatedHours}h`}
+                                      color="primary"
+                                      size="small"
+                                      sx={{
+                                        ml: 1,
+                                        fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                                      }}
+                                    />
+                                  )}
+                                </Box>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      ));
+                    })()
+                  ) : (
+                    // Regular list for non-employees
+                    <List sx={{ px: 0 }}>
+                      {recentJobs.map((job: any) => (
+                        <ListItem
+                          key={job.id}
+                          sx={{
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            alignItems: { xs: 'stretch', sm: 'center' },
+                            py: { xs: 1.5, sm: 1 },
+                            px: 0,
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                            '&:last-child': {
+                              borderBottom: 'none',
+                            },
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: 'action.hover',
+                              borderRadius: 1,
+                            },
+                          }}
+                          onClick={() => router.push(`/jobs/${job.id}`)}
+                        >
+                          <ListItemText
+                            primary={
+                              <Typography
+                                variant="subtitle2"
+                                sx={{
+                                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                                  fontWeight: 500,
+                                  mb: { xs: 0.5, sm: 0 }
+                                }}
+                              >
+                                {job.title}
+                              </Typography>
+                            }
+                            secondary={
+                              <>
+                                <Typography component="span" variant="body2" color="text.secondary" display="block">
+                                  {job.customer}
+                                </Typography>
+                              </>
+                            }
+                            secondaryTypographyProps={{
+                              component: 'div'
+                            }}
+                            sx={{ mb: { xs: 1, sm: 0 } }}
+                          />
+                          <Chip
+                            label={job.status?.replace('_', ' ')}
+                            color={job.status === 'completed' ? 'success' :
+                                   job.status === 'in_progress' ? 'warning' : 'default'}
+                            size="small"
+                            sx={{
+                              alignSelf: { xs: 'flex-start', sm: 'center' },
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                            }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
                   )}
-                </List>
+                </Box>
               </CardContent>
             </Card>
           </Grid>

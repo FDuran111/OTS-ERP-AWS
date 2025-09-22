@@ -25,6 +25,10 @@ import {
   useTheme,
   Grid,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
 } from '@mui/material'
 import {
   AccessTime as TimeIcon,
@@ -34,6 +38,8 @@ import {
   Today,
   Group,
   TrendingUp,
+  Add as AddIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material'
 
 interface User {
@@ -99,6 +105,7 @@ export default function TimePage() {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
   const [stats, setStats] = useState<TimeStat[]>([])
   const [loading, setLoading] = useState(true)
+  const [manualEntryOpen, setManualEntryOpen] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -158,8 +165,22 @@ export default function TimePage() {
 
   if (!user) return null
 
-  // Action buttons for the page header - removed clock functionality
-  const actionButtons = null
+  // Action buttons for the page header - Manual Time Entry button for employees
+  const actionButtons = user.role === 'EMPLOYEE' ? (
+    <Button
+      variant="contained"
+      startIcon={<AddIcon />}
+      onClick={() => setManualEntryOpen(true)}
+      sx={{
+        backgroundColor: '#00bf9a',
+        '&:hover': {
+          backgroundColor: '#00a884',
+        },
+      }}
+    >
+      Manual Time Entry
+    </Button>
+  ) : null
 
 
   return (
@@ -233,16 +254,18 @@ export default function TimePage() {
         {/* Scheduled Job Suggestions */}
         <Box sx={{ mb: 3 }}>
           <ScheduledJobSuggestions onCreateTimeEntry={(schedule) => {
-            // This will trigger the SimpleTimeEntry to pre-fill with the schedule
-            // For now, we'll just show an alert, but you could enhance this further
-            alert(`Creating time entry for ${schedule.job.jobNumber}`)
+            // Open the manual entry dialog with the schedule pre-filled
+            setManualEntryOpen(true)
+            // TODO: Pass schedule data to SimpleTimeEntry
           }} />
         </Box>
 
-        {/* Quick Time Entry */}
-        <Box sx={{ mb: 3 }}>
-          <SimpleTimeEntry onTimeEntryCreated={fetchTimeData} />
-        </Box>
+        {/* Quick Time Entry - Show as card for non-employees */}
+        {user?.role !== 'EMPLOYEE' && (
+          <Box sx={{ mb: 3 }}>
+            <SimpleTimeEntry onTimeEntryCreated={fetchTimeData} />
+          </Box>
+        )}
 
 
         <Typography variant="h6" sx={{ mb: 2 }}>
@@ -307,18 +330,18 @@ export default function TimePage() {
                         </Typography>
                       </Stack>
                     </TableCell>
-                    <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(entry.date + 'T00:00:00').toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {new Date(entry.startTime).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      {new Date(entry.startTime).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })}
                     </TableCell>
                     <TableCell>
-                      {entry.endTime 
-                        ? new Date(entry.endTime).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
+                      {entry.endTime
+                        ? new Date(entry.endTime).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
                           })
                         : 'Active'
                       }
@@ -342,6 +365,35 @@ export default function TimePage() {
           </Table>
         </TableContainer>
       </ResponsiveContainer>
+
+      {/* Manual Time Entry Dialog for Employees */}
+      <Dialog
+        open={manualEntryOpen}
+        onClose={() => setManualEntryOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          pb: 1
+        }}>
+          Manual Time Entry
+          <IconButton onClick={() => setManualEntryOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <SimpleTimeEntry
+            noCard={true}
+            onTimeEntryCreated={() => {
+              fetchTimeData()
+              setManualEntryOpen(false)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </ResponsiveLayout>
   )
 }

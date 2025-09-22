@@ -177,6 +177,14 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
                     value={jobs.find(job => job.id === field.value) || null}
                     onChange={(_, newValue) => field.onChange(newValue?.id || '')}
                     loading={loading}
+                    renderOption={(props, option) => {
+                      const { key, ...otherProps } = props as any
+                      return (
+                        <li key={key} {...otherProps}>
+                          {getJobDisplayName(option)}
+                        </li>
+                      )
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}

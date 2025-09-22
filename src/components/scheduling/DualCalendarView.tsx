@@ -222,144 +222,50 @@ export default function DualCalendarView({
 
       {/* Calendar Display */}
       {viewMode === 'BOTH' && canViewBoth ? (
-        // Split view for both divisions
-        <Stack spacing={3}>
-          {/* Low Voltage Calendar */}
-          <Paper sx={{ overflow: 'hidden' }}>
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                p: 2,
-                bgcolor: 'grey.50',
-                borderBottom: 1,
-                borderColor: 'divider',
-                cursor: 'pointer',
-                '&:hover': {
-                  bgcolor: 'grey.100'
-                }
-              }}
-              onClick={() => setLowVoltageExpanded(!lowVoltageExpanded)}
-            >
-              <IconButton
-                size="small"
-                sx={{ mr: 1 }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setLowVoltageExpanded(!lowVoltageExpanded)
-                }}
-              >
-                {lowVoltageExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              </IconButton>
-              <LowVoltageIcon sx={{ mr: 1, color: divisionConfig.LOW_VOLTAGE.color }} />
-              <Typography variant="h6" sx={{ color: divisionConfig.LOW_VOLTAGE.color, flexGrow: 1 }}>
-                Low Voltage Division
+        // Unified calendar view with color-coded divisions
+        <Paper sx={{ p: 2 }}>
+          {/* Legend for divisions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+              Division Legend:
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LowVoltageIcon sx={{ color: divisionConfig.LOW_VOLTAGE.color, fontSize: 20 }} />
+              <Typography variant="body2" sx={{ color: divisionConfig.LOW_VOLTAGE.color }}>
+                Low Voltage
               </Typography>
-              <Chip 
-                label={divisionConfig.LOW_VOLTAGE.description} 
-                size="small" 
-                sx={{ mr: 1 }}
-              />
-              {!lowVoltageExpanded && (
-                <Stack direction="row" spacing={1}>
-                  <Chip 
-                    label={`${getJobsForDate(new Date(), 'LOW_VOLTAGE').length} today`}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Chip 
-                    label={`${getFilteredSchedules('LOW_VOLTAGE').length} total`}
-                    size="small"
-                    variant="outlined"
-                  />
-                </Stack>
-              )}
             </Box>
-            <Collapse in={lowVoltageExpanded}>
-              <Box sx={{ p: 2 }}>
-                <CalendarGrid
-                  days={days}
-                  currentDate={currentDate}
-                  getJobsForDate={(date) => getJobsForDate(date, 'LOW_VOLTAGE')}
-                  onDateClick={onDateClick}
-                  onCrewAssignment={onCrewAssignment}
-                  onMaterialReservation={onMaterialReservation}
-                  onJobDrop={onJobDrop}
-                />
-              </Box>
-            </Collapse>
-          </Paper>
-
-          <Divider />
-
-          {/* Line Voltage Calendar */}
-          <Paper sx={{ overflow: 'hidden' }}>
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                p: 2,
-                bgcolor: 'grey.50',
-                borderBottom: 1,
-                borderColor: 'divider',
-                cursor: 'pointer',
-                '&:hover': {
-                  bgcolor: 'grey.100'
-                }
-              }}
-              onClick={() => setLineVoltageExpanded(!lineVoltageExpanded)}
-            >
-              <IconButton
-                size="small"
-                sx={{ mr: 1 }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setLineVoltageExpanded(!lineVoltageExpanded)
-                }}
-              >
-                {lineVoltageExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              </IconButton>
-              <LineVoltageIcon sx={{ mr: 1, color: divisionConfig.LINE_VOLTAGE.color }} />
-              <Typography variant="h6" sx={{ color: divisionConfig.LINE_VOLTAGE.color, flexGrow: 1 }}>
-                Line Voltage Division
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LineVoltageIcon sx={{ color: divisionConfig.LINE_VOLTAGE.color, fontSize: 20 }} />
+              <Typography variant="body2" sx={{ color: divisionConfig.LINE_VOLTAGE.color }}>
+                Line Voltage
               </Typography>
-              <Chip 
-                label={divisionConfig.LINE_VOLTAGE.description} 
-                size="small" 
-                sx={{ mr: 1 }}
-              />
-              {!lineVoltageExpanded && (
-                <Stack direction="row" spacing={1}>
-                  <Chip 
-                    label={`${getJobsForDate(new Date(), 'LINE_VOLTAGE').length} today`}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Chip 
-                    label={`${getFilteredSchedules('LINE_VOLTAGE').length} total`}
-                    size="small"
-                    variant="outlined"
-                  />
-                </Stack>
-              )}
             </Box>
-            <Collapse in={lineVoltageExpanded}>
-              <Box sx={{ p: 2 }}>
-                <CalendarGrid
-                  days={days}
-                  currentDate={currentDate}
-                  getJobsForDate={(date) => getJobsForDate(date, 'LINE_VOLTAGE')}
-                  onDateClick={onDateClick}
-                  onCrewAssignment={onCrewAssignment}
-                  onMaterialReservation={onMaterialReservation}
-                  onJobDrop={onJobDrop}
-                />
-              </Box>
-            </Collapse>
-          </Paper>
-        </Stack>
+            <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+              <Chip
+                label={`${getFilteredSchedules('LOW_VOLTAGE').length} LV Jobs`}
+                size="small"
+                sx={{ bgcolor: `${divisionConfig.LOW_VOLTAGE.color}20`, color: divisionConfig.LOW_VOLTAGE.color }}
+              />
+              <Chip
+                label={`${getFilteredSchedules('LINE_VOLTAGE').length} HV Jobs`}
+                size="small"
+                sx={{ bgcolor: `${divisionConfig.LINE_VOLTAGE.color}20`, color: divisionConfig.LINE_VOLTAGE.color }}
+              />
+            </Box>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+          <CalendarGrid
+            days={days}
+            currentDate={currentDate}
+            getJobsForDate={(date) => getJobsForDate(date)} // Get all jobs for unified view
+            onDateClick={onDateClick}
+            onCrewAssignment={onCrewAssignment}
+            onMaterialReservation={onMaterialReservation}
+            onJobDrop={onJobDrop}
+            showDivisionColors={true} // Pass prop to show division colors
+          />
+        </Paper>
       ) : (
         // Single division view
         <Paper sx={{ p: 2 }}>

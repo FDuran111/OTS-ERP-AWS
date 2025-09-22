@@ -99,52 +99,62 @@ export function UnscheduledJobsSection({
           }}
         >
           {jobs.slice(0, 12).map((job) => (
-            <Chip
+            <Box
               key={job.id}
-              label={`${job.jobNumber} - ${job.customer}`}
-              color={getPriorityColor(job.priority) as any}
-              variant="outlined"
+              component="div"
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData('job', JSON.stringify(job))
                 e.dataTransfer.effectAllowed = 'copy'
                 // Add visual feedback
-                const target = e.target as HTMLElement
+                const target = e.currentTarget as HTMLElement
                 target.style.opacity = '0.5'
               }}
               onDragEnd={(e) => {
                 // Reset visual feedback
-                const target = e.target as HTMLElement
+                const target = e.currentTarget as HTMLElement
                 target.style.opacity = '1'
               }}
-              onClick={() => {
-                onJobSelect(job)
-                onDialogOpen()
-              }}
               sx={{
-                cursor: 'move',
-                fontSize: '0.8rem',
-                height: 'auto',
-                py: 1,
-                px: 1.5,
-                bgcolor: '#e8eaf6',
-                borderColor: '#9fa8da',
-                color: '#3f51b5',
-                '&:hover': {
-                  bgcolor: '#c5cae9',
-                  borderColor: '#7986cb',
-                  transform: 'translateY(-1px)',
-                  boxShadow: 2
-                },
-                '& .MuiChip-label': {
-                  fontWeight: 500,
-                  maxWidth: 200,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
-                },
-                transition: 'all 0.2s ease-in-out'
+                display: 'inline-block',
+                isolation: 'isolate', // This prevents text bleeding
               }}
-            />
+            >
+              <Chip
+                label={`${job.jobNumber} - ${job.customer}`}
+                color={getPriorityColor(job.priority) as any}
+                variant="outlined"
+                onClick={() => {
+                  onJobSelect(job)
+                  onDialogOpen()
+                }}
+                sx={{
+                  cursor: 'move',
+                  fontSize: '0.8rem',
+                  height: 'auto',
+                  py: 1,
+                  px: 1.5,
+                  bgcolor: '#e8eaf6',
+                  borderColor: '#9fa8da',
+                  color: '#3f51b5',
+                  userSelect: 'none', // Prevents text selection during drag
+                  '&:hover': {
+                    bgcolor: '#c5cae9',
+                    borderColor: '#7986cb',
+                    transform: 'translateY(-1px)',
+                    boxShadow: 2
+                  },
+                  '& .MuiChip-label': {
+                    fontWeight: 500,
+                    maxWidth: 200,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    pointerEvents: 'none', // Prevents label from interfering
+                  },
+                  transition: 'all 0.2s ease-in-out'
+                }}
+              />
+            </Box>
           ))}
           
           {jobs.length > 12 && (

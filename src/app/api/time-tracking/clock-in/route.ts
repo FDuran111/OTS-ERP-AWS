@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
       
       // Check if user already has an active time entry
       const activeCheck = await client.query(`
-        SELECT id, "clockInTime" FROM "TimeEntry" 
-        WHERE "userId" = $1 AND status = 'ACTIVE'
+        SELECT id, "startTime" FROM "TimeEntry"
+        WHERE "userId" = $1 AND "endTime" IS NULL
       `, [userId])
       
       if (activeCheck.rows.length > 0) {
@@ -39,19 +39,18 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      // Get employee schedule for rate information
-      const scheduleResult = await client.query(`
-        SELECT * FROM "EmployeeSchedule" 
-        WHERE "userId" = $1 AND "isActive" = true 
-        AND "effectiveDate" <= CURRENT_DATE
-        ORDER BY "effectiveDate" DESC 
-        LIMIT 1
+      // Get user's default rate information
+      const userResult = await client.query(`
+        SELECT u.*, lr."regularRate", lr."overtimeRate"
+        FROM "User" u
+        LEFT JOIN "LaborRate" lr ON lr."userId" = u.id AND lr."isDefault" = true
+        WHERE u.id = $1
       `, [userId])
-      
-      const schedule = scheduleResult.rows[0]
+
+      const userData = userResult.rows[0]
       
       // Get effective labor rate (considering job-specific overrides)
-      let effectiveRate = schedule?.regularRate || 25.00 // Default rate
+      let effectiveRate = userData?.regularRate || 25.00 // Default rate
       
       if (jobId) {
         // Check for job-specific rate override
@@ -67,17 +66,21 @@ export async function POST(request: NextRequest) {
       // Create time entry
       const result = await client.query(`
         INSERT INTO "TimeEntry" (
-          "userId", "clockInTime", "jobId", 
-          "clockInLatitude", "clockInLongitude", "workSiteAddress",
-          "appliedRegularRate"
-        ) VALUES ($1, NOW(), $2, $3, $4, $5, $6)
+          id, "userId", "startTime", "date", "jobId",
+          "gpsLatitude", "gpsLongitude", "description",
+          "regularRate", "hours", "synced"
+        ) VALUES (
+          gen_random_uuid()::text, $1, NOW(), NOW()::date, $2,
+          $3, $4, $5,
+          $6, 0, false
+        )
         RETURNING *
       `, [
-        userId, 
-        jobId || null, 
-        latitude || null, 
-        longitude || null, 
-        workSiteAddress || null,
+        userId,
+        jobId || null,
+        latitude || null,
+        longitude || null,
+        workSiteAddress || 'Clock in at ' + new Date().toLocaleTimeString(),
         effectiveRate
       ])
       

@@ -55,14 +55,15 @@ interface User {
 
 interface SimpleTimeEntryProps {
   onTimeEntryCreated: () => void
+  noCard?: boolean // Optional prop to skip Card wrapper for dialog usage
 }
 
-export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryProps) {
+export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false }: SimpleTimeEntryProps) {
   const [jobs, setJobs] = useState<Job[]>([])
   const [scheduledJobs, setScheduledJobs] = useState<ScheduledJob[]>([])
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduledJob | null>(null)
-  const [entryMode, setEntryMode] = useState<'scheduled' | 'manual'>('manual') // Default to manual
+  const [entryMode, setEntryMode] = useState<'scheduled' | 'manual' | 'new'>('manual') // Default to manual
   
   // Form state
   const [date, setDate] = useState<Date>(new Date())
@@ -73,6 +74,11 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // New job entry fields
+  const [newJobNumber, setNewJobNumber] = useState('')
+  const [newJobCustomer, setNewJobCustomer] = useState('')
+  const [newJobDescription, setNewJobDescription] = useState('')
   
   // User state
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -173,9 +179,17 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
   }
 
   const handleSubmit = async () => {
-    if (!selectedJob) {
-      setError('Please select a job')
-      return
+    // Validation for new job entry mode
+    if (entryMode === 'new') {
+      if (!newJobNumber || !newJobCustomer) {
+        setError('Please fill in job number and customer name')
+        return
+      }
+    } else {
+      if (!selectedJob) {
+        setError('Please select a job')
+        return
+      }
     }
 
     if (!useTimeRange && (!hours || parseFloat(hours) <= 0)) {
@@ -198,6 +212,44 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
     try {
       setSubmitting(true)
       setError(null)
+
+      // For new job entries, create a different payload
+      if (entryMode === 'new') {
+        const newJobData = {
+          userId: selectedUser?.id || currentUser?.id,
+          jobNumber: newJobNumber,
+          customer: newJobCustomer,
+          description: newJobDescription,
+          date: format(date, 'yyyy-MM-dd'),
+          hours: calculateHours(),
+          workDescription: description || undefined,
+        }
+
+        // Send to a special endpoint for new job entries
+        const response = await fetch('/api/time-entries/new-job', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(newJobData),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to create new job entry')
+        }
+
+        // Reset form
+        setNewJobNumber('')
+        setNewJobCustomer('')
+        setNewJobDescription('')
+        setDescription('')
+        setDate(new Date())
+        setStartTime(new Date())
+        setEndTime(addHours(new Date(), 8))
+
+        onTimeEntryCreated()
+        return
+      }
 
       // Create the time entry directly (no timer needed)
       const timeData: any = {
@@ -255,45 +307,61 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
     }
   }
 
-  return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Card>
-        <CardContent>
+  const content = (
+    <>
+      {!noCard && (
+        <>
           <Typography variant="h6" gutterBottom>
             📝 Manual Time Entry
           </Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Enter hours worked manually - perfect for field crews logging time at the end of the day
           </Typography>
+        </>
+      )}
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-          {/* Entry Mode Selection */}
+          {/* Entry Mode Selection - Show different options based on user role */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="subtitle2" gutterBottom>
               Entry Method
             </Typography>
             <Stack direction="row" spacing={1}>
-              <Button
-                variant={entryMode === 'scheduled' ? 'contained' : 'outlined'}
-                startIcon={<ScheduleIcon />}
-                onClick={() => setEntryMode('scheduled')}
-                size="small"
-              >
-                From Schedule ({scheduledJobs.length})
-              </Button>
+              {/* Show 'From Schedule' only for non-employees */}
+              {currentUser?.role !== 'EMPLOYEE' && (
+                <Button
+                  variant={entryMode === 'scheduled' ? 'contained' : 'outlined'}
+                  startIcon={<ScheduleIcon />}
+                  onClick={() => setEntryMode('scheduled')}
+                  size="small"
+                >
+                  From Schedule ({scheduledJobs.length})
+                </Button>
+              )}
               <Button
                 variant={entryMode === 'manual' ? 'contained' : 'outlined'}
                 startIcon={<WorkIcon />}
                 onClick={() => setEntryMode('manual')}
                 size="small"
               >
-                Manual Entry
+                Existing Job
               </Button>
+              {/* Show 'New Job Entry' only for employees - TEMPORARILY DISABLED */}
+              {false && currentUser?.role === 'EMPLOYEE' && (
+                <Button
+                  variant={entryMode === 'new' ? 'contained' : 'outlined'}
+                  startIcon={<AddIcon />}
+                  onClick={() => setEntryMode('new')}
+                  size="small"
+                >
+                  New Job Entry
+                </Button>
+              )}
             </Stack>
           </Box>
 
@@ -333,8 +401,43 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
               </Grid>
             )}
             
-            {/* Job Selection */}
-            {entryMode === 'scheduled' ? (
+            {/* Job Selection based on entry mode */}
+            {entryMode === 'new' ? (
+              // New Job Entry Fields
+              <>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Job Number"
+                    value={newJobNumber}
+                    onChange={(e) => setNewJobNumber(e.target.value)}
+                    required
+                    placeholder="e.g., J-2024-999"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Customer Name"
+                    value={newJobCustomer}
+                    onChange={(e) => setNewJobCustomer(e.target.value)}
+                    required
+                    placeholder="e.g., John Smith"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    fullWidth
+                    label="Job Description"
+                    value={newJobDescription}
+                    onChange={(e) => setNewJobDescription(e.target.value)}
+                    multiline
+                    rows={2}
+                    placeholder="Brief description of the job..."
+                  />
+                </Grid>
+              </>
+            ) : entryMode === 'scheduled' ? (
               <Grid size={{ xs: 12 }}>
                 <Autocomplete
                   options={scheduledJobs}
@@ -483,7 +586,7 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={handleSubmit}
-                disabled={submitting || !selectedJob}
+                disabled={submitting || (entryMode !== 'new' && !selectedJob)}
                 sx={{
                   backgroundColor: '#00bf9a',
                   '&:hover': {
@@ -495,8 +598,18 @@ export default function SimpleTimeEntry({ onTimeEntryCreated }: SimpleTimeEntryP
               </Button>
             </Grid>
           </Grid>
-        </CardContent>
-      </Card>
+    </>
+  )
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      {noCard ? (
+        content
+      ) : (
+        <Card>
+          <CardContent>{content}</CardContent>
+        </Card>
+      )}
     </LocalizationProvider>
   )
 }

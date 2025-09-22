@@ -17,15 +17,15 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // Get active time entry
+    // Get active time entry (where endTime is NULL)
     const result = await pool.query(`
-      SELECT te.*, 
-             j."jobNumber", j.description as "jobDescription",
-             sc."callNumber", sc.title as "serviceCallTitle"
+      SELECT te.*,
+             j."jobNumber", j.description as "jobDescription"
       FROM "TimeEntry" te
       LEFT JOIN "Job" j ON te."jobId" = j.id
-      LEFT JOIN "ServiceCall" sc ON te."serviceCallId" = sc.id
-      WHERE te."userId" = $1 AND te.status = 'ACTIVE'
+      WHERE te."userId" = $1 AND te."endTime" IS NULL
+      ORDER BY te."startTime" DESC
+      LIMIT 1
     `, [userId])
     
     const activeEntry = result.rows[0] || null
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     let elapsedTime = null
     if (activeEntry) {
       const now = new Date()
-      const clockInTime = new Date(activeEntry.clockInTime)
-      const elapsedMinutes = Math.floor((now.getTime() - clockInTime.getTime()) / 60000)
+      const startTime = new Date(activeEntry.startTime)
+      const elapsedMinutes = Math.floor((now.getTime() - startTime.getTime()) / 60000)
       
       elapsedTime = {
         totalMinutes: elapsedMinutes,

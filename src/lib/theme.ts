@@ -247,10 +247,20 @@ export const theme = createTheme({
     MuiDrawer: {
       styleOverrides: {
         paper: {
-          backgroundColor: '#1A202C',
+          backgroundColor: '#2D3748',
           backgroundImage: 'none',
           borderRight: '1px solid #4A5568',
           maxWidth: '100vw',
+          color: '#CBD5E0',
+          '& .MuiListItemText-primary': {
+            color: '#CBD5E0',
+          },
+          '& .MuiListItemIcon-root': {
+            color: '#A0AEC0',
+          },
+          '& .MuiTypography-root': {
+            color: '#CBD5E0',
+          },
           '@media (max-width: 600px)': {
             width: '80vw',
             maxWidth: '320px',

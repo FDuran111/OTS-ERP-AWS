@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
-import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   Box,
   Typography,
@@ -11,22 +10,16 @@ import {
   CardContent,
   Chip,
   Button,
-  Paper,
-  Stack,
-  CircularProgress,
-  Alert,
   Grid,
   useTheme,
   useMediaQuery,
   IconButton,
 } from '@mui/material'
 import {
-  Schedule as ScheduleIcon,
   Notifications as NotificationsIcon,
   Event as EventIcon,
   Warning as WarningIcon,
   TaskAlt as TaskIcon,
-  Tv as TvIcon,
   Close as CloseIcon,
 } from '@mui/icons-material'
 import JobSchedulingCalendar from '@/components/scheduling/JobSchedulingCalendar'
@@ -55,12 +48,10 @@ interface UpcomingReminder {
 export default function SchedulePage() {
   const router = useRouter()
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
   const [upcomingReminders, setUpcomingReminders] = useState<UpcomingReminder[]>([])
   const [showReminders, setShowReminders] = useState(true)
   const [reminderManagementOpen, setReminderManagementOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -74,7 +65,6 @@ export default function SchedulePage() {
 
   const fetchUpcomingReminders = async () => {
     try {
-      setLoading(true)
       const remindersResponse = await fetch('/api/schedule/reminders')
       
       if (remindersResponse.ok) {
@@ -110,8 +100,6 @@ export default function SchedulePage() {
     } catch (error) {
       console.error('Error fetching reminders:', error)
       setUpcomingReminders([])
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -148,37 +136,9 @@ export default function SchedulePage() {
 
   if (!user) return null
 
-  // Action buttons for the page header - Only show on desktop
-  const actionButtons = !isMobile ? (
-    <Stack 
-      direction="row" 
-      spacing={1.5} 
-      sx={{ 
-        alignItems: 'center'
-      }}
-    >
-      <Button
-        startIcon={<TvIcon />}
-        variant="outlined"
-        size="large"
-        onClick={() => window.open('/office-display', '_blank')}
-        sx={{ 
-          fontWeight: 600,
-          minWidth: '140px'
-        }}
-      >
-        Office Display
-      </Button>
-    </Stack>
-  ) : null
-
-
   return (
     <ResponsiveLayout>
-      <ResponsiveContainer
-        title="Schedule Management"
-        actions={actionButtons}
-      >
+      <Box sx={{ mt: -2 }}>
 
 
           {/* Upcoming Reminders Section */}
@@ -311,7 +271,7 @@ export default function SchedulePage() {
               <CrewAvailabilityWidget />
             </Box>
           )}
-      </ResponsiveContainer>
+      </Box>
 
       {/* Reminder Management Dialog */}
       {reminderManagementOpen && (
