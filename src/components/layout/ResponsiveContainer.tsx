@@ -23,7 +23,7 @@ interface BreadcrumbItem {
 
 interface ResponsiveContainerProps {
   children: ReactNode
-  title?: string
+  title?: string | ReactNode
   subtitle?: string
   breadcrumbs?: BreadcrumbItem[]
   actions?: ReactNode
@@ -156,24 +156,28 @@ export default function ResponsiveContainer({
           >
             <Box className="flex-1 min-w-0">
               {title && (
-                <Typography
-                  variant={isMobile ? "h4" : "h3"}
-                  component="h1"
-                  className="
-                    font-bold text-gray-900 dark:text-gray-100
-                    mb-2 truncate
-                  "
-                  sx={{
-                    fontSize: {
-                      xs: '1.75rem',
-                      sm: '2rem',
-                      md: '2.5rem',
-                    },
-                    fontWeight: 700,
-                  }}
-                >
-                  {title}
-                </Typography>
+                typeof title === 'string' ? (
+                  <Typography
+                    variant={isMobile ? "h4" : "h3"}
+                    component="h1"
+                    className="
+                      font-bold text-gray-900 dark:text-gray-100
+                      mb-2 truncate
+                    "
+                    sx={{
+                      fontSize: {
+                        xs: '1.75rem',
+                        sm: '2rem',
+                        md: '2.5rem',
+                      },
+                      fontWeight: 700,
+                    }}
+                  >
+                    {title}
+                  </Typography>
+                ) : (
+                  <Box>{title}</Box>
+                )
               )}
               
               {subtitle && (

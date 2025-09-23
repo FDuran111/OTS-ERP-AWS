@@ -33,7 +33,7 @@ import JobPhasesManager from '@/components/jobs/JobPhasesManager'
 import MaterialUsageTracker from '@/components/jobs/MaterialUsageTracker'
 import RealTimeJobCosts from '@/components/job-costing/RealTimeJobCosts'
 import JobLaborRateOverrides from '@/components/jobs/JobLaborRateOverrides'
-import FileAttachmentManager from '@/components/FileAttachmentManager'
+import PhotoUploader from '@/components/files/PhotoUploader'
 import EditJobDialog from '@/components/jobs/EditJobDialog'
 
 interface Job {
@@ -306,11 +306,25 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
         {/* Tabs */}
         <Paper sx={{ mb: 3 }}>
-          <Tabs 
-            value={activeTab} 
+          <Tabs
+            value={activeTab}
             onChange={(_, newValue) => setActiveTab(newValue)}
             indicatorColor="primary"
             textColor="primary"
+            variant="fullWidth"
+            sx={{
+              '& .MuiTab-root': {
+                minWidth: 0,
+                padding: { xs: '6px 8px', sm: '6px 16px' },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                '& .MuiTab-iconWrapper': {
+                  marginRight: { xs: '4px', sm: '8px' },
+                },
+                '& .MuiSvgIcon-root': {
+                  fontSize: { xs: '1rem', sm: '1.25rem' },
+                }
+              }
+            }}
           >
             <Tab 
               icon={<WorkIcon />} 
@@ -377,11 +391,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         </TabPanel>
 
         <TabPanel value={activeTab} index={5}>
-          <FileAttachmentManager 
-            entityType="job"
-            entityId={job.id}
-            onAttachmentChange={() => {
-              // Optionally refresh job data
+          <PhotoUploader
+            jobId={job.id}
+            onUploadComplete={() => {
+              // Optionally refresh the page or show a success message
+              console.log('Files uploaded successfully')
             }}
           />
         </TabPanel>

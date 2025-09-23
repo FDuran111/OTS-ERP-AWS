@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Box,
   Card,
@@ -117,6 +118,7 @@ interface JobSchedulingCalendarProps {
 }
 
 export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingCalendarProps) {
+  const router = useRouter()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week'>('week')
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([])
@@ -292,8 +294,14 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
   }
 
   const handleCrewAssignment = (entry: ScheduleEntry) => {
-    setSelectedSchedule(entry)
-    setCrewDialogOpen(true)
+    // For employees, navigate directly to job details
+    // For managers/admins, open crew assignment dialog
+    if (user?.role === 'EMPLOYEE') {
+      router.push(`/jobs/${entry.jobId}`)
+    } else {
+      setSelectedSchedule(entry)
+      setCrewDialogOpen(true)
+    }
   }
 
   const handleMaterialReservation = (entry: ScheduleEntry) => {

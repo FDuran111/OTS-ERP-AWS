@@ -1,135 +1,89 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
-import { cookies } from 'next/headers'
-
-// Mock notifications for now - will be replaced with database queries
-const getNotificationsForUser = (userId: string, role: string) => {
-  const baseNotifications = []
-  
-  // Role-specific notifications
-  if (role === 'EMPLOYEE') {
-    baseNotifications.push(
-      {
-        id: '1',
-        type: 'job',
-        title: 'New Job Assignment',
-        message: 'You have been assigned to a new job. Check your schedule for details.',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-        read: false,
-        priority: 'high',
-        actionUrl: '/jobs'
-      },
-      {
-        id: '2',
-        type: 'schedule',
-        title: 'Schedule Update',
-        message: 'Your schedule for next week has been posted.',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-        read: false,
-        priority: 'medium',
-        actionUrl: '/schedule'
-      }
-    )
-  } else if (role === 'FOREMAN') {
-    baseNotifications.push(
-      {
-        id: '1',
-        type: 'job',
-        title: 'Job Completion Review',
-        message: 'Job #2345 is ready for your review and approval.',
-        timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-        read: false,
-        priority: 'high',
-        actionUrl: '/jobs'
-      },
-      {
-        id: '2',
-        type: 'alert',
-        title: 'Material Shortage',
-        message: 'Low stock alert: Circuit breakers running low.',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-        read: true,
-        priority: 'medium',
-        actionUrl: '/materials'
-      }
-    )
-  } else if (role === 'OWNER_ADMIN') {
-    baseNotifications.push(
-      {
-        id: '1',
-        type: 'system',
-        title: 'Weekly Report Ready',
-        message: 'Your weekly performance report is ready for review.',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-        read: false,
-        priority: 'medium',
-        actionUrl: '/reports'
-      },
-      {
-        id: '2',
-        type: 'alert',
-        title: 'Invoice Overdue',
-        message: '3 invoices are overdue for payment.',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-        read: false,
-        priority: 'high',
-        actionUrl: '/invoicing'
-      }
-    )
-  }
-  
-  // Common notifications for all users
-  baseNotifications.push(
-    {
-      id: '3',
-      type: 'system',
-      title: 'Time Entry Reminder',
-      message: 'Please submit your time entries for this week.',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-      read: true,
-      priority: 'low',
-      actionUrl: '/time'
-    }
-  )
-  
-  return baseNotifications
-}
+import { query } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
     // Get auth token
-    const cookieStore = await cookies()
-    const token = cookieStore.get('auth-token')?.value
+    const token = request.cookies.get('auth-token')?.value
 
     if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify token
+    // Verify token and get user info
     let userPayload
     try {
       userPayload = verifyToken(token)
     } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Get notifications for user
-    const notifications = getNotificationsForUser(userPayload.id, userPayload.role)
+    const userId = (userPayload as any).userId || userPayload.id
 
-    return NextResponse.json({
-      notifications,
-      unreadCount: notifications.filter(n => !n.read).length
+    // Fetch real notifications from database
+    const notificationsResult = await query(
+      `SELECT
+        id,
+        type,
+        subject as title,
+        message,
+        metadata,
+        status,
+        "createdAt" as timestamp,
+        "readAt",
+        CASE
+          WHEN type = 'JOB_PENDING_REVIEW' THEN 'high'
+          WHEN type = 'JOB_ASSIGNED' THEN 'medium'
+          ELSE 'low'
+        END as priority
+      FROM "NotificationLog"
+      WHERE "userId" = $1
+      ORDER BY "createdAt" DESC
+      LIMIT 50`,
+      [userId]
+    )
+
+    // Transform notifications to match frontend format
+    const notifications = notificationsResult.rows.map(notif => {
+      const metadata = notif.metadata || {}
+
+      // Determine notification type for icon
+      let notificationType = 'system'
+      if (notif.type.includes('JOB')) {
+        notificationType = 'job'
+      } else if (notif.type.includes('SCHEDULE')) {
+        notificationType = 'schedule'
+      } else if (notif.type.includes('ALERT')) {
+        notificationType = 'alert'
+      }
+
+      // Build action URL based on notification type
+      let actionUrl = null
+      if (notif.type === 'JOB_PENDING_REVIEW' && metadata.jobId) {
+        actionUrl = '/jobs/pending-review'
+      } else if (metadata.jobId) {
+        actionUrl = `/jobs/${metadata.jobId}`
+      }
+
+      return {
+        id: notif.id,
+        type: notificationType,
+        title: notif.title,
+        message: notif.message,
+        timestamp: notif.timestamp,
+        read: !!notif.readAt || notif.status === 'READ',
+        priority: notif.priority,
+        actionUrl,
+        metadata
+      }
     })
+
+    return NextResponse.json(notifications)
   } catch (error) {
     console.error('Error fetching notifications:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch notifications' },
       { status: 500 }
     )
   }
@@ -138,47 +92,95 @@ export async function GET(request: NextRequest) {
 // Mark notification as read
 export async function PATCH(request: NextRequest) {
   try {
-    // Get auth token
-    const cookieStore = await cookies()
-    const token = cookieStore.get('auth-token')?.value
+    const token = request.cookies.get('auth-token')?.value
 
     if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify token
+    const body = await request.json()
+    const { notificationId, markAllRead } = body
+
     let userPayload
     try {
       userPayload = verifyToken(token)
     } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const { notificationId, action } = await request.json()
+    const userId = (userPayload as any).userId || userPayload.id
 
-    if (!notificationId || !action) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
+    if (markAllRead) {
+      // Mark all notifications as read for this user
+      await query(
+        `UPDATE "NotificationLog"
+         SET status = 'READ',
+             "readAt" = CURRENT_TIMESTAMP
+         WHERE "userId" = $1 AND status = 'SENT'`,
+        [userId]
       )
+      return NextResponse.json({ success: true, message: 'All notifications marked as read' })
+    } else if (notificationId) {
+      // Mark specific notification as read
+      await query(
+        `UPDATE "NotificationLog"
+         SET status = 'READ',
+             "readAt" = CURRENT_TIMESTAMP
+         WHERE id = $1 AND "userId" = $2`,
+        [notificationId, userId]
+      )
+      return NextResponse.json({ success: true, message: 'Notification marked as read' })
     }
 
-    // In a real implementation, this would update the database
-    // For now, just return success
-    return NextResponse.json({
-      success: true,
-      message: `Notification ${notificationId} marked as ${action}`
-    })
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   } catch (error) {
     console.error('Error updating notification:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to update notification' },
+      { status: 500 }
+    )
+  }
+}
+
+// Delete notification
+export async function DELETE(request: NextRequest) {
+  try {
+    const token = request.cookies.get('auth-token')?.value
+
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const notificationId = searchParams.get('id')
+
+    if (!notificationId) {
+      return NextResponse.json({ error: 'Notification ID required' }, { status: 400 })
+    }
+
+    let userPayload
+    try {
+      userPayload = verifyToken(token)
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const userId = (userPayload as any).userId || userPayload.id
+
+    // Soft delete - just mark as deleted
+    await query(
+      `UPDATE "NotificationLog"
+       SET status = 'DELETED',
+           "deletedAt" = CURRENT_TIMESTAMP
+       WHERE id = $1 AND "userId" = $2`,
+      [notificationId, userId]
+    )
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting notification:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete notification' },
       { status: 500 }
     )
   }

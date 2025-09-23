@@ -308,15 +308,16 @@ export function CalendarDay({
                 </Box>
                 
                 {/* Customer Name */}
-                <Typography sx={{ 
-                  fontSize: '0.7rem', 
+                <Typography sx={{
+                  fontSize: '0.7rem',
                   fontWeight: 600,
                   color: colors.text,
                   lineHeight: 1.1,
                   mb: 0.25,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  maxWidth: '100%'
                 }}>
                   {entry.job.customer}
                 </Typography>

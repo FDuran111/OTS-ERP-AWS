@@ -106,6 +106,8 @@ const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | '
     case 'scheduled':
     case 'dispatched':
       return 'warning'
+    case 'pending_review':
+      return 'secondary'
     case 'completed':
     case 'billed':
       return 'info'
@@ -260,6 +262,12 @@ export default function JobsPage() {
         }
         const userData = await response.json()
         setUser(userData)
+
+        // Redirect employees to schedule page instead
+        if (userData.role === 'EMPLOYEE') {
+          router.push('/schedule')
+          return
+        }
         fetchJobs()
       } catch (error) {
         console.error('Auth check failed:', error)
@@ -554,6 +562,7 @@ export default function JobsPage() {
                         <MenuItem value="scheduled">Scheduled</MenuItem>
                         <MenuItem value="dispatched">Dispatched</MenuItem>
                         <MenuItem value="in_progress">In Progress</MenuItem>
+                        <MenuItem value="pending_review">Pending Review</MenuItem>
                         <MenuItem value="completed">Completed</MenuItem>
                         <MenuItem value="billed">Billed</MenuItem>
                         <MenuItem value="cancelled">Cancelled</MenuItem>

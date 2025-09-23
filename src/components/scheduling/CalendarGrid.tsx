@@ -40,12 +40,15 @@ export function CalendarGrid({
   const currentMonthDays = days.filter(day => isSameMonth(day, currentDate))
 
   return (
-    <Paper 
-      elevation={2} 
-      sx={{ 
+    <Paper
+      elevation={2}
+      sx={{
         p: { xs: 1, sm: 2, md: 3 },
         borderRadius: 2,
-        bgcolor: 'background.paper'
+        bgcolor: 'background.paper',
+        width: '100%',
+        overflowX: 'auto',
+        overflowY: 'hidden'
       }}
     >
       {isMobile ? (
@@ -182,12 +185,14 @@ export function CalendarGrid({
           </Box>
 
           {/* Calendar Days Grid */}
-          <Box 
-            sx={{ 
+          <Box
+            sx={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(7, 1fr)',
+              gridTemplateColumns: 'repeat(7, minmax(120px, 1fr))',
               gap: 1,
-              minHeight: { xs: '300px', sm: '400px', md: '500px' }
+              minHeight: { xs: '300px', sm: '400px', md: '500px' },
+              minWidth: { xs: '840px', sm: '100%' },
+              width: '100%'
             }}
           >
             {days.map((day) => {

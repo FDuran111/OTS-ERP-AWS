@@ -109,39 +109,82 @@ function TabPanel(props: TabPanelProps) {
 export default function NotificationsPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuthCheck()
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [activeTab, setActiveTab] = useState(0)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // In the future, fetch notifications from API
-    // fetchNotifications()
-  }, [])
+    if (user) {
+      fetchNotifications()
+    }
+  }, [user])
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/notifications')
+      if (response.ok) {
+        const data = await response.json()
+        setNotifications(data)
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const unreadCount = notifications.filter(n => !n.read).length
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    )
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId: id })
+      })
+      if (response.ok) {
+        setNotifications(prev =>
+          prev.map(n => n.id === id ? { ...n, read: true } : n)
+        )
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error)
+    }
   }
 
-  const handleDelete = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications?id=${id}`, {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        setNotifications(prev => prev.filter(n => n.id !== id))
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error)
+    }
   }
 
-  const handleMarkAllRead = () => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, read: true }))
-    )
+  const handleMarkAllRead = async () => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markAllRead: true })
+      })
+      if (response.ok) {
+        setNotifications(prev =>
+          prev.map(n => ({ ...n, read: true }))
+        )
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error)
+    }
   }
 
   const handleRefresh = () => {
-    setLoading(true)
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
-    }, 1000)
+    fetchNotifications()
   }
 
   const handleNotificationClick = (notification: Notification) => {
@@ -287,31 +330,33 @@ export default function NotificationsPage() {
                           {getIcon(notification.type)}
                         </ListItemIcon>
                         <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: notification.read ? 400 : 600 }}>
-                              {notification.title}
-                            </Typography>
-                            <Chip
-                              label={notification.priority}
-                              size="small"
-                              color={getPriorityColor(notification.priority)}
-                              sx={{ height: 20 }}
-                            />
-                          </Box>
-                        }
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {notification.message}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                              <TimeIcon fontSize="small" />
-                              {formatTimestamp(notification.timestamp)}
-                            </Typography>
-                          </Box>
-                        }
-                      />
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: notification.read ? 400 : 600 }}>
+                                {notification.title}
+                              </Typography>
+                              <Chip
+                                label={notification.priority}
+                                size="small"
+                                color={getPriorityColor(notification.priority)}
+                                sx={{ height: 20 }}
+                              />
+                            </Box>
+                          }
+                          secondary={
+                            <>
+                              <Typography component="span" variant="body2" color="text.secondary" display="block">
+                                {notification.message}
+                              </Typography>
+                              <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                                <TimeIcon fontSize="small" />
+                                <Typography component="span" variant="caption" color="text.secondary">
+                                  {formatTimestamp(notification.timestamp)}
+                                </Typography>
+                              </Box>
+                            </>
+                          }
+                        />
                       </ListItemButton>
                     </ListItem>
                     {index < filteredNotifications('all').length - 1 && <Divider />}
@@ -360,31 +405,33 @@ export default function NotificationsPage() {
                           {getIcon(notification.type)}
                         </ListItemIcon>
                         <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                              {notification.title}
-                            </Typography>
-                            <Chip
-                              label={notification.priority}
-                              size="small"
-                              color={getPriorityColor(notification.priority)}
-                              sx={{ height: 20 }}
-                            />
-                          </Box>
-                        }
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {notification.message}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                              <TimeIcon fontSize="small" />
-                              {formatTimestamp(notification.timestamp)}
-                            </Typography>
-                          </Box>
-                        }
-                      />
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                {notification.title}
+                              </Typography>
+                              <Chip
+                                label={notification.priority}
+                                size="small"
+                                color={getPriorityColor(notification.priority)}
+                                sx={{ height: 20 }}
+                              />
+                            </Box>
+                          }
+                          secondary={
+                            <>
+                              <Typography component="span" variant="body2" color="text.secondary" display="block">
+                                {notification.message}
+                              </Typography>
+                              <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                                <TimeIcon fontSize="small" />
+                                <Typography component="span" variant="caption" color="text.secondary">
+                                  {formatTimestamp(notification.timestamp)}
+                                </Typography>
+                              </Box>
+                            </>
+                          }
+                        />
                       </ListItemButton>
                     </ListItem>
                     {index < filteredNotifications('unread').length - 1 && <Divider />}

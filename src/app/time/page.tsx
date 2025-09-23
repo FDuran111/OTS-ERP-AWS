@@ -28,7 +28,10 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   IconButton,
+  TextField,
+  Tooltip,
 } from '@mui/material'
 import {
   AccessTime as TimeIcon,
@@ -40,6 +43,7 @@ import {
   TrendingUp,
   Add as AddIcon,
   Close as CloseIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material'
 
 interface User {
@@ -67,6 +71,8 @@ interface TimeEntry {
   description?: string
   isActive: boolean
   createdAt: string
+  approvedAt?: string | null
+  approvedBy?: string | null
 }
 
 interface TimeStat {
@@ -106,6 +112,15 @@ export default function TimePage() {
   const [stats, setStats] = useState<TimeStat[]>([])
   const [loading, setLoading] = useState(true)
   const [manualEntryOpen, setManualEntryOpen] = useState(false)
+  const [preselectedJob, setPreselectedJob] = useState<any>(null)
+  const [editRequestOpen, setEditRequestOpen] = useState(false)
+  const [selectedEditEntry, setSelectedEditEntry] = useState<TimeEntry | null>(null)
+  const [editRequestForm, setEditRequestForm] = useState({
+    newStartTime: '',
+    newEndTime: '',
+    newHours: '',
+    reason: ''
+  })
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -255,8 +270,13 @@ export default function TimePage() {
         <Box sx={{ mb: 3 }}>
           <ScheduledJobSuggestions onCreateTimeEntry={(schedule) => {
             // Open the manual entry dialog with the schedule pre-filled
+            setPreselectedJob({
+              jobId: schedule.jobId || schedule.job?.id,
+              jobNumber: schedule.job?.jobNumber,
+              jobTitle: schedule.job?.title,
+              estimatedHours: schedule.estimatedHours
+            })
             setManualEntryOpen(true)
-            // TODO: Pass schedule data to SimpleTimeEntry
           }} />
         </Box>
 
@@ -291,12 +311,18 @@ export default function TimePage() {
                 <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>End Time</TableCell>
                 <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Hours</TableCell>
                 <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Phase</TableCell>
+                {user?.role === 'EMPLOYEE' && (
+                  <>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Actions</TableCell>
+                  </>
+                )}
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={user?.role === 'EMPLOYEE' ? 6 : 7} align="center">
+                  <TableCell colSpan={user?.role === 'EMPLOYEE' ? 8 : 7} align="center">
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
                       <CircularProgress size={24} />
                       <Typography sx={{ ml: 2 }}>Loading time entries...</Typography>
@@ -305,7 +331,7 @@ export default function TimePage() {
                 </TableRow>
               ) : timeEntries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={user?.role === 'EMPLOYEE' ? 6 : 7} align="center">
+                  <TableCell colSpan={user?.role === 'EMPLOYEE' ? 8 : 7} align="center">
                     <Typography color="text.secondary">No time entries found</Typography>
                   </TableCell>
                 </TableRow>
@@ -358,6 +384,46 @@ export default function TimePage() {
                         '-'
                       )}
                     </TableCell>
+                    {user?.role === 'EMPLOYEE' && (
+                      <>
+                        <TableCell>
+                          <Chip
+                            label={entry.approvedAt ? "Approved" : "Pending"}
+                            color={entry.approvedAt ? "success" : "warning"}
+                            size="small"
+                            variant={entry.approvedAt ? "filled" : "outlined"}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="Request Time Change">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => {
+                                setSelectedEditEntry(entry)
+                                setEditRequestForm({
+                                  newStartTime: new Date(entry.startTime).toLocaleTimeString('en-US', {
+                                    hour12: false,
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  }),
+                                  newEndTime: entry.endTime ? new Date(entry.endTime).toLocaleTimeString('en-US', {
+                                    hour12: false,
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  }) : '',
+                                  newHours: entry.hours?.toString() || '',
+                                  reason: ''
+                                })
+                                setEditRequestOpen(true)
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -369,7 +435,10 @@ export default function TimePage() {
       {/* Manual Time Entry Dialog for Employees */}
       <Dialog
         open={manualEntryOpen}
-        onClose={() => setManualEntryOpen(false)}
+        onClose={() => {
+          setManualEntryOpen(false)
+          setPreselectedJob(null)
+        }}
         maxWidth="md"
         fullWidth
       >
@@ -387,12 +456,184 @@ export default function TimePage() {
         <DialogContent dividers>
           <SimpleTimeEntry
             noCard={true}
+            preselectedJob={preselectedJob}
             onTimeEntryCreated={() => {
               fetchTimeData()
               setManualEntryOpen(false)
+              setPreselectedJob(null)
             }}
           />
         </DialogContent>
+      </Dialog>
+
+      {/* Edit Request Dialog */}
+      <Dialog
+        open={editRequestOpen}
+        onClose={() => {
+          setEditRequestOpen(false)
+          setSelectedEditEntry(null)
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          pb: 1
+        }}>
+          Request Time Change
+          <IconButton onClick={() => setEditRequestOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedEditEntry && (
+            <Stack spacing={3}>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Current Entry Details
+                </Typography>
+                <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
+                  <Grid container spacing={1}>
+                    <Grid size={12}>
+                      <Typography variant="body2">
+                        <strong>Job:</strong> {selectedEditEntry.jobNumber} - {selectedEditEntry.jobTitle}
+                      </Typography>
+                    </Grid>
+                    <Grid size={6}>
+                      <Typography variant="body2">
+                        <strong>Date:</strong> {new Date(selectedEditEntry.date + 'T00:00:00').toLocaleDateString()}
+                      </Typography>
+                    </Grid>
+                    <Grid size={6}>
+                      <Typography variant="body2">
+                        <strong>Current Hours:</strong> {selectedEditEntry.hours?.toFixed(1) || '-'}
+                      </Typography>
+                    </Grid>
+                    <Grid size={6}>
+                      <Typography variant="body2">
+                        <strong>Start Time:</strong> {new Date(selectedEditEntry.startTime).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </Typography>
+                    </Grid>
+                    <Grid size={6}>
+                      <Typography variant="body2">
+                        <strong>End Time:</strong> {selectedEditEntry.endTime
+                          ? new Date(selectedEditEntry.endTime).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : 'Active'
+                        }
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Requested Changes
+                </Typography>
+                <Stack spacing={2}>
+                  <TextField
+                    label="New Start Time"
+                    type="time"
+                    value={editRequestForm.newStartTime}
+                    onChange={(e) => setEditRequestForm({...editRequestForm, newStartTime: e.target.value})}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    helperText="Leave blank to keep current start time"
+                  />
+                  <TextField
+                    label="New End Time"
+                    type="time"
+                    value={editRequestForm.newEndTime}
+                    onChange={(e) => setEditRequestForm({...editRequestForm, newEndTime: e.target.value})}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    helperText="Leave blank to keep current end time"
+                  />
+                  <TextField
+                    label="Or Enter Total Hours"
+                    type="number"
+                    value={editRequestForm.newHours}
+                    onChange={(e) => setEditRequestForm({...editRequestForm, newHours: e.target.value})}
+                    fullWidth
+                    inputProps={{ step: 0.5, min: 0, max: 24 }}
+                    helperText="Alternative: directly enter the total hours worked"
+                  />
+                  <TextField
+                    label="Reason for Change (Required)"
+                    multiline
+                    rows={3}
+                    value={editRequestForm.reason}
+                    onChange={(e) => setEditRequestForm({...editRequestForm, reason: e.target.value})}
+                    fullWidth
+                    required
+                    placeholder="Please explain why this time change is needed..."
+                  />
+                </Stack>
+              </Box>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => {
+              setEditRequestOpen(false)
+              setSelectedEditEntry(null)
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              // TODO: Submit edit request to API
+              if (!editRequestForm.reason.trim()) {
+                alert('Please provide a reason for the time change request')
+                return
+              }
+
+              try {
+                const response = await fetch('/api/time-entries/edit-request', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    timeEntryId: selectedEditEntry?.id,
+                    newStartTime: editRequestForm.newStartTime || null,
+                    newEndTime: editRequestForm.newEndTime || null,
+                    newHours: editRequestForm.newHours ? parseFloat(editRequestForm.newHours) : null,
+                    reason: editRequestForm.reason,
+                  })
+                })
+
+                if (response.ok) {
+                  alert('Time change request submitted successfully. Your manager will review it.')
+                  setEditRequestOpen(false)
+                  setSelectedEditEntry(null)
+                  fetchTimeData()
+                } else {
+                  const error = await response.json()
+                  alert(error.message || 'Failed to submit edit request')
+                }
+              } catch (error) {
+                console.error('Error submitting edit request:', error)
+                alert('Failed to submit edit request. Please try again.')
+              }
+            }}
+            disabled={!editRequestForm.reason.trim()}
+          >
+            Submit Request
+          </Button>
+        </DialogActions>
       </Dialog>
     </ResponsiveLayout>
   )

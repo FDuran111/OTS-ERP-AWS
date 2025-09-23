@@ -52,6 +52,7 @@ interface CrewMember {
   role: string
   conflicts?: number
   scheduledHours?: number
+  loggedHours?: number
   availableHours?: number
   totalCapacity?: number
 }
@@ -79,17 +80,11 @@ export default function CrewAvailabilityWidget() {
     try {
       setLoading(true)
       const response = await fetch(`/api/crew/available?startDate=${startDate}&endDate=${endDate}`)
-      
+
       if (response.ok) {
         const crewData = await response.json()
-        // Add mock scheduling data for demonstration
-        const enhancedCrew = crewData.map((member: CrewMember) => ({
-          ...member,
-          scheduledHours: Math.floor(Math.random() * 30) + 10, // Mock data
-          totalCapacity: 40, // Standard work week
-          availableHours: 40 - (Math.floor(Math.random() * 30) + 10)
-        }))
-        setCrewMembers(enhancedCrew)
+        // Data now comes with real scheduled hours from the API
+        setCrewMembers(crewData)
       }
     } catch (error) {
       console.error('Error fetching crew availability:', error)
@@ -301,22 +296,43 @@ export default function CrewAvailabilityWidget() {
                           </Tooltip>
                         </Stack>
 
-                        {/* Utilization Bar */}
+                        {/* Utilization Bar (Scheduled) */}
                         <Box>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              Utilization
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary' }}>
+                              Utilization (Scheduled)
                             </Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
                               {member.scheduledHours}h / {member.totalCapacity}h
                             </Typography>
                           </Box>
-                          <LinearProgress 
-                            variant="determinate" 
+                          <LinearProgress
+                            variant="determinate"
                             value={utilizationPercent}
                             color={availability.color as any}
-                            sx={{ 
-                              height: 8, 
+                            sx={{
+                              height: 8,
+                              borderRadius: 4,
+                              bgcolor: 'grey.200',
+                              mb: 2
+                            }}
+                          />
+
+                          {/* Logged Hours Bar */}
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary' }}>
+                              Logged (Actual)
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: member.loggedHours && member.loggedHours > (member.scheduledHours || 0) ? 'warning.main' : 'text.primary' }}>
+                              {member.loggedHours || 0}h / {member.scheduledHours || 0}h
+                            </Typography>
+                          </Box>
+                          <LinearProgress
+                            variant="determinate"
+                            value={Math.min(((member.loggedHours || 0) / (member.scheduledHours || 1)) * 100, 100)}
+                            color={member.loggedHours && member.scheduledHours && member.loggedHours > member.scheduledHours ? 'warning' : 'info'}
+                            sx={{
+                              height: 8,
                               borderRadius: 4,
                               bgcolor: 'grey.200'
                             }}

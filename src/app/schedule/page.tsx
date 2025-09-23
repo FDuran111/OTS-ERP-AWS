@@ -261,7 +261,12 @@ export default function SchedulePage() {
           )}
 
           {/* Job Scheduling Calendar */}
-          <Box sx={{ mb: 3 }}>
+          <Box sx={{
+            mb: 3,
+            width: '100%',
+            overflowX: 'auto',
+            overflowY: 'hidden'
+          }}>
             <JobSchedulingCalendar onJobScheduled={handleJobScheduled} />
           </Box>
 

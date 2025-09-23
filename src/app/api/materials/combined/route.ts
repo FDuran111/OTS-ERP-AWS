@@ -47,14 +47,14 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       // Get materials with reservation data
       query(
-        `SELECT 
+        `SELECT
           m.*,
-          ma.total_reserved,
-          ma.available_stock
+          ma."reservedQuantity" as total_reserved,
+          ma."availableQuantity" as available_stock
         FROM "Material" m
         LEFT JOIN "MaterialAvailability" ma ON m.id = ma.id
-        ${whereClause} 
-        ORDER BY name ASC`,
+        ${whereClause}
+        ORDER BY m.name ASC`,
         params
       ),
       // Get total count
@@ -75,10 +75,10 @@ export async function GET(request: NextRequest) {
       `),
       // Get reservation statistics
       query(`
-        SELECT 
+        SELECT
           COUNT(*) as "totalReservations",
           COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) as "activeReservations",
-          SUM(CASE WHEN status = 'ACTIVE' THEN quantity ELSE 0 END) as "totalReservedQuantity"
+          SUM(CASE WHEN status = 'ACTIVE' THEN "quantityReserved" ELSE 0 END) as "totalReservedQuantity"
         FROM "MaterialReservation"
       `)
     ])

@@ -106,10 +106,12 @@ export async function GET(request: NextRequest) {
     }
 
     let crewFilter = ''
+    let userIdParamIndex = null
     if (userId) {
+      userIdParamIndex = paramIndex
       crewFilter = `AND EXISTS (
-        SELECT 1 FROM "CrewAssignment" ca 
-        WHERE ca."scheduleId" = js.id 
+        SELECT 1 FROM "CrewAssignment" ca
+        WHERE ca."scheduleId" = js.id
         AND ca."userId" = $${paramIndex}
         AND ca.status = 'ASSIGNED'
       )`
@@ -118,17 +120,17 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await query(`
-      SELECT 
+      SELECT
         js.id,
         js."jobId",
         js."startDate",
-        js."endDate", 
+        js."endDate",
         js."estimatedHours",
         js."actualHours",
         js.status,
         js.notes,
         js."createdAt",
-        
+
         -- Job information
         j."jobNumber",
         j.description as title,
@@ -141,10 +143,20 @@ export async function GET(request: NextRequest) {
         j.city,
         j.state,
         j.zip,
-        
+
         -- Customer information
         COALESCE(c."companyName", CONCAT(c."firstName", ' ', c."lastName")) as "customerName",
-        
+
+        -- Check if time has been entered for this job today (for employees)
+        ${userId ? `
+        EXISTS (
+          SELECT 1 FROM "TimeEntry" te
+          WHERE te."jobId" = js."jobId"
+          AND te."userId" = $${userIdParamIndex}
+          AND DATE(te.date) = DATE(js."startDate")
+        ) as "hasTimeEntry",
+        ` : 'false as "hasTimeEntry",'}
+
         -- Crew assignments
         COALESCE(
           JSON_AGG(
@@ -182,6 +194,7 @@ export async function GET(request: NextRequest) {
       status: row.status,
       notes: row.notes,
       createdAt: row.createdAt,
+      hasTimeEntry: row.hasTimeEntry || false,
       job: {
         id: row.jobId,
         jobNumber: row.jobNumber,

@@ -56,9 +56,15 @@ interface User {
 interface SimpleTimeEntryProps {
   onTimeEntryCreated: () => void
   noCard?: boolean // Optional prop to skip Card wrapper for dialog usage
+  preselectedJob?: {
+    jobId: string
+    jobNumber?: string
+    jobTitle?: string
+    estimatedHours?: number
+  } | null
 }
 
-export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false }: SimpleTimeEntryProps) {
+export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, preselectedJob }: SimpleTimeEntryProps) {
   const [jobs, setJobs] = useState<Job[]>([])
   const [scheduledJobs, setScheduledJobs] = useState<ScheduledJob[]>([])
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
@@ -100,6 +106,17 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false }: 
   useEffect(() => {
     fetchData()
   }, [isAdmin])
+
+  // Set preselected job when prop changes
+  useEffect(() => {
+    if (preselectedJob && jobs.length > 0) {
+      const job = jobs.find(j => j.id === preselectedJob.jobId)
+      if (job) {
+        setSelectedJob(job)
+        setEntryMode('manual')
+      }
+    }
+  }, [preselectedJob, jobs])
 
   const fetchData = async () => {
     try {
@@ -471,6 +488,7 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false }: 
                   getOptionLabel={(option) => `${option.jobNumber} - ${option.title} (${option.customer})`}
                   value={selectedJob}
                   onChange={(_, value) => handleJobSelect(value)}
+                  disabled={!!preselectedJob} // Disable when job is preselected
                   renderOption={(props, option) => {
                     const { key, ...otherProps } = props as any
                     return (
@@ -487,7 +505,12 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false }: 
                     )
                   }}
                   renderInput={(params) => (
-                    <TextField {...params} label="Select Job" required />
+                    <TextField
+                      {...params}
+                      label={preselectedJob ? "Job (Auto-selected)" : "Select Job"}
+                      required
+                      helperText={preselectedJob ? "This job was selected from your scheduled jobs" : undefined}
+                    />
                   )}
                 />
               </Grid>

@@ -1,0 +1,207 @@
+=== ALL TABLES IN RDS ===
+           table_name           
+--------------------------------
+ AssetAssignment
+ BidSheet
+ CategoryPerformanceView
+ ChangeOrder
+ CompanyAsset
+ CompanySettings
+ Crew
+ CrewAssignment
+ CrewDailyHours
+ CrewMember
+ Customer
+ CustomerActivity
+ CustomerAttachment
+ CustomerAuth
+ CustomerFeedback
+ CustomerMessage
+ CustomerNotification
+ CustomerPhotoView
+ CustomerPortalPreferences
+ CustomerPortalSession
+ CustomerPortalSettings
+ CustomerPortalUser
+ CustomerQuickBooksMapping
+ CustomerSession
+ DailyRoutePerformanceView
+ EmployeeCostSummary
+ EmployeeOverhead
+ EmployeeSchedule
+ EquipmentBillingSummary
+ EquipmentMaintenance
+ EquipmentProfitabilityAnalysis
+ EquipmentRate
+ EquipmentTimeLog
+ EquipmentUsage
+ FileAttachment
+ Invoice
+ InvoiceLineItem
+ InvoiceQuickBooksMapping
+ Job
+ JobAssignment
+ JobAttachment
+ JobCategory
+ JobClassificationView
+ JobCost
+ JobCostAnalysis
+ JobEquipmentCost
+ JobEquipmentCostSummary
+ JobLaborActual
+ JobLaborCost
+ JobLaborRates
+ JobLaborRatesWithDetails
+ JobMaterialCost
+ JobNote
+ JobPhase
+ JobPhaseDetail
+ JobPhotoView
+ JobReminder
+ JobSchedule
+ JobSubCategory
+ JobTag
+ JobTagAssignment
+ LaborRate
+ Lead
+ LeadActivity
+ LeadEstimate
+ Material
+ MaterialAttachment
+ MaterialAvailability
+ MaterialPhotoView
+ MaterialReservation
+ MaterialStockLocation
+ MaterialUsage
+ NotificationLog
+ PayrollPeriod
+ PurchaseOrder
+ PurchaseOrderItem
+ QuickBooksAccount
+ QuickBooksConnection
+ QuickBooksItem
+ QuickBooksMapping
+ QuickBooksSyncConfig
+ QuickBooksSyncLog
+ QuickBooksSyncStatus
+ QuickBooksWebhook
+ RoleHierarchy
+ Route
+ RouteOptimizationSettings
+ RouteStop
+ RouteSummaryView
+ RouteTemplate
+ ScheduleView
+ ServiceArea
+ ServiceCall
+ ServiceCallAttachment
+ ServiceCallChecklist
+ ServiceCallHistory
+ ServiceCallMaterial
+ ServiceSchedule
+ ServiceTemplate
+ ServiceType
+ StockMovement
+ StorageLocation
+ TimeEntry
+ TimeEntryBreak
+ TravelMatrix
+ User
+ UserAppearanceSettings
+ UserAuditLog
+ UserNotificationSettings
+ UserPermissions
+ UserPermissionsView
+ UserSecuritySettings
+ Vehicle
+ Vendor
+ Warehouse
+(115 rows)
+
+=== CHECK FOR FileUpload TABLE ===
+ file_upload_exists 
+--------------------
+ f
+(1 row)
+
+=== CHECK FOR JobAttachment TABLE ===
+  column_name   |          data_type          | is_nullable |        column_default        
+----------------+-----------------------------+-------------+------------------------------
+ id             | uuid                        | NO          | gen_random_uuid()
+ jobId          | text                        | NO          | 
+ fileId         | uuid                        | NO          | 
+ attachmentType | character varying           | NO          | 'GENERAL'::character varying
+ category       | character varying           | YES         | 
+ phase          | character varying           | YES         | 
+ description    | text                        | YES         | 
+ isPrimary      | boolean                     | YES         | false
+ sortOrder      | integer                     | YES         | 0
+ attachedBy     | uuid                        | YES         | 
+ attachedAt     | timestamp without time zone | YES         | now()
+(11 rows)
+
+=== CHECK FOR FileAttachment TABLE ===
+  column_name  |          data_type          | is_nullable |  column_default   
+---------------+-----------------------------+-------------+-------------------
+ id            | uuid                        | NO          | gen_random_uuid()
+ fileName      | character varying           | NO          | 
+ originalName  | character varying           | NO          | 
+ mimeType      | character varying           | NO          | 
+ fileSize      | bigint                      | NO          | 
+ fileExtension | character varying           | NO          | 
+ filePath      | text                        | NO          | 
+ fileUrl       | text                        | YES         | 
+ uploadedBy    | uuid                        | YES         | 
+ uploadedAt    | timestamp without time zone | YES         | now()
+ isImage       | boolean                     | YES         | false
+ imageWidth    | integer                     | YES         | 
+ imageHeight   | integer                     | YES         | 
+ thumbnailPath | text                        | YES         | 
+ thumbnailUrl  | text                        | YES         | 
+ description   | text                        | YES         | 
+ tags          | ARRAY                       | YES         | 
+ metadata      | jsonb                       | YES         | 
+ active        | boolean                     | NO          | true
+ createdAt     | timestamp without time zone | YES         | now()
+ updatedAt     | timestamp without time zone | YES         | now()
+(21 rows)
+
+=== TimeEntry TABLE STRUCTURE ===
+ column_name  |          data_type          | is_nullable |  column_default   
+--------------+-----------------------------+-------------+-------------------
+ id           | text                        | NO          | 
+ userId       | text                        | NO          | 
+ jobId        | text                        | NO          | 
+ phaseId      | text                        | YES         | 
+ date         | timestamp without time zone | NO          | 
+ startTime    | timestamp without time zone | NO          | 
+ endTime      | timestamp without time zone | YES         | 
+ hours        | double precision            | NO          | 
+ description  | text                        | YES         | 
+ gpsLatitude  | double precision            | YES         | 
+ gpsLongitude | double precision            | YES         | 
+ synced       | boolean                     | NO          | false
+ quickbooksId | text                        | YES         | 
+ createdAt    | timestamp without time zone | NO          | CURRENT_TIMESTAMP
+ updatedAt    | timestamp without time zone | NO          | 
+ regularRate  | numeric                     | YES         | 
+ overtimeRate | numeric                     | YES         | 
+ totalCost    | numeric                     | YES         | 
+(18 rows)
+
+=== User TABLE ROLE FIELD ===
+ column_name |  data_type   | is_nullable | column_default 
+-------------+--------------+-------------+----------------
+ role        | USER-DEFINED | NO          | 
+(1 row)
+
+=== RECORD COUNTS ===
+ table_name  | count 
+-------------+-------
+ Customer    |    20
+ Job         |    31
+ JobSchedule |     0
+ TimeEntry   |     4
+ User        |     9
+(5 rows)
+

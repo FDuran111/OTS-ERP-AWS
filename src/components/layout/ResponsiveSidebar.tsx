@@ -76,19 +76,14 @@ const navigationItems: NavItem[] = [
     title: 'Jobs',
     icon: <JobsIcon />,
     path: '/jobs',
-    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'],
+    roles: ['OWNER_ADMIN', 'FOREMAN'], // Removed EMPLOYEE - they use Schedule instead
     children: [
       { title: 'All Jobs', icon: <JobsIcon />, path: '/jobs', roles: ['OWNER_ADMIN', 'FOREMAN'] },
       { title: 'Categories', icon: <CategoriesIcon />, path: '/job-categories', roles: ['OWNER_ADMIN', 'FOREMAN'] },
       { title: 'Photos', icon: <PhotoIcon />, path: '/photo-gallery', roles: ['OWNER_ADMIN', 'FOREMAN'] }
     ]
   },
-  {
-    title: 'Photo Gallery',
-    icon: <PhotoIcon />,
-    path: '/photo-gallery',
-    roles: ['EMPLOYEE'] // Only show as standalone for employees
-  },
+  // Photo Gallery removed for employees - they access photos through job details from Schedule/Dashboard
   {
     title: 'Schedule',
     icon: <ScheduleIcon />,

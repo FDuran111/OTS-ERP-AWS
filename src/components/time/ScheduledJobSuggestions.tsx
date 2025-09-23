@@ -30,6 +30,7 @@ interface ScheduledJob {
   }
   startDate: string
   estimatedHours: number
+  hasTimeEntry?: boolean
   crew: any[]
 }
 
@@ -78,12 +79,16 @@ export default function ScheduledJobSuggestions({ onCreateTimeEntry }: Scheduled
         const scheduleData = await response.json()
 
         // For employees, further filter to ensure they only see their assigned jobs
+        // AND hide jobs where they've already entered time
         if (user.role === 'EMPLOYEE') {
           const filteredData = scheduleData.filter((schedule: ScheduledJob) => {
             // Check if the user is in the crew list
-            return schedule.crew?.some((crewMember: any) =>
+            const isAssigned = schedule.crew?.some((crewMember: any) =>
               crewMember.userId === user.id || crewMember.id === user.id
             )
+            // Only show jobs without time entries
+            const needsTimeEntry = !schedule.hasTimeEntry
+            return isAssigned && needsTimeEntry
           })
           setTodaysSchedule(filteredData)
         } else {

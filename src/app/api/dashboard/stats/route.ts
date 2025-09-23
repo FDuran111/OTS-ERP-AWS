@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
       thisMonthRevenueResult,
       lastMonthRevenueResult,
       recentJobsResult,
-      pendingPurchaseOrdersResult
+      pendingPurchaseOrdersResult,
+      pendingReviewJobsResult
     ] = await Promise.all([
       // Active jobs count
       query(
@@ -93,8 +94,18 @@ export async function GET(request: NextRequest) {
 
       // Pending Purchase Orders
       query(
-        `SELECT COUNT(*) as count FROM "PurchaseOrder" 
+        `SELECT COUNT(*) as count FROM "PurchaseOrder"
          WHERE status = 'PENDING' OR status = 'DRAFT'`
+      ),
+
+      // Jobs pending admin review
+      query(
+        `SELECT j.*,
+                COALESCE(c."companyName", c."firstName" || ' ' || c."lastName") as customer_name
+         FROM "Job" j
+         LEFT JOIN "Customer" c ON j."customerId" = c.id
+         WHERE j.status = 'PENDING_REVIEW'
+         ORDER BY j."updatedAt" DESC`
       )
     ])
 
@@ -107,6 +118,7 @@ export async function GET(request: NextRequest) {
     const revenueThis = parseFloat(thisMonthRevenueResult.rows[0].total) || 0
     const revenueLast = parseFloat(lastMonthRevenueResult.rows[0].total) || 0
     const pendingPurchaseOrders = parseInt(pendingPurchaseOrdersResult.rows[0].count) || 0
+    const pendingReviewJobs = pendingReviewJobsResult.rows || []
 
     // Calculate changes
     const jobsChange = lastMonthActiveJobs > 0 
@@ -163,6 +175,22 @@ export async function GET(request: NextRequest) {
         const userRole = userPayload.role
         const userId = (userPayload as any).userId || userPayload.id
 
+        // Add pending review jobs count for admins
+        if (permissions.canViewRevenueReports(userRole)) {
+          // Always show the stat card, even if 0
+          const pendingReviewStat = {
+            title: 'Jobs Marked Done',
+            value: pendingReviewJobs.length.toString(),
+            change: pendingReviewJobs.length > 0 ? 'Awaiting closure' : 'All jobs closed',
+            icon: 'pending_actions',
+            color: 'warning' as const,
+            clickable: true,
+            link: '/jobs/pending-review'
+          }
+          // Insert after active jobs
+          filteredStats.splice(1, 0, pendingReviewStat)
+        }
+
         // Filter stats based on role
         if (!permissions.canViewRevenueReports(userRole)) {
           // Remove revenue and purchase order stats for employees
@@ -171,8 +199,9 @@ export async function GET(request: NextRequest) {
             stat.title !== 'Pending Purchase Orders'
           )
 
-          // For employees, get upcoming scheduled jobs for this week
-          const weekStart = startOfWeek(now, { weekStartsOn: 0 }) // Sunday
+          // For employees, get upcoming scheduled jobs (today and future only)
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
           const weekEnd = endOfWeek(now, { weekStartsOn: 0 })
 
           const upcomingJobsResult = await query(
@@ -184,21 +213,34 @@ export async function GET(request: NextRequest) {
               j."jobNumber",
               j.description,
               j.status,
-              COALESCE(c."companyName", c."firstName" || ' ' || c."lastName") as customer_name
+              COALESCE(c."companyName", c."firstName" || ' ' || c."lastName") as customer_name,
+              EXISTS (
+                SELECT 1 FROM "TimeEntry" te
+                WHERE te."jobId" = j.id
+                AND te."userId" = $3
+                AND DATE(te.date) = DATE(js."startDate")
+              ) as has_time_entry
             FROM "JobSchedule" js
             INNER JOIN "Job" j ON js."jobId" = j.id
             LEFT JOIN "Customer" c ON j."customerId" = c.id
             WHERE js."startDate" >= $1
               AND js."startDate" <= $2
+              AND j.status NOT IN ('COMPLETED', 'CANCELLED')
               AND EXISTS (
                 SELECT 1 FROM "CrewAssignment" ca
                 WHERE ca."scheduleId" = js.id
                 AND ca."userId" = $3
                 AND ca.status = 'ASSIGNED'
               )
+              AND NOT EXISTS (
+                SELECT 1 FROM "TimeEntry" te
+                WHERE te."jobId" = j.id
+                AND te."userId" = $3
+                AND DATE(te.date) = DATE(js."startDate")
+              )
             ORDER BY js."startDate" ASC
             LIMIT 7`,
-            [weekStart, weekEnd, userId]
+            [today, weekEnd, userId]
           )
 
           jobsToReturn = upcomingJobsResult.rows.map(job => ({
@@ -233,9 +275,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Check if user can see pending review jobs
+    let userCanSeeReviews = false
+    if (token) {
+      try {
+        const userPayload = verifyToken(token)
+        userCanSeeReviews = permissions.canViewRevenueReports(userPayload.role)
+      } catch {
+        userCanSeeReviews = false
+      }
+    }
+
     return NextResponse.json({
       stats: filteredStats,
       recentJobs: jobsToReturn,
+      pendingReviewJobs: userCanSeeReviews ? pendingReviewJobs : [],
     })
   } catch (error) {
     console.error('Dashboard stats error:', error)
