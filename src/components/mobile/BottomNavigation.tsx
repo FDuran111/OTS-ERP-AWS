@@ -40,11 +40,11 @@ const navigationItems = [
     roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[]
   },
   {
-    label: 'Customers',
+    label: 'Admin',
     icon: <CustomersIcon />,
-    value: '/customers',
-    paths: ['/customers'],
-    roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] // Only staff can manage customers
+    value: '/admin',
+    paths: ['/admin', '/analytics', '/leads', '/reports'],
+    roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] // Admin features for management
   },
   {
     label: 'Routes',

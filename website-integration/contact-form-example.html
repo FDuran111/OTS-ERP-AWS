@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Ortmeier Technical Services</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- This is an example of how to update your existing contact.html -->
+
+    <div class="container mx-auto px-4 py-12">
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-4xl font-bold mb-8">Contact Us</h1>
+
+            <!-- Updated contact form with proper field names for ERP integration -->
+            <form id="contact-form" class="bg-white rounded-lg shadow-lg p-8 space-y-6">
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- First Name -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">First Name *</label>
+                        <input
+                            type="text"
+                            name="firstName"
+                            required
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="John"
+                        >
+                    </div>
+
+                    <!-- Last Name -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Last Name *</label>
+                        <input
+                            type="text"
+                            name="lastName"
+                            required
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="Doe"
+                        >
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Email *</label>
+                        <input
+                            type="email"
+                            name="email"
+                            required
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="john@example.com"
+                        >
+                    </div>
+
+                    <!-- Phone -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Phone *</label>
+                        <input
+                            type="tel"
+                            name="phone"
+                            required
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="(402) 555-0123"
+                        >
+                    </div>
+                </div>
+
+                <!-- Company (Optional) -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">Company (Optional)</label>
+                    <input
+                        type="text"
+                        name="companyName"
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Your Company Name"
+                    >
+                </div>
+
+                <!-- Service Type -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">Service Needed</label>
+                    <select
+                        name="serviceType"
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="general-inquiry">General Inquiry</option>
+                        <option value="panel-upgrade">Panel Upgrade</option>
+                        <option value="ev-charger">EV Charger Installation</option>
+                        <option value="lighting">Lighting Installation</option>
+                        <option value="wiring">Electrical Wiring</option>
+                        <option value="troubleshooting">Troubleshooting</option>
+                        <option value="commercial">Commercial Services</option>
+                        <option value="emergency">Emergency Service</option>
+                    </select>
+                </div>
+
+                <!-- Urgency -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">Priority</label>
+                    <select
+                        name="urgency"
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="LOW">Low - No rush</option>
+                        <option value="MEDIUM" selected>Medium - Within a week</option>
+                        <option value="HIGH">High - Within 2-3 days</option>
+                        <option value="EMERGENCY">Emergency - ASAP</option>
+                    </select>
+                </div>
+
+                <!-- Service Address (Optional) -->
+                <div class="space-y-4">
+                    <h3 class="font-medium">Service Address (Optional)</h3>
+
+                    <input
+                        type="text"
+                        name="street"
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Street Address"
+                    >
+
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <input
+                            type="text"
+                            name="city"
+                            class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="City"
+                        >
+                        <input
+                            type="text"
+                            name="state"
+                            class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="NE"
+                            value="NE"
+                        >
+                        <input
+                            type="text"
+                            name="zip"
+                            class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="ZIP"
+                        >
+                    </div>
+                </div>
+
+                <!-- Preferred Date/Time (Optional) -->
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Preferred Date</label>
+                        <input
+                            type="date"
+                            name="preferredDate"
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Preferred Time</label>
+                        <input
+                            type="time"
+                            name="preferredTime"
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+                </div>
+
+                <!-- Message -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">How can we help? *</label>
+                    <textarea
+                        name="description"
+                        required
+                        rows="4"
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Please describe your electrical needs..."
+                    ></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <button
+                    type="submit"
+                    class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition duration-200"
+                >
+                    Send Service Request
+                </button>
+            </form>
+
+            <!-- Contact Information -->
+            <div class="mt-12 bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold mb-4">Other Ways to Reach Us</h2>
+
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                        </svg>
+                        <div>
+                            <p class="font-semibold">Phone</p>
+                            <p>(402) 625-2233</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        <div>
+                            <p class="font-semibold">Email</p>
+                            <p>info@ortmeier.com</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <div>
+                            <p class="font-semibold">Location</p>
+                            <p>Yutan, NE 68073</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <p class="font-semibold">Business Hours</p>
+                            <p>Mon-Fri: 7:00 AM - 6:00 PM</p>
+                            <p>Emergency Service: 24/7</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the ERP integration script -->
+    <script src="js/erp-integration.js"></script>
+</body>
+</html>

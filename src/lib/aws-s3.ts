@@ -105,7 +105,7 @@ export async function deleteFromS3(key: string): Promise<void> {
  */
 export function generateJobFileKey(
   jobId: string,
-  category: 'photos' | 'documents' | 'invoices',
+  category: 'photo' | 'document' | 'invoice' | 'attachment',
   fileName: string
 ): string {
   const timestamp = Date.now()

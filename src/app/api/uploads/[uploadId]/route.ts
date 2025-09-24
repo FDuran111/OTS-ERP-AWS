@@ -5,17 +5,24 @@ import storage from '@/lib/storage-adapter'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { uploadId: string } }
+  { params }: { params: Promise<{ uploadId: string }> }
 ) {
   try {
     // Verify authentication
-    const authResult = await verifyToken(request)
-    if (!authResult.authenticated || !authResult.user) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const fileId = params.uploadId
-    const userId = authResult.user.id
+    let authUser
+    try {
+      authUser = verifyToken(token)
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const { uploadId: fileId } = await params
+    const userId = authUser.id
 
     // Get file details from our new FileUpload table
     const fileResult = await query(
@@ -23,24 +30,24 @@ export async function DELETE(
       [fileId]
     )
 
-    if (fileResult.length === 0) {
+    if (fileResult.rows.length === 0) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    const file = fileResult[0]
+    const file = fileResult.rows[0]
 
     // Check permission (user must be the uploader or an admin)
-    if (file.userId !== userId && authResult.user.role !== 'OWNER_ADMIN') {
+    if (file.userid !== userId && authUser.role !== 'OWNER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Delete from storage (local in dev, S3 in production)
     try {
-      await storage.delete(file.s3Key)
+      await storage.delete(file.s3key)
 
       // Delete thumbnail if exists
-      if (file.thumbnailS3Key) {
-        await storage.delete(file.thumbnailS3Key)
+      if (file.thumbnails3key) {
+        await storage.delete(file.thumbnails3key)
       }
     } catch (storageError) {
       console.error('Storage deletion error:', storageError)
@@ -49,7 +56,7 @@ export async function DELETE(
 
     // Soft delete from database (mark as deleted)
     await query(
-      `UPDATE "FileUpload" SET "deletedAt" = CURRENT_TIMESTAMP WHERE id = $1`,
+      `UPDATE "FileUpload" SET deletedat = CURRENT_TIMESTAMP WHERE id = $1`,
       [fileId]
     )
 

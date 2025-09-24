@@ -5,17 +5,24 @@ import { deleteFromS3 } from '@/lib/aws-s3'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
-    const authResult = await verifyToken(request)
-    if (!authResult.authenticated || !authResult.user) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const fileId = params.id
-    const userId = authResult.user.id
+    let authUser
+    try {
+      authUser = verifyToken(token)
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const { id: fileId } = await params
+    const userId = authUser.id
 
     // Get file details
     const fileResult = await query(
@@ -23,24 +30,24 @@ export async function DELETE(
       [fileId]
     )
 
-    if (fileResult.length === 0) {
+    if (fileResult.rows.length === 0) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    const file = fileResult[0]
+    const file = fileResult.rows[0]
 
     // Check permission (user must be the uploader or an admin)
-    if (file.userId !== userId && authResult.user.role !== 'OWNER_ADMIN') {
+    if (file.userid !== userId && authUser.role !== 'OWNER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Delete from S3
     try {
-      await deleteFromS3(file.s3Key)
+      await deleteFromS3(file.s3key)
 
       // Delete thumbnail if exists
-      if (file.thumbnailS3Key) {
-        await deleteFromS3(file.thumbnailS3Key)
+      if (file.thumbnails3key) {
+        await deleteFromS3(file.thumbnails3key)
       }
     } catch (s3Error) {
       console.error('S3 deletion error:', s3Error)
@@ -49,7 +56,7 @@ export async function DELETE(
 
     // Soft delete from database (mark as deleted)
     await query(
-      `UPDATE "FileUpload" SET "deletedAt" = CURRENT_TIMESTAMP WHERE id = $1`,
+      `UPDATE "FileUpload" SET deletedat = CURRENT_TIMESTAMP WHERE id = $1`,
       [fileId]
     )
 

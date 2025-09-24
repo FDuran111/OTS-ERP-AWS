@@ -60,7 +60,7 @@ export default function PhotoUploader({ jobId, onUploadComplete, existingFiles =
       const file = acceptedFiles[i]
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('category', 'photos')
+      formData.append('category', 'photo')
 
       try {
         const response = await fetch(`/api/jobs/${jobId}/upload`, {

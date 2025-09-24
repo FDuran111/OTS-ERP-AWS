@@ -15,17 +15,24 @@ export const maxDuration = 30 // 30 seconds for upload
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
-    const authResult = await verifyToken(request)
-    if (!authResult.authenticated || !authResult.user) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const jobId = params.id
-    const userId = authResult.user.id
+    let authUser
+    try {
+      authUser = verifyToken(token)
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const { id: jobId } = await params
+    const userId = authUser.id
 
     // Check if job exists and user has access
     const jobResult = await query(
@@ -33,14 +40,14 @@ export async function POST(
       [jobId]
     )
 
-    if (jobResult.length === 0) {
+    if (jobResult.rows.length === 0) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 })
     }
 
     // Parse form data
     const formData = await request.formData()
     const file = formData.get('file') as File | null
-    const category = formData.get('category') as string || 'photos'
+    const category = formData.get('category') as string || 'photo'
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
@@ -113,10 +120,10 @@ export async function POST(
       },
     })
 
-    // Save file record to database
+    // Save file record to database (note: all column names are lowercase in the database)
     const insertResult = await query(
       `INSERT INTO "FileUpload"
-       (id, "jobId", "userId", "fileName", "fileType", "fileSize", "s3Key", "s3Bucket", "thumbnailS3Key", category, metadata)
+       (id, jobid, userid, filename, filetype, filesize, s3key, s3bucket, thumbnails3key, category, metadata)
        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
@@ -140,7 +147,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       file: {
-        id: insertResult[0].id,
+        id: insertResult.rows[0].id,
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
@@ -148,7 +155,7 @@ export async function POST(
         thumbnailS3Key: thumbnailS3Key,
         category: category,
         url: uploadResult.url,
-        uploadedAt: insertResult[0].uploadedAt,
+        uploadedAt: insertResult.rows[0].uploadedat,
       },
     })
   } catch (error) {
@@ -163,36 +170,43 @@ export async function POST(
 // GET endpoint to list files for a job
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
-    const authResult = await verifyToken(request)
-    if (!authResult.authenticated || !authResult.user) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const jobId = params.id
+    let authUser
+    try {
+      authUser = verifyToken(token)
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
 
-    // Get all files for this job
+    const { id: jobId } = await params
+
+    // Get all files for this job (note: all column names are lowercase in the database)
     const files = await query(
       `SELECT
         f.*,
         u.name as uploadedByName
        FROM "FileUpload" f
-       LEFT JOIN "User" u ON f."userId" = u.id
-       WHERE f."jobId" = $1 AND f."deletedAt" IS NULL
-       ORDER BY f."uploadedAt" DESC`,
+       LEFT JOIN "User" u ON f.userid = u.id
+       WHERE f.jobid = $1 AND f.deletedat IS NULL
+       ORDER BY f.uploadedat DESC`,
       [jobId]
     )
 
     // Generate URLs for each file
     const filesWithUrls = await Promise.all(
-      files.map(async (file) => ({
+      files.rows.map(async (file: any) => ({
         ...file,
-        url: await storage.getUrl(file.s3Key),
-        thumbnailUrl: file.thumbnailS3Key
-          ? await storage.getUrl(file.thumbnailS3Key)
+        url: await storage.getUrl(file.s3key),
+        thumbnailUrl: file.thumbnails3key
+          ? await storage.getUrl(file.thumbnails3key)
           : null,
       }))
     )
