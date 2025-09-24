@@ -120,44 +120,45 @@ export default function LeadsPage() {
   }, [router])
 
   useEffect(() => {
+    const controller = new AbortController()
+
     if (user) {
-      fetchLeads()
+      fetchLeads(controller.signal)
+    }
+
+    // Cleanup function to abort fetch on unmount
+    return () => {
+      controller.abort()
     }
   }, [user])
 
-  const fetchLeads = async () => {
+  const fetchLeads = async (signal?: AbortSignal) => {
     try {
       setLoading(true)
       setError(null)
-      
-      // Create AbortController for timeout
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 2000) // 2s timeout
-      
+
       const response = await fetch('/api/leads', {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
         },
-        signal: controller.signal
+        signal: signal
       })
-      
-      clearTimeout(timeoutId)
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch leads: ${response.status}`)
       }
-      
+
       const data = await response.json()
       setLeads(data.leads || [])
     } catch (error) {
-      console.error('Error fetching leads:', error)
-      
+      // Don't show error if the request was intentionally aborted (component unmount)
       if (error instanceof Error && error.name === 'AbortError') {
-        setError('Request timed out after 2 seconds - click Retry')
-      } else {
-        setError('Failed to load leads')
+        return // Silently ignore abort errors
       }
+
+      console.error('Error fetching leads:', error)
+      setError('Failed to load leads')
       
       // No auto-retry - user can click Retry or Refresh manually
     } finally {
