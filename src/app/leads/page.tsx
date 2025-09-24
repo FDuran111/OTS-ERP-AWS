@@ -109,6 +109,11 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [viewMode, setViewMode] = useState<'table' | 'pipeline'>('pipeline')
   const [searchTerm, setSearchTerm] = useState('')
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'website' | 'manual'>('all')
+  const [pipelineStages, setPipelineStages] = useState<any[]>([])
+  const [leadsByStage, setLeadsByStage] = useState<Record<string, any[]>>({})
+  const [websiteLeadsCount, setWebsiteLeadsCount] = useState(0)
+  const [manualLeadsCount, setManualLeadsCount] = useState(0)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -130,14 +135,20 @@ export default function LeadsPage() {
     return () => {
       controller.abort()
     }
-  }, [user])
+  }, [user, sourceFilter])
 
   const fetchLeads = async (signal?: AbortSignal) => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/leads', {
+      // Build URL with filters
+      const params = new URLSearchParams()
+      if (sourceFilter !== 'all') {
+        params.append('source', sourceFilter)
+      }
+
+      const response = await fetch(`/api/leads?${params.toString()}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
@@ -151,6 +162,10 @@ export default function LeadsPage() {
 
       const data = await response.json()
       setLeads(data.leads || [])
+      setPipelineStages(data.pipelineStages || leadStages)
+      setLeadsByStage(data.leadsByStage || {})
+      setWebsiteLeadsCount(data.websiteLeadsCount || 0)
+      setManualLeadsCount(data.manualLeadsCount || 0)
     } catch (error) {
       // Don't show error if the request was intentionally aborted (component unmount)
       if (error instanceof Error && error.name === 'AbortError') {
@@ -308,6 +323,26 @@ export default function LeadsPage() {
               {error}
             </Alert>
           )}
+
+          {/* Source Filter */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <ToggleButtonGroup
+              value={sourceFilter}
+              exclusive
+              onChange={(_, value) => value && setSourceFilter(value)}
+              size="small"
+            >
+              <ToggleButton value="all">
+                All Leads ({leads.length})
+              </ToggleButton>
+              <ToggleButton value="website">
+                🌐 Website ({websiteLeadsCount})
+              </ToggleButton>
+              <ToggleButton value="manual">
+                📝 Manual ({manualLeadsCount})
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
             <Autocomplete

@@ -27,6 +27,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const assignedTo = searchParams.get('assignedTo')
+    const source = searchParams.get('source') // Filter by source (website, manual, etc.)
+    const urgency = searchParams.get('urgency') // Filter by urgency
 
     // Build WHERE conditions
     const conditions = []
@@ -43,35 +45,86 @@ export async function GET(request: NextRequest) {
       params.push(assignedTo)
     }
 
+    if (source) {
+      if (source === 'website') {
+        conditions.push(`source LIKE 'Website Form%'`)
+      } else if (source === 'manual') {
+        conditions.push(`(source IS NULL OR source NOT LIKE 'Website Form%')`)
+      }
+    }
+
+    if (urgency) {
+      conditions.push(`priority = $${paramIndex++}`)
+      params.push(urgency)
+    }
+
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-    // Simple SQL query to get leads
+    // Get leads with pipeline stage information
     const result = await query(
-      `SELECT * FROM "Lead" ${whereClause} ORDER BY "updatedAt" DESC`,
+      `SELECT
+        l.*,
+        ps.name as "stageName",
+        ps.color as "stageColor",
+        ps.position as "stagePosition"
+      FROM "Lead" l
+      LEFT JOIN "LeadPipelineStage" ps ON l."pipelineStageId" = ps.id
+      ${whereClause}
+      ORDER BY l."updatedAt" DESC`,
       params
     )
 
     const leads = result.rows
 
-    // Group leads by status for pipeline view
+    // Get all pipeline stages
+    const stagesResult = await query(
+      `SELECT * FROM "LeadPipelineStage"
+       WHERE "isActive" = true
+       ORDER BY position ASC`
+    )
+    const pipelineStages = stagesResult.rows
+
+    // Group leads by pipeline stage
+    const leadsByStage = pipelineStages.reduce((acc, stage) => {
+      acc[stage.id] = leads.filter(lead => lead.pipelineStageId === stage.id).map(lead => ({
+        ...lead,
+        daysSinceLastContact: lead.lastContactDate
+          ? Math.floor((new Date().getTime() - new Date(lead.lastContactDate).getTime()) / (1000 * 60 * 60 * 24))
+          : null,
+        overdue: lead.nextFollowUpDate && new Date(lead.nextFollowUpDate) < new Date(),
+        isWebsiteLead: lead.source && lead.source.startsWith('Website Form')
+      }))
+      return acc
+    }, {} as Record<string, any[]>)
+
+    // Group by old status for backward compatibility
     const leadsByStatus = leads.reduce((acc, lead) => {
       if (!acc[lead.status]) {
         acc[lead.status] = []
       }
       acc[lead.status].push({
         ...lead,
-        daysSinceLastContact: lead.lastContactDate 
+        daysSinceLastContact: lead.lastContactDate
           ? Math.floor((new Date().getTime() - new Date(lead.lastContactDate).getTime()) / (1000 * 60 * 60 * 24))
           : null,
-        overdue: lead.nextFollowUpDate && new Date(lead.nextFollowUpDate) < new Date()
+        overdue: lead.nextFollowUpDate && new Date(lead.nextFollowUpDate) < new Date(),
+        isWebsiteLead: lead.source && lead.source.startsWith('Website Form')
       })
       return acc
     }, {} as Record<string, any[]>)
 
+    // Calculate stats
+    const websiteLeadsCount = leads.filter(l => l.source && l.source.startsWith('Website Form')).length
+    const manualLeadsCount = leads.length - websiteLeadsCount
+
     return NextResponse.json({
       leads,
       leadsByStatus,
+      leadsByStage,
+      pipelineStages,
       totalLeads: leads.length,
+      websiteLeadsCount,
+      manualLeadsCount,
       statusCounts: Object.keys(leadsByStatus).reduce((acc, status) => {
         acc[status] = leadsByStatus[status].length
         return acc

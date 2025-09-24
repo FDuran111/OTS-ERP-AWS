@@ -378,6 +378,14 @@ function DraggableLeadCard({
               sx={{ fontSize: '0.7rem', height: 20 }}
             />
           )}
+          {lead.source && lead.source.startsWith('Website Form') && (
+            <Chip
+              label="🌐 Website"
+              size="small"
+              color="info"
+              sx={{ fontSize: '0.7rem', height: 20 }}
+            />
+          )}
           {lead.source && (
             <Chip
               label={lead.source}
