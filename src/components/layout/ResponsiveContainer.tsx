@@ -158,7 +158,7 @@ export default function ResponsiveContainer({
               {title && (
                 typeof title === 'string' ? (
                   <Typography
-                    variant={isMobile ? "h4" : "h3"}
+                    variant={isMobile ? "h6" : "h5"}
                     component="h1"
                     className="
                       font-bold text-gray-900 dark:text-gray-100

@@ -128,7 +128,8 @@ const navigationItems: NavItem[] = [
     children: [
       { title: 'Overview', icon: <ReportsIcon />, path: '/reports', roles: ['OWNER_ADMIN', 'FOREMAN'] },
       { title: 'Revenue', icon: <ReportsIcon />, path: '/reports/revenue', roles: ['OWNER_ADMIN'] },
-      { title: 'Cost Analysis', icon: <ReportsIcon />, path: '/cost-management', roles: ['OWNER_ADMIN'] }
+      { title: 'Cost Analysis', icon: <ReportsIcon />, path: '/cost-management', roles: ['OWNER_ADMIN'] },
+      { title: 'Website Analytics', icon: <ReportsIcon />, path: '/analytics', roles: ['OWNER_ADMIN', 'FOREMAN'] }
     ]
   },
   {

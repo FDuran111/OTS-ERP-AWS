@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { verifyAuth } from '@/lib/auth'
+import { verifyToken } from '@/lib/auth'
 import { z } from 'zod'
 
 const updateStageSchema = z.object({
@@ -22,10 +22,11 @@ interface Props {
 // GET single pipeline stage
 export async function GET(request: NextRequest, { params }: Props) {
   try {
-    const user = await verifyAuth(request)
-    if (!user) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const user = verifyToken(token)
 
     const { id } = await params
 
@@ -60,8 +61,12 @@ export async function GET(request: NextRequest, { params }: Props) {
 // PATCH update pipeline stage
 export async function PATCH(request: NextRequest, { params }: Props) {
   try {
-    const user = await verifyAuth(request)
-    if (!user || !['OWNER_ADMIN', 'FOREMAN'].includes(user.role)) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const user = verifyToken(token)
+    if (!['OWNER_ADMIN', 'FOREMAN'].includes(user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -134,8 +139,12 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 // DELETE pipeline stage
 export async function DELETE(request: NextRequest, { params }: Props) {
   try {
-    const user = await verifyAuth(request)
-    if (!user || user.role !== 'OWNER_ADMIN') {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const user = verifyToken(token)
+    if (user.role !== 'OWNER_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -154,18 +163,8 @@ export async function DELETE(request: NextRequest, { params }: Props) {
       )
     }
 
-    // Check if it's a default stage
-    const stageResult = await query(
-      `SELECT "isDefault" FROM "LeadPipelineStage" WHERE id = $1`,
-      [id]
-    )
-
-    if (stageResult.rows[0]?.isDefault) {
-      return NextResponse.json(
-        { error: 'Cannot delete default pipeline stage' },
-        { status: 400 }
-      )
-    }
+    // No longer restrict deletion of default stages
+    // Users should be able to customize their pipeline completely
 
     // Soft delete (mark as inactive)
     const result = await query(

@@ -47,10 +47,12 @@ import {
   ViewList as ViewListIcon,
   ViewColumn as ViewColumnIcon,
   MoreVert as MoreVertIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material'
 import AddLeadDialog from '@/components/leads/AddLeadDialog'
 import EditLeadDialog from '@/components/leads/EditLeadDialog'
 import LeadsPipelineView from '@/components/leads/LeadsPipelineView'
+import PipelineEditor from '@/components/leads/PipelineEditor'
 
 interface User {
   id: string
@@ -114,6 +116,7 @@ export default function LeadsPage() {
   const [leadsByStage, setLeadsByStage] = useState<Record<string, any[]>>({})
   const [websiteLeadsCount, setWebsiteLeadsCount] = useState(0)
   const [manualLeadsCount, setManualLeadsCount] = useState(0)
+  const [pipelineEditorOpen, setPipelineEditorOpen] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -239,12 +242,12 @@ export default function LeadsPage() {
     }
   }
 
-  const handleUpdateLeadStatus = async (leadId: string, newStatus: string) => {
+  const handleUpdateLeadStatus = async (leadId: string, newStageId: string) => {
     try {
       const response = await fetch(`/api/leads/${leadId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ pipelineStageId: newStageId }),
       })
       if (response.ok) {
         fetchLeads()
@@ -303,7 +306,6 @@ export default function LeadsPage() {
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
-        title="Lead Management"
         actions={actionButtons}
       >
           {error && (
@@ -428,6 +430,16 @@ export default function LeadsPage() {
                   <ViewListIcon />
                 </ToggleButton>
               </ToggleButtonGroup>
+              {viewMode === 'pipeline' && user?.role !== 'EMPLOYEE' && (
+                <Button
+                  variant="outlined"
+                  startIcon={<SettingsIcon />}
+                  onClick={() => setPipelineEditorOpen(true)}
+                  size="small"
+                >
+                  Edit Pipeline
+                </Button>
+              )}
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -442,14 +454,6 @@ export default function LeadsPage() {
               >
                 New Lead
               </Button>
-              <Button
-                variant="outlined"
-                onClick={() => fetchLeads()}
-                disabled={loading}
-                size="small"
-              >
-                {loading ? 'Loading...' : 'Refresh'}
-              </Button>
             </Box>
           </Box>
 
@@ -463,6 +467,7 @@ export default function LeadsPage() {
             ) : (
               <LeadsPipelineView
                 leads={filteredLeads}
+                stages={pipelineStages}
                 onEditLead={handlePipelineEditLead}
                 onDeleteLead={handlePipelineDeleteLead}
                 onUpdateLeadStatus={handleUpdateLeadStatus}
@@ -618,6 +623,12 @@ export default function LeadsPage() {
         onClose={() => setEditLeadDialogOpen(false)}
         onLeadUpdated={handleLeadUpdated}
         lead={selectedLead}
+      />
+
+      <PipelineEditor
+        open={pipelineEditorOpen}
+        onClose={() => setPipelineEditorOpen(false)}
+        onSave={fetchLeads}
       />
     </ResponsiveLayout>
   )

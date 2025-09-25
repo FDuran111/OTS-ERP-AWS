@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { verifyAuth } from '@/lib/auth'
+import { verifyToken } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await verifyAuth(request)
-    if (!user) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const user = verifyToken(token)
 
     const { searchParams } = new URL(request.url)
     const days = parseInt(searchParams.get('days') || '7')

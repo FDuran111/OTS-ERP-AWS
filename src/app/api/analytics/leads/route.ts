@@ -1,31 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { verifyAuth } from '@/lib/auth'
+import { verifyToken } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await verifyAuth(request)
-    if (!user) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const user = verifyToken(token)
 
-    // Get total leads
+    const { searchParams } = new URL(request.url)
+    const days = parseInt(searchParams.get('days') || '7')
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - days)
+
+    // Get total leads in time period
     const totalLeadsResult = await query(
-      `SELECT COUNT(*) as total FROM "Lead"`
+      `SELECT COUNT(*) as total FROM "Lead"
+       WHERE "createdAt" >= $1`,
+      [startDate]
     )
     const totalLeads = parseInt(totalLeadsResult.rows[0].total)
 
-    // Get website leads (from Website Form source)
+    // Get website leads (from Website Form source or notes containing Website Form)
     const websiteLeadsResult = await query(
       `SELECT COUNT(*) as total FROM "Lead"
-       WHERE source LIKE 'Website Form%'`
+       WHERE (source = 'WEBSITE'
+          OR notes LIKE '%Website Form%'
+          OR notes LIKE '%Service Type:%')
+         AND "createdAt" >= $1`,
+      [startDate]
     )
     const websiteLeads = parseInt(websiteLeadsResult.rows[0].total)
 
-    // Calculate conversion rate (leads that became customers)
+    // Calculate conversion rate (leads that became customers - PAID or JOB_COMPLETED)
     const convertedLeadsResult = await query(
       `SELECT COUNT(*) as total FROM "Lead"
-       WHERE source LIKE 'Website Form%' AND status = 'CONVERTED'`
+       WHERE (source = 'WEBSITE' OR notes LIKE '%Website Form%' OR notes LIKE '%Service Type:%')
+         AND status IN ('PAID', 'JOB_COMPLETED', 'INVOICED')
+         AND "createdAt" >= $1`,
+      [startDate]
     )
     const convertedLeads = parseInt(convertedLeadsResult.rows[0].total)
     const conversionRate = websiteLeads > 0 ? ((convertedLeads / websiteLeads) * 100).toFixed(1) : 0
@@ -35,8 +50,10 @@ export async function GET(request: NextRequest) {
       `SELECT
         AVG(EXTRACT(EPOCH FROM ("lastContactDate" - "createdAt"))/3600) as avg_hours
        FROM "Lead"
-       WHERE source LIKE 'Website Form%'
-         AND "lastContactDate" IS NOT NULL`
+       WHERE (source = 'WEBSITE' OR notes LIKE '%Website Form%' OR notes LIKE '%Service Type:%')
+         AND "lastContactDate" IS NOT NULL
+         AND "createdAt" >= $1`,
+      [startDate]
     )
     const avgHours = parseFloat(responseTimeResult.rows[0].avg_hours || 0)
     const averageResponseTime = avgHours > 24
@@ -47,16 +64,18 @@ export async function GET(request: NextRequest) {
     const leadsBySourceResult = await query(
       `SELECT
         CASE
-          WHEN source LIKE 'Website Form%' THEN 'Website Forms'
-          WHEN source LIKE '%google%' THEN 'Google Ads'
-          WHEN source LIKE '%facebook%' THEN 'Facebook'
+          WHEN source = 'WEBSITE' OR notes LIKE '%Website Form%' OR notes LIKE '%Service Type:%' THEN 'Website Forms'
+          WHEN source::text ILIKE '%google%' THEN 'Google Ads'
+          WHEN source::text ILIKE '%facebook%' THEN 'Facebook'
           WHEN source IS NULL THEN 'Direct/Manual'
-          ELSE COALESCE(source, 'Other')
+          ELSE COALESCE(source::text, 'Other')
         END as source_category,
         COUNT(*) as count
        FROM "Lead"
+       WHERE "createdAt" >= $1
        GROUP BY source_category
-       ORDER BY count DESC`
+       ORDER BY count DESC`,
+      [startDate]
     )
 
     // Get recent website leads with urgency
@@ -78,9 +97,11 @@ export async function GET(request: NextRequest) {
           ELSE 'general-inquiry'
         END as serviceType
        FROM "Lead" l
-       WHERE l.source LIKE 'Website Form%'
+       WHERE (l.source = 'WEBSITE' OR l.notes LIKE '%Website Form%' OR l.notes LIKE '%Service Type:%')
+         AND l."createdAt" >= $1
        ORDER BY l."createdAt" DESC
-       LIMIT 20`
+       LIMIT 20`,
+      [startDate]
     )
 
     return NextResponse.json({

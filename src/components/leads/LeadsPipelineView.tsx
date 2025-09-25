@@ -54,6 +54,7 @@ interface Lead {
   email?: string
   phone?: string
   status: string
+  pipelineStageId?: string
   source?: string
   estimatedValue?: number
   priority?: string
@@ -72,14 +73,26 @@ interface Lead {
   estimates?: any[]
 }
 
+interface PipelineStage {
+  id: string
+  name: string
+  systemName: string
+  position: number
+  color: string
+  isDefault?: boolean
+  leadCount?: number
+}
+
 interface LeadsPipelineViewProps {
   leads: Lead[]
+  stages?: PipelineStage[]
   onEditLead: (lead: Lead) => void
   onDeleteLead: (lead: Lead) => void
   onUpdateLeadStatus: (leadId: string, newStatus: string) => void
 }
 
-const leadStages = [
+// Default stages if none provided
+const defaultLeadStages = [
   { key: 'COLD_LEAD', label: 'Cold Leads', color: '#90CAF9' },
   { key: 'WARM_LEAD', label: 'Warm Leads', color: '#FFCC02' },
   { key: 'ESTIMATE_REQUESTED', label: 'Estimate Requested', color: '#FF9800' },
@@ -459,11 +472,12 @@ function DraggableLeadCard({
 }
 
 
-export default function LeadsPipelineView({ 
-  leads, 
-  onEditLead, 
-  onDeleteLead, 
-  onUpdateLeadStatus 
+export default function LeadsPipelineView({
+  leads,
+  stages,
+  onEditLead,
+  onDeleteLead,
+  onUpdateLeadStatus
 }: LeadsPipelineViewProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -472,6 +486,13 @@ export default function LeadsPipelineView({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
+
+  // Use provided stages or fall back to default
+  const leadStages = stages ? stages.map(stage => ({
+    key: stage.systemName || stage.id,
+    label: stage.name,
+    color: stage.color || '#6B7280'
+  })) : defaultLeadStages
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -506,6 +527,14 @@ export default function LeadsPipelineView({
   }
 
   const getLeadsForStage = (stageKey: string) => {
+    // If using pipeline stages, match by stage ID
+    if (stages && stages.length > 0) {
+      const stage = stages.find(s => s.systemName === stageKey || s.id === stageKey)
+      if (stage) {
+        return leads.filter(lead => lead.pipelineStageId === stage.id)
+      }
+    }
+    // Fall back to status field for backward compatibility
     return leads.filter(lead => lead.status === stageKey)
   }
 
@@ -525,40 +554,44 @@ export default function LeadsPipelineView({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-    
+
     setActiveId(null)
     setDraggedLead(null)
     setOverId(null)
-    
+
     if (!over) return
-    
+
     // Check if we're dropping on a stage
-    const targetStageId = over.id as string
-    const targetStage = leadStages.find(stage => stage.key === targetStageId)
-    
+    const targetStageKey = over.id as string
+    const targetStage = leadStages.find(stage => stage.key === targetStageKey)
+
     if (!targetStage) {
       // If not dropping on a stage directly, check if the over element has stage data
       const overData = over.data?.current
       if (overData?.type === 'stage') {
         const stageKey = overData.stage
         const stage = leadStages.find(s => s.key === stageKey)
-        if (stage) {
+        if (stage && stages) {
           const leadId = active.id as string
           const lead = leads.find(l => l.id === leadId)
-          
-          if (lead && lead.status !== stage.key) {
-            onUpdateLeadStatus(leadId, stage.key)
+          const pipelineStage = stages.find(s => s.systemName === stage.key || s.id === stage.key)
+
+          if (lead && pipelineStage && lead.pipelineStageId !== pipelineStage.id) {
+            onUpdateLeadStatus(leadId, pipelineStage.id)
           }
         }
       }
       return
     }
-    
+
     const leadId = active.id as string
     const lead = leads.find(l => l.id === leadId)
-    
-    if (lead && lead.status !== targetStage.key) {
-      onUpdateLeadStatus(leadId, targetStage.key)
+
+    if (lead && stages) {
+      const pipelineStage = stages.find(s => s.systemName === targetStage.key || s.id === targetStage.key)
+      if (pipelineStage && lead.pipelineStageId !== pipelineStage.id) {
+        onUpdateLeadStatus(leadId, pipelineStage.id)
+      }
     }
   }
 

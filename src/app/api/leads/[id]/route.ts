@@ -13,6 +13,7 @@ const updateLeadSchema = z.object({
   priority: z.string().optional(),
   description: z.string().optional(),
   status: z.string().optional(),
+  pipelineStageId: z.string().optional(),
 })
 
 // GET single lead
@@ -99,6 +100,10 @@ export async function PATCH(
     if (data.status !== undefined) {
       updateFields.push(`status = $${paramIndex++}`)
       updateValues.push(data.status)
+    }
+    if (data.pipelineStageId !== undefined) {
+      updateFields.push(`"pipelineStageId" = $${paramIndex++}`)
+      updateValues.push(data.pipelineStageId)
     }
 
     if (updateFields.length === 0) {

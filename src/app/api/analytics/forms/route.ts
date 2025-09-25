@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { verifyAuth } from '@/lib/auth'
+import { verifyToken } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await verifyAuth(request)
-    if (!user) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const user = verifyToken(token)
 
     const { searchParams } = new URL(request.url)
     const days = parseInt(searchParams.get('days') || '7')
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     const formsCompletedResult = await query(
       `SELECT COUNT(*) as total
        FROM "Lead"
-       WHERE source LIKE 'Website Form%'
+       WHERE (source = 'WEBSITE' OR notes LIKE '%Website Form%' OR notes LIKE '%Service Type:%')
          AND "createdAt" >= $1`,
       [startDate]
     )

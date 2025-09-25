@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { verifyAuth } from '@/lib/auth'
+import { verifyToken } from '@/lib/auth'
 import { z } from 'zod'
 
 const createStageSchema = z.object({
@@ -19,10 +19,11 @@ const createStageSchema = z.object({
 // GET all pipeline stages
 export async function GET(request: NextRequest) {
   try {
-    const user = await verifyAuth(request)
-    if (!user) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const user = verifyToken(token)
 
     const result = await query(
       `SELECT * FROM "LeadPipelineStage"
@@ -64,8 +65,12 @@ export async function GET(request: NextRequest) {
 // POST create new pipeline stage
 export async function POST(request: NextRequest) {
   try {
-    const user = await verifyAuth(request)
-    if (!user || !['OWNER_ADMIN', 'FOREMAN'].includes(user.role)) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const user = verifyToken(token)
+    if (!['OWNER_ADMIN', 'FOREMAN'].includes(user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -116,8 +121,12 @@ export async function POST(request: NextRequest) {
 // PUT update pipeline stages (bulk update for reordering)
 export async function PUT(request: NextRequest) {
   try {
-    const user = await verifyAuth(request)
-    if (!user || !['OWNER_ADMIN', 'FOREMAN'].includes(user.role)) {
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const user = verifyToken(token)
+    if (!['OWNER_ADMIN', 'FOREMAN'].includes(user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

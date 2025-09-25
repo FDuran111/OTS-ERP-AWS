@@ -1,12 +1,46 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { TrendingUp, Users, FileText, Clock, AlertTriangle, CheckCircle, BarChart3, Eye } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
+import {
+  Box,
+  Paper,
+  Typography,
+  CircularProgress,
+  Alert,
+  Card,
+  CardContent,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Chip,
+  LinearProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from '@mui/material'
+import {
+  TrendingUp,
+  Language as WebIcon,
+  Assignment as FormIcon,
+  People as LeadsIcon,
+  LocationOn as LocationIcon,
+  Timeline as TimelineIcon,
+  Assessment as AssessmentIcon,
+  Visibility as EyeIcon,
+  CheckCircle as CheckIcon,
+  Warning as WarningIcon,
+  AccessTime as ClockIcon,
+} from '@mui/icons-material'
 
 interface AnalyticsData {
-  leadMetrics: {
+  leadMetrics?: {
     totalLeads: number
     websiteLeads: number
     conversionRate: number
@@ -14,13 +48,13 @@ interface AnalyticsData {
     leadsBySource: { source: string; count: number }[]
     recentLeads: any[]
   }
-  pageMetrics: {
+  pageMetrics?: {
     totalPageViews: number
     uniqueVisitors: number
     topPages: { page: string; views: number }[]
     pageViewsTrend: { date: string; views: number }[]
   }
-  formMetrics: {
+  formMetrics?: {
     formsStarted: number
     formsCompleted: number
     formsAbandoned: number
@@ -30,29 +64,55 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState('7days')
 
   useEffect(() => {
-    fetchAnalytics()
-    // Refresh every 30 seconds for real-time updates
-    const interval = setInterval(fetchAnalytics, 30000)
-    return () => clearInterval(interval)
-  }, [timeRange])
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) {
+      router.push('/login')
+      return
+    }
+    const userData = JSON.parse(storedUser)
+    setUser(userData)
+
+    // Only allow admin/owner to view analytics
+    if (userData.role !== 'OWNER_ADMIN' && userData.role !== 'FOREMAN') {
+      router.push('/dashboard')
+    }
+  }, [router])
+
+  useEffect(() => {
+    if (user) {
+      fetchAnalytics()
+      // Refresh every 30 seconds for real-time updates
+      const interval = setInterval(fetchAnalytics, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [user, timeRange])
 
   const fetchAnalytics = async () => {
     try {
-      // Fetch lead metrics
-      const leadsRes = await fetch('/api/analytics/leads')
+      setError(null)
+
+      // Calculate days based on time range
+      const days = timeRange === 'today' ? 1 :
+                  timeRange === '7days' ? 7 :
+                  timeRange === '30days' ? 30 : 90
+
+      // Fetch all metrics in parallel
+      const [leadsRes, pagesRes, formsRes] = await Promise.all([
+        fetch(`/api/analytics/leads?days=${days}`),
+        fetch(`/api/analytics/pages?days=${days}`),
+        fetch(`/api/analytics/forms?days=${days}`)
+      ])
+
       const leadData = await leadsRes.json()
-
-      // Fetch page metrics
-      const pagesRes = await fetch('/api/analytics/pages')
       const pageData = await pagesRes.json()
-
-      // Fetch form metrics
-      const formsRes = await fetch('/api/analytics/forms')
       const formData = await formsRes.json()
 
       setData({
@@ -62,265 +122,333 @@ export default function AnalyticsPage() {
       })
     } catch (error) {
       console.error('Failed to fetch analytics:', error)
+      setError('Failed to load analytics data')
     } finally {
       setLoading(false)
     }
   }
 
+  const StatCard = ({ title, value, subtitle, icon, color = 'primary.main' }: any) => (
+    <Card sx={{ height: '100%' }}>
+      <CardContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Box>
+            <Typography color="text.secondary" gutterBottom variant="overline">
+              {title}
+            </Typography>
+            <Typography variant="h4" component="div" sx={{ color }}>
+              {value}
+            </Typography>
+            {subtitle && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                {subtitle}
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ color, opacity: 0.3 }}>
+            {icon}
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  )
+
+  if (!user) return null
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading analytics...</p>
-        </div>
-      </div>
+      <ResponsiveLayout>
+        <ResponsiveContainer>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+            <CircularProgress />
+          </Box>
+        </ResponsiveContainer>
+      </ResponsiveLayout>
     )
   }
 
+  const emergencyLeads = data?.leadMetrics?.recentLeads?.filter(l => l.urgency === 'EMERGENCY') || []
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Website Analytics & Lead Tracking</h1>
-        <select
-          value={timeRange}
-          onChange={(e) => setTimeRange(e.target.value)}
-          className="px-4 py-2 border rounded-lg"
-        >
-          <option value="today">Today</option>
-          <option value="7days">Last 7 Days</option>
-          <option value="30days">Last 30 Days</option>
-          <option value="90days">Last 90 Days</option>
-        </select>
-      </div>
+    <ResponsiveLayout>
+      <ResponsiveContainer>
+        {/* Header */}
+        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h5" gutterBottom>
+              Website Analytics & Lead Tracking
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Monitor your website performance and lead generation
+            </Typography>
+          </Box>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Time Range</InputLabel>
+            <Select
+              value={timeRange}
+              label="Time Range"
+              onChange={(e) => setTimeRange(e.target.value)}
+            >
+              <MenuItem value="today">Today</MenuItem>
+              <MenuItem value="7days">Last 7 Days</MenuItem>
+              <MenuItem value="30days">Last 30 Days</MenuItem>
+              <MenuItem value="90days">Last 90 Days</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
 
-      {/* Real-time Alerts */}
-      {data?.leadMetrics.recentLeads.filter(l => l.urgency === 'EMERGENCY').length > 0 && (
-        <Alert className="border-red-500 bg-red-50">
-          <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
-            <strong>Emergency Service Requests:</strong> You have {data.leadMetrics.recentLeads.filter(l => l.urgency === 'EMERGENCY').length} emergency requests waiting for response!
-          </AlertDescription>
-        </Alert>
-      )}
+        {/* Emergency Alert */}
+        {emergencyLeads.length > 0 && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            <strong>Emergency Service Requests:</strong> You have {emergencyLeads.length} emergency requests waiting for response!
+          </Alert>
+        )}
 
-      {/* Key Metrics Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Website Leads</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data?.leadMetrics.websiteLeads || 0}</div>
-            <p className="text-xs text-gray-600 mt-1">
-              {data?.leadMetrics.conversionRate || 0}% conversion rate
-            </p>
-          </CardContent>
-        </Card>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Page Views</CardTitle>
-            <Eye className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data?.pageMetrics.totalPageViews || 0}</div>
-            <p className="text-xs text-gray-600 mt-1">
-              {data?.pageMetrics.uniqueVisitors || 0} unique visitors
-            </p>
-          </CardContent>
-        </Card>
+        {/* Key Metrics */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 45%', md: '1 1 22%' } }}>
+            <StatCard
+              title="Website Leads"
+              value={data?.leadMetrics?.websiteLeads?.toLocaleString() || '0'}
+              subtitle={`${data?.leadMetrics?.conversionRate || 0}% conversion rate`}
+              icon={<LeadsIcon sx={{ fontSize: 40 }} />}
+              color="primary.main"
+            />
+          </Box>
+          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 45%', md: '1 1 22%' } }}>
+            <StatCard
+              title="Page Views"
+              value={data?.pageMetrics?.totalPageViews?.toLocaleString() || '0'}
+              subtitle={`${data?.pageMetrics?.uniqueVisitors || 0} unique visitors`}
+              icon={<EyeIcon sx={{ fontSize: 40 }} />}
+              color="success.main"
+            />
+          </Box>
+          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 45%', md: '1 1 22%' } }}>
+            <StatCard
+              title="Form Completion"
+              value={`${data?.formMetrics?.completionRate || 0}%`}
+              subtitle={`${data?.formMetrics?.formsCompleted || 0} completed`}
+              icon={<CheckIcon sx={{ fontSize: 40 }} />}
+              color="success.main"
+            />
+          </Box>
+          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 45%', md: '1 1 22%' } }}>
+            <StatCard
+              title="Avg Response Time"
+              value={data?.leadMetrics?.averageResponseTime || 'N/A'}
+              subtitle="to first contact"
+              icon={<ClockIcon sx={{ fontSize: 40 }} />}
+              color="warning.main"
+            />
+          </Box>
+        </Box>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Form Completion</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data?.formMetrics.completionRate || 0}%</div>
-            <p className="text-xs text-gray-600 mt-1">
-              {data?.formMetrics.formsCompleted || 0} completed
-            </p>
-          </CardContent>
-        </Card>
+        {/* Form Funnel Analysis */}
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Form Conversion Funnel
+          </Typography>
+          <Box sx={{ mt: 3 }}>
+            {/* Forms Viewed */}
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2">Forms Viewed</Typography>
+                <Typography variant="body2" color="text.secondary">100%</Typography>
+              </Box>
+              <LinearProgress variant="determinate" value={100} sx={{ height: 10, borderRadius: 5 }} />
+            </Box>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
-            <Clock className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data?.leadMetrics.averageResponseTime || 'N/A'}</div>
-            <p className="text-xs text-gray-600 mt-1">to first contact</p>
-          </CardContent>
-        </Card>
-      </div>
+            {/* Forms Started */}
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2">Forms Started</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {((data?.formMetrics?.formsStarted || 0) / (data?.pageMetrics?.totalPageViews || 1) * 100).toFixed(1)}%
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={Math.min(((data?.formMetrics?.formsStarted || 0) / (data?.pageMetrics?.totalPageViews || 1) * 100), 100)}
+                sx={{ height: 10, borderRadius: 5 }}
+                color="warning"
+              />
+            </Box>
 
-      {/* Form Funnel Analysis */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Form Conversion Funnel</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="relative">
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium">Forms Viewed</span>
-                <span className="text-sm text-gray-600">100%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-8">
-                <div className="bg-blue-600 h-8 rounded-full flex items-center justify-center text-white text-sm" style={{width: '100%'}}>
-                  All Visitors
-                </div>
-              </div>
-            </div>
+            {/* Forms Completed */}
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2">Forms Completed</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {data?.formMetrics?.completionRate || 0}%
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={data?.formMetrics?.completionRate || 0}
+                sx={{ height: 10, borderRadius: 5 }}
+                color="success"
+              />
+            </Box>
 
-            <div className="relative">
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium">Forms Started</span>
-                <span className="text-sm text-gray-600">{((data?.formMetrics.formsStarted || 0) / (data?.pageMetrics.totalPageViews || 1) * 100).toFixed(1)}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-8">
-                <div
-                  className="bg-yellow-500 h-8 rounded-full flex items-center justify-center text-white text-sm"
-                  style={{width: `${Math.min(((data?.formMetrics.formsStarted || 0) / (data?.pageMetrics.totalPageViews || 1) * 100), 100)}%`}}
-                >
-                  {data?.formMetrics.formsStarted || 0} Started
-                </div>
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium">Forms Completed</span>
-                <span className="text-sm text-gray-600">{data?.formMetrics.completionRate || 0}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-8">
-                <div
-                  className="bg-green-600 h-8 rounded-full flex items-center justify-center text-white text-sm"
-                  style={{width: `${data?.formMetrics.completionRate || 0}%`}}
-                >
-                  {data?.formMetrics.formsCompleted || 0} Completed
-                </div>
-              </div>
-            </div>
-
-            {data?.formMetrics.abandonmentRate > 20 && (
-              <Alert className="mt-4">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  High abandonment rate ({data.formMetrics.abandonmentRate}%). Consider simplifying your form or reducing required fields.
-                </AlertDescription>
+            {/* High Abandonment Warning */}
+            {(data?.formMetrics?.abandonmentRate || 0) > 20 && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                High abandonment rate ({data?.formMetrics?.abandonmentRate}%). Consider simplifying your form or reducing required fields.
               </Alert>
             )}
-          </div>
-        </CardContent>
-      </Card>
+          </Box>
+        </Paper>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Pages */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Pages</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {data?.pageMetrics.topPages.slice(0, 5).map((page, idx) => (
-                <div key={idx} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-sm font-medium text-gray-500">{idx + 1}.</span>
-                    <span className="text-sm truncate max-w-[200px]">{page.page}</span>
-                  </div>
-                  <span className="text-sm font-semibold">{page.views} views</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Lead Sources */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Lead Sources</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {data?.leadMetrics.leadsBySource.map((source, idx) => (
-                <div key={idx} className="flex items-center justify-between">
-                  <span className="text-sm">{source.source}</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{width: `${(source.count / data.leadMetrics.totalLeads * 100)}%`}}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+          {/* Top Pages */}
+          <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 45%' } }}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom>
+                Top Pages
+              </Typography>
+              {data?.pageMetrics?.topPages && data.pageMetrics.topPages.length > 0 ? (
+                <Box sx={{ mt: 2 }}>
+                  {data.pageMetrics.topPages.slice(0, 5).map((page, index) => (
+                    <Box key={index} sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2" noWrap sx={{ maxWidth: '70%' }}>
+                          {index + 1}. {page.page}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {page.views} views
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={(page.views / (data.pageMetrics?.totalPageViews || 1)) * 100}
+                        sx={{ height: 8, borderRadius: 4 }}
                       />
-                    </div>
-                    <span className="text-sm font-semibold w-12 text-right">{source.count}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
+                  No page data available
+                </Typography>
+              )}
+            </Paper>
+          </Box>
 
-      {/* Recent Website Leads */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Website Leads</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2">Name</th>
-                  <th className="text-left py-2">Service Type</th>
-                  <th className="text-left py-2">Urgency</th>
-                  <th className="text-left py-2">Source</th>
-                  <th className="text-left py-2">Submitted</th>
-                  <th className="text-left py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data?.leadMetrics.recentLeads.slice(0, 10).map((lead) => (
-                  <tr key={lead.id} className="border-b hover:bg-gray-50">
-                    <td className="py-2">
-                      <div>
-                        <div className="font-medium">{lead.firstName} {lead.lastName}</div>
-                        <div className="text-xs text-gray-500">{lead.email}</div>
-                      </div>
-                    </td>
-                    <td className="py-2">{lead.serviceType}</td>
-                    <td className="py-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        lead.urgency === 'EMERGENCY' ? 'bg-red-100 text-red-800' :
-                        lead.urgency === 'HIGH' ? 'bg-orange-100 text-orange-800' :
-                        lead.urgency === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {lead.urgency}
-                      </span>
-                    </td>
-                    <td className="py-2 text-xs">{lead.source}</td>
-                    <td className="py-2 text-xs">{new Date(lead.createdAt).toLocaleString()}</td>
-                    <td className="py-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        lead.status === 'CONVERTED' ? 'bg-green-100 text-green-800' :
-                        lead.status === 'CONTACTED' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {lead.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          {/* Lead Sources */}
+          <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 45%' } }}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom>
+                Lead Sources
+              </Typography>
+              {data?.leadMetrics?.leadsBySource && data.leadMetrics.leadsBySource.length > 0 ? (
+                <Box sx={{ mt: 2 }}>
+                  {data.leadMetrics.leadsBySource.map((source, index) => (
+                    <Box key={index} sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2">{source.source}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {source.count} leads
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={(source.count / (data.leadMetrics?.totalLeads || 1)) * 100}
+                        sx={{ height: 8, borderRadius: 4 }}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
+                  No lead source data available
+                </Typography>
+              )}
+            </Paper>
+          </Box>
+
+          {/* Recent Website Leads */}
+          <Box sx={{ flex: '1 1 100%' }}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Recent Website Leads
+              </Typography>
+              {data?.leadMetrics?.recentLeads && data.leadMetrics.recentLeads.length > 0 ? (
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Contact</TableCell>
+                        <TableCell>Service Type</TableCell>
+                        <TableCell>Urgency</TableCell>
+                        <TableCell>Submitted</TableCell>
+                        <TableCell>Status</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {data.leadMetrics.recentLeads.slice(0, 10).map((lead) => (
+                        <TableRow key={lead.id} hover>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="medium">
+                              {lead.firstName} {lead.lastName}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption">
+                              {lead.email}<br />
+                              {lead.phone}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{lead.serviceType || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={lead.urgency || 'NORMAL'}
+                              size="small"
+                              color={
+                                lead.urgency === 'EMERGENCY' ? 'error' :
+                                lead.urgency === 'HIGH' ? 'warning' :
+                                'default'
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption">
+                              {new Date(lead.createdAt).toLocaleDateString()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={lead.status || 'NEW'}
+                              size="small"
+                              color={
+                                lead.status === 'CONVERTED' ? 'success' :
+                                lead.status === 'CONTACTED' ? 'info' :
+                                'default'
+                              }
+                              variant="outlined"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
+                  No recent leads available
+                </Typography>
+              )}
+            </Paper>
+          </Box>
+        </Box>
+      </ResponsiveContainer>
+    </ResponsiveLayout>
   )
 }
