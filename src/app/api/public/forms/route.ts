@@ -27,8 +27,8 @@ const serviceRequestSchema = z.object({
   utmCampaign: z.string().optional(),
 })
 
-function verifyApiKey(request: NextRequest): boolean {
-  const headersList = headers()
+async function verifyApiKey(request: NextRequest): Promise<boolean> {
+  const headersList = await headers()
   const apiKey = headersList.get('x-api-key') || request.headers.get('x-api-key')
 
   if (!apiKey) return false
@@ -54,7 +54,7 @@ function getPriorityFromUrgency(urgency: string): string {
 }
 
 function getSourceInfo(data: any): string {
-  let source = 'Website Form'
+  let source = 'WEBSITE'
 
   if (data.formId) {
     source += ` - ${data.formId}`
@@ -72,7 +72,7 @@ function getSourceInfo(data: any): string {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!verifyApiKey(request)) {
+    if (!(await verifyApiKey(request))) {
       return NextResponse.json(
         { error: 'Unauthorized - Invalid API key' },
         { status: 401 }
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         data.city || null,
         data.state || null,
         data.zip || null,
-        getSourceInfo(data),
+        'WEBSITE',
         null,
         getPriorityFromUrgency(data.urgency),
         data.description,
@@ -129,21 +129,8 @@ export async function POST(request: NextRequest) {
 
     const lead = leadResult.rows[0]
 
-    await query(
-      `INSERT INTO "LeadActivity" (
-        id, "leadId", type, description, "completedDate", "createdBy", "createdAt", "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        crypto.randomUUID(),
-        leadId,
-        'FORM_SUBMISSION',
-        `Service request form submitted from website.\nService Type: ${data.serviceType}\nUrgency: ${data.urgency}\nPage: ${data.pageUrl || 'Unknown'}`,
-        now,
-        'SYSTEM',
-        now,
-        now
-      ]
-    )
+    // Note: We're not creating LeadActivity because it requires a valid user ID
+    // The activity will be tracked when the lead is first viewed by a user
 
     if (data.urgency === 'EMERGENCY') {
       try {
