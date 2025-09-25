@@ -58,6 +58,7 @@ interface Lead {
   estimatedValue?: number
   priority?: string
   description?: string
+  notes?: string
   lastContactDate?: string
   nextFollowUpDate?: string
   assignedUser?: {
@@ -378,7 +379,8 @@ function DraggableLeadCard({
               sx={{ fontSize: '0.7rem', height: 20 }}
             />
           )}
-          {lead.source && lead.source.startsWith('Website Form') && (
+          {(lead.source === 'WEBSITE' ||
+            (lead.notes && (lead.notes.includes('Website Form') || lead.notes.includes('Service Type:')))) && (
             <Chip
               label="🌐 Website"
               size="small"

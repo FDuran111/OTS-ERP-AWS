@@ -47,9 +47,11 @@ export async function GET(request: NextRequest) {
 
     if (source) {
       if (source === 'website') {
-        conditions.push(`source LIKE 'Website Form%'`)
+        // Filter for website leads - check enum value or notes field
+        conditions.push(`(l.source = 'WEBSITE' OR l.notes LIKE '%Website Form%' OR l.notes LIKE '%Service Type:%')`)
       } else if (source === 'manual') {
-        conditions.push(`(source IS NULL OR source NOT LIKE 'Website Form%')`)
+        // Filter for non-website leads
+        conditions.push(`(l.source IS NULL OR l.source != 'WEBSITE') AND (l.notes IS NULL OR l.notes NOT LIKE '%Website Form%')`)
       }
     }
 
@@ -92,7 +94,8 @@ export async function GET(request: NextRequest) {
           ? Math.floor((new Date().getTime() - new Date(lead.lastContactDate).getTime()) / (1000 * 60 * 60 * 24))
           : null,
         overdue: lead.nextFollowUpDate && new Date(lead.nextFollowUpDate) < new Date(),
-        isWebsiteLead: lead.source && lead.source.startsWith('Website Form')
+        isWebsiteLead: lead.source === 'WEBSITE' ||
+          (lead.notes && (lead.notes.includes('Website Form') || lead.notes.includes('Service Type:')))
       }))
       return acc
     }, {} as Record<string, any[]>)
@@ -108,13 +111,17 @@ export async function GET(request: NextRequest) {
           ? Math.floor((new Date().getTime() - new Date(lead.lastContactDate).getTime()) / (1000 * 60 * 60 * 24))
           : null,
         overdue: lead.nextFollowUpDate && new Date(lead.nextFollowUpDate) < new Date(),
-        isWebsiteLead: lead.source && lead.source.startsWith('Website Form')
+        isWebsiteLead: lead.source === 'WEBSITE' ||
+          (lead.notes && (lead.notes.includes('Website Form') || lead.notes.includes('Service Type:')))
       })
       return acc
     }, {} as Record<string, any[]>)
 
-    // Calculate stats
-    const websiteLeadsCount = leads.filter(l => l.source && l.source.startsWith('Website Form')).length
+    // Calculate stats - check both enum value and notes field
+    const websiteLeadsCount = leads.filter(l =>
+      l.source === 'WEBSITE' ||
+      (l.notes && (l.notes.includes('Website Form') || l.notes.includes('Service Type:')))
+    ).length
     const manualLeadsCount = leads.length - websiteLeadsCount
 
     return NextResponse.json({
