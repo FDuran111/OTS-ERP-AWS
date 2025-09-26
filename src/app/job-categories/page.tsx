@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import CategoryEditor from '@/components/job-categories/CategoryEditor'
 import {
   Box,
   Card,
@@ -53,6 +54,7 @@ import {
   TrendingUp as TrendingUpIcon,
   AttachMoney as MoneyIcon,
   Assessment as StatsIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
@@ -137,7 +139,8 @@ export default function JobCategoriesPage() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
   const [subCategoryDialogOpen, setSubCategoryDialogOpen] = useState(false)
   const [tagDialogOpen, setTagDialogOpen] = useState(false)
-  
+  const [categoryEditorOpen, setCategoryEditorOpen] = useState(false)
+
   // Form states
   const [newCategory, setNewCategory] = useState({
     categoryCode: '',
@@ -469,13 +472,22 @@ export default function JobCategoriesPage() {
       <TabPanel value={tabValue} index={0}>
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Job Categories</Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setCategoryDialogOpen(true)}
-          >
-            Add Category
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<SettingsIcon />}
+              onClick={() => setCategoryEditorOpen(true)}
+            >
+              Manage Categories
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setCategoryDialogOpen(true)}
+            >
+              Add Category
+            </Button>
+          </Box>
         </Box>
 
         <Grid container spacing={3}>
@@ -854,6 +866,13 @@ export default function JobCategoriesPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Category Editor Dialog */}
+      <CategoryEditor
+        open={categoryEditorOpen}
+        onClose={() => setCategoryEditorOpen(false)}
+        onSave={fetchCategories}
+      />
       </ResponsiveContainer>
     </ResponsiveLayout>
   )

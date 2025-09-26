@@ -17,7 +17,13 @@ import {
   Autocomplete,
   Chip,
   Box,
+  Divider,
+  IconButton,
 } from '@mui/material'
+import {
+  Add as AddIcon,
+  Person as PersonIcon,
+} from '@mui/icons-material'
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -36,6 +42,14 @@ interface User {
   role: string
 }
 
+interface JobCategory {
+  id: string
+  categoryCode: string
+  categoryName: string
+  color: string
+  icon: string
+}
+
 interface CreateJobDialogProps {
   open: boolean
   onClose: () => void
@@ -44,6 +58,7 @@ interface CreateJobDialogProps {
 
 const jobSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
+  categoryId: z.string().optional(),
   type: z.enum(['SERVICE_CALL', 'INSTALLATION']),
   division: z.enum(['LOW_VOLTAGE', 'LINE_VOLTAGE']).optional(),
   description: z.string().min(1, 'Description is required'),
@@ -63,9 +78,18 @@ type JobFormData = z.infer<typeof jobSchema>
 export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJobDialogProps) {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [categories, setCategories] = useState<JobCategory[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [isUnscheduled, setIsUnscheduled] = useState(false)
+  const [showNewCustomer, setShowNewCustomer] = useState(false)
+  const [newCustomerData, setNewCustomerData] = useState({
+    firstName: '',
+    lastName: '',
+    companyName: '',
+    email: '',
+    phone: ''
+  })
 
   const {
     control,
@@ -88,18 +112,21 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
     if (open) {
       fetchCustomers()
       fetchUsers()
+      fetchCategories()
     }
   }, [open])
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch('/api/customers', {
+      // For employees, only fetch customers they created
+      const response = await fetch('/api/customers?createdByEmployee=true', {
         credentials: 'include'
       })
       if (response.ok) {
         const data = await response.json()
         // Extract customers array from API response
-        setCustomers(data.customers || [])
+        const customersList = data.customers || data || []
+        setCustomers(Array.isArray(customersList) ? customersList : [])
       }
     } catch (error) {
       console.error('Error fetching customers:', error)
@@ -114,7 +141,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
         const data = await response.json()
         // Extract users array from API response
         const usersArray = data.users || data || []
-        const fieldUsers = Array.isArray(usersArray) ? usersArray.filter((user: User) => 
+        const fieldUsers = Array.isArray(usersArray) ? usersArray.filter((user: User) =>
           user.role === 'EMPLOYEE' || user.role === 'OWNER_ADMIN' || user.role === 'FOREMAN'
         ) : []
         setUsers(fieldUsers)
@@ -122,6 +149,19 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
     } catch (error) {
       console.error('Error fetching users:', error)
       setUsers([]) // Set empty array on error
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/job-categories?active=true')
+      if (response.ok) {
+        const data = await response.json()
+        setCategories(data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      setCategories([])
     }
   }
 
@@ -174,7 +214,59 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
   const handleClose = () => {
     reset()
     setIsUnscheduled(false)
+    setShowNewCustomer(false)
+    setNewCustomerData({
+      firstName: '',
+      lastName: '',
+      companyName: '',
+      email: '',
+      phone: ''
+    })
     onClose()
+  }
+
+  const handleCreateCustomer = async () => {
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...newCustomerData,
+          createdByEmployee: true  // Mark as employee-created
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create customer')
+      }
+
+      const newCustomer = await response.json()
+
+      // Add to customers list and select it
+      const updatedCustomers = [...customers, newCustomer]
+      setCustomers(updatedCustomers)
+
+      // Set the new customer as selected in the form
+      reset({
+        ...watch(),
+        customerId: newCustomer.id
+      })
+
+      // Reset new customer form
+      setShowNewCustomer(false)
+      setNewCustomerData({
+        firstName: '',
+        lastName: '',
+        companyName: '',
+        email: '',
+        phone: ''
+      })
+    } catch (error) {
+      console.error('Error creating customer:', error)
+      alert('Failed to create customer. Please try again.')
+    }
   }
 
   // Auto-fill address from selected customer
@@ -207,9 +299,30 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                       value={field.value || ''}
                       label="Customer *"
                     >
+                      <MenuItem value="" onClick={() => setShowNewCustomer(true)}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                          <AddIcon fontSize="small" />
+                          <Typography>Add New Customer</Typography>
+                        </Box>
+                      </MenuItem>
+                      {customers.length > 0 && <Divider />}
+                      {customers.length === 0 && !showNewCustomer && (
+                        <MenuItem disabled>
+                          <Typography variant="body2" color="text.secondary">
+                            No customers yet - create your first one above
+                          </Typography>
+                        </MenuItem>
+                      )}
                       {customers.map((customer) => (
                         <MenuItem key={customer.id} value={customer.id}>
-                          {customer.name}
+                          <Box>
+                            <Typography>{customer.name || `${customer.firstName} ${customer.lastName}`}</Typography>
+                            {customer.companyName && (
+                              <Typography variant="caption" color="text.secondary">
+                                {customer.companyName}
+                              </Typography>
+                            )}
+                          </Box>
                         </MenuItem>
                       ))}
                     </Select>
@@ -218,6 +331,149 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                         {errors.customerId.message}
                       </Typography>
                     )}
+                  </FormControl>
+                )}
+              />
+            </Grid>
+
+            {/* New Customer Form */}
+            {showNewCustomer && (
+              <>
+                <Grid size={{ xs: 12 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, mb: 1 }}>
+                    <PersonIcon color="primary" />
+                    <Typography variant="subtitle2" color="primary">
+                      New Customer Information
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      (Will be sent to admin for review)
+                    </Typography>
+                  </Box>
+                  <Divider />
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    label="First Name *"
+                    value={newCustomerData.firstName}
+                    onChange={(e) => setNewCustomerData({...newCustomerData, firstName: e.target.value})}
+                    fullWidth
+                    required
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    label="Last Name *"
+                    value={newCustomerData.lastName}
+                    onChange={(e) => setNewCustomerData({...newCustomerData, lastName: e.target.value})}
+                    fullWidth
+                    required
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    label="Company Name"
+                    value={newCustomerData.companyName}
+                    onChange={(e) => setNewCustomerData({...newCustomerData, companyName: e.target.value})}
+                    fullWidth
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    label="Email"
+                    type="email"
+                    value={newCustomerData.email}
+                    onChange={(e) => setNewCustomerData({...newCustomerData, email: e.target.value})}
+                    fullWidth
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    label="Phone"
+                    value={newCustomerData.phone}
+                    onChange={(e) => setNewCustomerData({...newCustomerData, phone: e.target.value})}
+                    fullWidth
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleCreateCustomer}
+                      disabled={!newCustomerData.firstName || !newCustomerData.lastName}
+                    >
+                      Create Customer
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        setShowNewCustomer(false)
+                        setNewCustomerData({
+                          firstName: '',
+                          lastName: '',
+                          companyName: '',
+                          email: '',
+                          phone: ''
+                        })
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <Divider sx={{ my: 1 }} />
+                </Grid>
+              </>
+            )}
+
+            {/* Job Category */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Controller
+                name="categoryId"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Job Category</InputLabel>
+                    <Select
+                      {...field}
+                      value={field.value || ''}
+                      label="Job Category"
+                    >
+                      <MenuItem value="">
+                        <em>None</em>
+                      </MenuItem>
+                      {categories.map((category) => (
+                        <MenuItem key={category.id} value={category.id}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Box
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 1,
+                                bgcolor: category.color,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1rem',
+                                flexShrink: 0
+                              }}
+                            >
+                              {category.icon}
+                            </Box>
+                            <Typography>{category.categoryName}</Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
                   </FormControl>
                 )}
               />

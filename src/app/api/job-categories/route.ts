@@ -152,3 +152,34 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+// PUT update category order
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { categories } = body
+
+    if (!Array.isArray(categories)) {
+      return NextResponse.json(
+        { error: 'Categories must be an array' },
+        { status: 400 }
+      )
+    }
+
+    // Update sort order for each category
+    for (let i = 0; i < categories.length; i++) {
+      await query(
+        'UPDATE "JobCategory" SET "sortOrder" = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $2',
+        [i + 1, categories[i].id]
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error updating category order:', error)
+    return NextResponse.json(
+      { error: 'Failed to update category order' },
+      { status: 500 }
+    )
+  }
+}

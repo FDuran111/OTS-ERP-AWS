@@ -15,23 +15,20 @@ import {
   IconButton,
   Button,
   Divider,
+  Stack,
 } from '@mui/material'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
-  Work as WorkIcon,
-  Schedule as ScheduleIcon,
   Inventory as InventoryIcon,
   Assessment as AssessmentIcon,
   AttachMoney as MoneyIcon,
   PhotoLibrary as PhotoIcon,
 } from '@mui/icons-material'
 import JobMaterialReservations from '@/components/jobs/JobMaterialReservations'
-import JobPhasesManager from '@/components/jobs/JobPhasesManager'
 import MaterialUsageTracker from '@/components/jobs/MaterialUsageTracker'
-import RealTimeJobCosts from '@/components/job-costing/RealTimeJobCosts'
 import JobLaborRateOverrides from '@/components/jobs/JobLaborRateOverrides'
 import PhotoUploader from '@/components/files/PhotoUploader'
 import EditJobDialog from '@/components/jobs/EditJobDialog'
@@ -192,8 +189,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
-        title={`${job.jobNumber} - ${job.title}`}
-        subtitle={job.customerName || job.customer}
+        title={`${job.jobNumber} - ${job.customerName || job.customer}`}
+        subtitle=""
         actions={
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
@@ -218,89 +215,196 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         {/* Job Summary Card */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-              <Box sx={{ flex: '1 1 calc(66.67% - 12px)', minWidth: '400px' }}>
-                <Typography variant="h5" gutterBottom>
-                  {job.title}
-                </Typography>
-                <Typography variant="body1" color="text.secondary" paragraph>
-                  {job.description || 'No description provided'}
-                </Typography>
-                
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                  <Chip
-                    label={job.status.replace('_', ' ')}
-                    color={getStatusColor(job.status)}
-                  />
-                  <Chip
-                    label={job.priority}
-                    color={getPriorityColor(job.priority)}
-                    variant="outlined"
-                  />
-                  <Chip
-                    label={job.type === 'SERVICE_CALL' ? 'Service Call' : 'Installation'}
-                    variant="outlined"
-                  />
-                </Box>
+            {/* Description and Basic Info */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body1" color="text.secondary" paragraph>
+                {job.description || 'No description provided'}
+              </Typography>
 
-                {job.address && (
-                  <Typography variant="body2" color="text.secondary">
-                    📍 {job.address}
-                    {job.city && `, ${job.city}`}
-                    {job.state && `, ${job.state}`}
-                    {job.zip && ` ${job.zip}`}
-                  </Typography>
-                )}
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                <Chip
+                  label={job.status.replace('_', ' ')}
+                  color={getStatusColor(job.status)}
+                />
+                <Chip
+                  label={job.priority}
+                  color={getPriorityColor(job.priority)}
+                  variant="outlined"
+                />
+                <Chip
+                  label={job.type === 'SERVICE_CALL' ? 'Service Call' : 'Installation'}
+                  variant="outlined"
+                />
               </Box>
 
-              <Box sx={{ flex: '1 1 calc(33.33% - 12px)', minWidth: '300px' }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {job.dueDate && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Due Date
-                      </Typography>
-                      <Typography variant="body2">
-                        {new Date(job.dueDate).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                  )}
+              {job.address && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  📍 {job.address}
+                  {job.city && `, ${job.city}`}
+                  {job.state && `, ${job.state}`}
+                  {job.zip && ` ${job.zip}`}
+                </Typography>
+              )}
 
-                  {job.customerPO && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Customer PO
-                      </Typography>
-                      <Typography variant="body2">
-                        {job.customerPO}
-                      </Typography>
-                    </Box>
-                  )}
+              {job.crew && job.crew.length > 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  👥 Crew: {job.crew.join(', ')}
+                </Typography>
+              )}
+            </Box>
 
-                  {job.estimatedHours && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Estimated Hours
-                      </Typography>
-                      <Typography variant="body2">
-                        {job.estimatedHours} hours
-                      </Typography>
-                    </Box>
-                  )}
+            <Divider sx={{ mb: 3 }} />
 
-                  {job.estimatedCost && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Estimated Cost
-                      </Typography>
-                      <Typography variant="body2">
-                        ${job.estimatedCost.toLocaleString()}
+            {/* Metrics Grid */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 3 }}>
+              {/* Financial Section - Admin Only */}
+              {user?.role === 'OWNER_ADMIN' && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main' }}>
+                    💰 FINANCIALS
+                  </Typography>
+                  <Stack spacing={1.5}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Estimated:</Typography>
+                      <Typography variant="body2" fontWeight={500}>
+                        ${job.estimatedCost?.toLocaleString() || '0'}
                       </Typography>
                     </Box>
-                  )}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Actual:</Typography>
+                      <Typography variant="body2" fontWeight={500}>
+                        ${job.actualCost?.toLocaleString() || '0'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Variance:</Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        color={(job.actualCost || 0) > (job.estimatedCost || 0) ? 'error.main' : 'success.main'}
+                      >
+                        ${((job.estimatedCost || 0) - (job.actualCost || 0)).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    <Divider />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Billed:</Typography>
+                      <Typography variant="body2" fontWeight={500}>
+                        ${job.billedAmount?.toLocaleString() || '0'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Margin:</Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        color={((job.billedAmount || 0) - (job.actualCost || 0)) > 0 ? 'success.main' : 'error.main'}
+                      >
+                        {job.billedAmount && job.actualCost
+                          ? `${Math.round(((job.billedAmount - job.actualCost) / job.billedAmount) * 100)}%`
+                          : 'N/A'}
+                      </Typography>
+                    </Box>
+                  </Stack>
                 </Box>
+              )}
+
+              {/* Labor Section */}
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main' }}>
+                  ⏱️ LABOR
+                </Typography>
+                <Stack spacing={1.5}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Estimated:</Typography>
+                    <Typography variant="body2" fontWeight={500}>
+                      {job.estimatedHours || 0} hrs
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Actual:</Typography>
+                    <Typography variant="body2" fontWeight={500}>
+                      {job.actualHours || 0} hrs
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Remaining:</Typography>
+                    <Typography
+                      variant="body2"
+                      fontWeight={500}
+                      color={(job.actualHours || 0) > (job.estimatedHours || 0) ? 'error.main' : 'text.primary'}
+                    >
+                      {Math.max(0, (job.estimatedHours || 0) - (job.actualHours || 0))} hrs
+                    </Typography>
+                  </Box>
+                  <Divider />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Efficiency:</Typography>
+                    <Typography variant="body2" fontWeight={500}>
+                      {job.estimatedHours && job.actualHours
+                        ? `${Math.round((job.actualHours / job.estimatedHours) * 100)}%`
+                        : 'N/A'}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Box>
+
+              {/* Schedule Section */}
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main' }}>
+                  📊 SCHEDULE
+                </Typography>
+                <Stack spacing={1.5}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Start:</Typography>
+                    <Typography variant="body2" fontWeight={500}>
+                      {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Due:</Typography>
+                    <Typography variant="body2" fontWeight={500}>
+                      {job.dueDate ? new Date(job.dueDate).toLocaleDateString() : 'N/A'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Days Left:</Typography>
+                    <Typography
+                      variant="body2"
+                      fontWeight={500}
+                      color={job.dueDate && new Date(job.dueDate) < new Date() ? 'error.main' : 'text.primary'}
+                    >
+                      {job.dueDate
+                        ? Math.ceil((new Date(job.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                        : 'N/A'} days
+                    </Typography>
+                  </Box>
+                  <Divider />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Status:</Typography>
+                    <Chip
+                      label={
+                        job.status === 'COMPLETED' ? '🟢 Complete' :
+                        job.dueDate && new Date(job.dueDate) < new Date() ? '🔴 Overdue' :
+                        job.actualHours && job.estimatedHours && job.actualHours > job.estimatedHours * 0.8 ? '🟡 At Risk' :
+                        '🟢 On Track'
+                      }
+                      size="small"
+                      variant="outlined"
+                    />
+                  </Box>
+                </Stack>
               </Box>
             </Box>
+
+            {/* Customer PO if exists */}
+            {job.customerPO && (
+              <Box sx={{ mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                <Typography variant="body2" color="text.secondary">
+                  Customer PO: <strong>{job.customerPO}</strong>
+                </Typography>
+              </Box>
+            )}
           </CardContent>
         </Card>
 
@@ -326,34 +430,24 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               }
             }}
           >
-            <Tab 
-              icon={<WorkIcon />} 
-              label="Phases" 
+            <Tab
+              icon={<InventoryIcon />}
+              label="Material Reservations"
               iconPosition="start"
             />
-            <Tab 
-              icon={<InventoryIcon />} 
-              label="Material Reservations" 
+            <Tab
+              icon={<AssessmentIcon />}
+              label="Material Usage"
               iconPosition="start"
             />
-            <Tab 
-              icon={<AssessmentIcon />} 
-              label="Material Usage" 
+            <Tab
+              icon={<MoneyIcon />}
+              label="Billing"
               iconPosition="start"
             />
-            <Tab 
-              icon={<ScheduleIcon />} 
-              label="Real-Time Costs" 
-              iconPosition="start"
-            />
-            <Tab 
-              icon={<MoneyIcon />} 
-              label="Billing" 
-              iconPosition="start"
-            />
-            <Tab 
-              icon={<PhotoIcon />} 
-              label="Photos & Files" 
+            <Tab
+              icon={<PhotoIcon />}
+              label="Photos & Files"
               iconPosition="start"
             />
           </Tabs>
@@ -361,36 +455,23 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
         {/* Tab Panels */}
         <TabPanel value={activeTab} index={0}>
-          <JobPhasesManager jobId={job.id} />
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={1}>
-          <JobMaterialReservations 
-            jobId={job.id} 
+          <JobMaterialReservations
+            jobId={job.id}
             jobTitle={job.title}
           />
         </TabPanel>
 
+        <TabPanel value={activeTab} index={1}>
+          <MaterialUsageTracker
+            jobId={job.id}
+          />
+        </TabPanel>
+
         <TabPanel value={activeTab} index={2}>
-          <MaterialUsageTracker 
-            jobId={job.id}
-          />
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={3}>
-          <RealTimeJobCosts 
-            jobId={job.id}
-            jobNumber={job.jobNumber}
-            autoRefresh={true}
-            refreshInterval={30000}
-          />
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={4}>
           <JobLaborRateOverrides jobId={job.id} />
         </TabPanel>
 
-        <TabPanel value={activeTab} index={5}>
+        <TabPanel value={activeTab} index={3}>
           <PhotoUploader
             jobId={job.id}
             onUploadComplete={() => {

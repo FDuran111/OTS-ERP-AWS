@@ -52,7 +52,7 @@ export function Sidebar({ userRole }: SidebarProps) {
       roles: ['OWNER_ADMIN', 'FOREMAN'],
     },
     {
-      name: 'Time Tracking',
+      name: 'Time Card',
       href: '/time',
       icon: Clock,
       roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'],

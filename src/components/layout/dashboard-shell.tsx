@@ -52,7 +52,7 @@ const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
   { text: 'Jobs', icon: WorkIcon, path: '/jobs', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
   { text: 'Schedule', icon: ScheduleIcon, path: '/schedule', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
-  { text: 'Time Tracking', icon: TimeIcon, path: '/time', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
+  { text: 'Time Card', icon: TimeIcon, path: '/time', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
   { text: 'Customers', icon: PeopleIcon, path: '/customers', roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },
   { text: 'Materials', icon: InventoryIcon, path: '/materials', roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'] as UserRole[] },
   { text: 'Invoicing', icon: ReceiptIcon, path: '/invoicing', roles: ['OWNER_ADMIN', 'FOREMAN'] as UserRole[] },

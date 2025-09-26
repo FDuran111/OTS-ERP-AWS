@@ -59,7 +59,7 @@ export default function MobileTimeClockPage() {
             <BackIcon />
           </IconButton>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Mobile Time Clock
+            Mobile Time Card
           </Typography>
           <IconButton
             color="inherit"

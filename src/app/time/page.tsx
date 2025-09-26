@@ -6,18 +6,14 @@ import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import SimpleTimeEntry from '@/components/time/SimpleTimeEntry'
 import ScheduledJobSuggestions from '@/components/time/ScheduledJobSuggestions'
+import WeeklyTimesheetDisplay from '@/components/time/WeeklyTimesheetDisplay'
+import CompanyWeeklyJobsSummary from '@/components/time/CompanyWeeklyJobsSummary'
+import PendingJobEntries from '@/components/admin/PendingJobEntries'
 import {
   Box,
   Typography,
   Card,
   CardContent,
-  Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   Button,
   Stack,
@@ -28,22 +24,28 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   IconButton,
-  TextField,
-  Tooltip,
+  Collapse,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Divider,
 } from '@mui/material'
 import {
-  AccessTime as TimeIcon,
-  PlayArrow,
-  Stop,
   Timer,
+  PlayArrow,
   Today,
   Group,
-  TrendingUp,
   Add as AddIcon,
   Close as CloseIcon,
-  Edit as EditIcon,
+  ExpandMore,
+  ExpandLess,
+  Person,
 } from '@mui/icons-material'
 
 interface User {
@@ -53,27 +55,6 @@ interface User {
   role: string
 }
 
-interface TimeEntry {
-  id: string
-  userId: string
-  userName: string
-  jobId: string
-  jobNumber: string
-  jobTitle: string
-  customer: string
-  phaseId?: string
-  phaseName?: string
-  date: string
-  startTime: string
-  endTime?: string
-  hours: number
-  calculatedHours?: number
-  description?: string
-  isActive: boolean
-  createdAt: string
-  approvedAt?: string | null
-  approvedBy?: string | null
-}
 
 interface TimeStat {
   title: string
@@ -108,19 +89,16 @@ export default function TimePage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
   const [stats, setStats] = useState<TimeStat[]>([])
   const [loading, setLoading] = useState(true)
   const [manualEntryOpen, setManualEntryOpen] = useState(false)
   const [preselectedJob, setPreselectedJob] = useState<any>(null)
-  const [editRequestOpen, setEditRequestOpen] = useState(false)
-  const [selectedEditEntry, setSelectedEditEntry] = useState<TimeEntry | null>(null)
-  const [editRequestForm, setEditRequestForm] = useState({
-    newStartTime: '',
-    newEndTime: '',
-    newHours: '',
-    reason: ''
-  })
+
+  // Admin view controls
+  const [adminViewExpanded, setAdminViewExpanded] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<'EMPLOYEE' | 'FOREMAN' | 'OWNER_ADMIN'>('EMPLOYEE')
+  const [allUsers, setAllUsers] = useState<User[]>([])
+  const [selectedViewUser, setSelectedViewUser] = useState<User | null>(null)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -131,7 +109,28 @@ export default function TimePage() {
     const userData = JSON.parse(storedUser)
     setUser(userData)
     fetchTimeData(userData)
+
+    // Fetch all users if admin
+    if (userData.role === 'OWNER_ADMIN' || userData.role === 'FOREMAN') {
+      fetchAllUsers()
+    }
   }, [router])
+
+  const fetchAllUsers = async () => {
+    try {
+      const response = await fetch('/api/users', {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        // Handle both array and object response formats
+        const users = Array.isArray(data) ? data : (data.users || [])
+        setAllUsers(users)
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    }
+  }
 
   const fetchTimeData = async (currentUser?: User) => {
     try {
@@ -140,27 +139,13 @@ export default function TimePage() {
       // Use passed user or state user
       const activeUser = currentUser || user
       
-      // For employees, only fetch their own time entries
-      const timeEntriesUrl = activeUser?.role === 'EMPLOYEE' 
-        ? `/api/time-entries?limit=20&userId=${activeUser.id}` 
-        : '/api/time-entries?limit=20'
-      
-      const [entriesResponse, statsResponse] = await Promise.all([
-        fetch(timeEntriesUrl, {
-          credentials: 'include'
-        }),
-        fetch(activeUser?.role === 'EMPLOYEE' 
+      const statsResponse = await fetch(
+        activeUser?.role === 'EMPLOYEE'
           ? `/api/time-entries/stats?userId=${activeUser.id}`
           : '/api/time-entries/stats', {
           credentials: 'include'
-        })
-      ])
-
-      if (entriesResponse.ok) {
-        const entries = await entriesResponse.json()
-        // Only show completed time entries, not active ones
-        setTimeEntries(entries.filter((entry: TimeEntry) => !entry.isActive))
-      }
+        }
+      )
 
       if (statsResponse.ok) {
         const statsData = await statsResponse.json()
@@ -180,8 +165,8 @@ export default function TimePage() {
 
   if (!user) return null
 
-  // Action buttons for the page header - Manual Time Entry button for employees
-  const actionButtons = user.role === 'EMPLOYEE' ? (
+  // Action buttons for the page header - Manual Time Entry button for all users
+  const actionButtons = (
     <Button
       variant="contained"
       startIcon={<AddIcon />}
@@ -195,13 +180,13 @@ export default function TimePage() {
     >
       Manual Time Entry
     </Button>
-  ) : null
+  )
 
 
   return (
     <ResponsiveLayout>
       <ResponsiveContainer
-        title="Time Tracking"
+        title="Time Card"
         actions={actionButtons}
       >
 
@@ -266,170 +251,164 @@ export default function TimePage() {
           )}
         </Grid>
 
-        {/* Scheduled Job Suggestions */}
-        <Box sx={{ mb: 3 }}>
-          <ScheduledJobSuggestions onCreateTimeEntry={(schedule) => {
-            // Open the manual entry dialog with the schedule pre-filled
-            setPreselectedJob({
-              jobId: schedule.jobId || schedule.job?.id,
-              jobNumber: schedule.job?.jobNumber,
-              jobTitle: schedule.job?.title,
-              estimatedHours: schedule.estimatedHours
-            })
-            setManualEntryOpen(true)
-          }} />
-        </Box>
-
-        {/* Quick Time Entry - Show as card for non-employees */}
-        {user?.role !== 'EMPLOYEE' && (
+        {/* Pending Job Entries - Admin only */}
+        {(user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && (
           <Box sx={{ mb: 3 }}>
-            <SimpleTimeEntry onTimeEntryCreated={fetchTimeData} />
+            <PendingJobEntries />
           </Box>
         )}
 
+        {/* Admin User Timesheet Viewer */}
+        {(user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setAdminViewExpanded(!adminViewExpanded)}
+              >
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Person />
+                  <Typography variant="h6">
+                    View Employee Timesheets
+                  </Typography>
+                </Stack>
+                <IconButton size="small">
+                  {adminViewExpanded ? <ExpandLess /> : <ExpandMore />}
+                </IconButton>
+              </Box>
 
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          📋 {user?.role === 'EMPLOYEE' ? 'My Time Entries' : 'Recent Time Entries'}
-        </Typography>
-        <TableContainer component={Paper} sx={{
-          borderRadius: 2,
-          overflow: 'hidden',
-          transition: 'box-shadow 0.2s',
-          '&:hover': {
-            boxShadow: 2,
-          },
-        }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                {user?.role !== 'EMPLOYEE' && (
-                  <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Employee</TableCell>
-                )}
-                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Job</TableCell>
-                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Start Time</TableCell>
-                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>End Time</TableCell>
-                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Hours</TableCell>
-                <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Phase</TableCell>
-                {user?.role === 'EMPLOYEE' && (
-                  <>
-                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Actions</TableCell>
-                  </>
-                )}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={user?.role === 'EMPLOYEE' ? 8 : 7} align="center">
-                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
-                      <CircularProgress size={24} />
-                      <Typography sx={{ ml: 2 }}>Loading time entries...</Typography>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : timeEntries.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={user?.role === 'EMPLOYEE' ? 8 : 7} align="center">
-                    <Typography color="text.secondary">No time entries found</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                timeEntries.map((entry) => (
-                  <TableRow key={entry.id} hover sx={{ 
-                    '&:hover': {
-                      backgroundColor: 'action.hover',
-                    },
-                  }}>
-                    {user?.role !== 'EMPLOYEE' && (
-                      <TableCell>{entry.userName}</TableCell>
-                    )}
-                    <TableCell>
-                      <Stack>
-                        <Typography variant="body2">{entry.jobNumber}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {entry.jobTitle}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {entry.customer}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
-                    <TableCell>{new Date(entry.date + 'T00:00:00').toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      {new Date(entry.startTime).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      {entry.endTime
-                        ? new Date(entry.endTime).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })
-                        : 'Active'
-                      }
-                    </TableCell>
-                    <TableCell>{entry.hours?.toFixed(1) || '-'}</TableCell>
-                    <TableCell>
-                      {entry.phaseName ? (
-                        <Chip
-                          label={entry.phaseName}
-                          size="small"
-                          variant="outlined"
-                        />
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                    {user?.role === 'EMPLOYEE' && (
-                      <>
-                        <TableCell>
-                          <Chip
-                            label={entry.approvedAt ? "Approved" : "Pending"}
-                            color={entry.approvedAt ? "success" : "warning"}
-                            size="small"
-                            variant={entry.approvedAt ? "filled" : "outlined"}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Tooltip title="Request Time Change">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => {
-                                setSelectedEditEntry(entry)
-                                setEditRequestForm({
-                                  newStartTime: new Date(entry.startTime).toLocaleTimeString('en-US', {
-                                    hour12: false,
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  }),
-                                  newEndTime: entry.endTime ? new Date(entry.endTime).toLocaleTimeString('en-US', {
-                                    hour12: false,
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  }) : '',
-                                  newHours: entry.hours?.toString() || '',
-                                  reason: ''
-                                })
-                                setEditRequestOpen(true)
-                              }}
+              <Collapse in={adminViewExpanded}>
+                <Box sx={{ mt: 2 }}>
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel>Role</InputLabel>
+                    <Select
+                      value={selectedRole}
+                      label="Role"
+                      onChange={(e) => {
+                        setSelectedRole(e.target.value as any)
+                        setSelectedViewUser(null)
+                      }}
+                    >
+                      <MenuItem value="EMPLOYEE">Employees</MenuItem>
+                      <MenuItem value="FOREMAN">Foremen</MenuItem>
+                      <MenuItem value="OWNER_ADMIN">Admins</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Select a user to view their timesheet:
+                  </Typography>
+
+                  <Paper variant="outlined" sx={{ maxHeight: 200, overflow: 'auto' }}>
+                    <List dense>
+                      {allUsers && Array.isArray(allUsers) && allUsers
+                        .filter(u => u.role === selectedRole)
+                        .map((u) => (
+                          <ListItem key={u.id} disablePadding>
+                            <ListItemButton
+                              selected={selectedViewUser?.id === u.id}
+                              onClick={() => setSelectedViewUser(u)}
                             >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </>
-                    )}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                              <ListItemText
+                                primary={u.name}
+                                secondary={u.email}
+                              />
+                            </ListItemButton>
+                          </ListItem>
+                        ))}
+                      {(!allUsers || !Array.isArray(allUsers) || allUsers.filter(u => u.role === selectedRole).length === 0) && (
+                        <ListItem>
+                          <ListItemText
+                            primary="No users found"
+                            secondary={`No ${selectedRole.toLowerCase()}s in the system`}
+                          />
+                        </ListItem>
+                      )}
+                    </List>
+                  </Paper>
+                </Box>
+              </Collapse>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Weekly Timesheet - Primary feature */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            📅 {selectedViewUser ? `${selectedViewUser.name}'s Weekly Timesheet` :
+               (user?.role === 'EMPLOYEE' ? 'My Weekly Timesheet' : 'All Jobs This Week - Company Overview')}
+          </Typography>
+
+          {/* For employees, show their own timesheet */}
+          {user?.role === 'EMPLOYEE' && (
+            <WeeklyTimesheetDisplay
+              userId={user.id}
+              isAdmin={false}
+              onEditEntry={(entry) => {
+                setPreselectedJob({
+                  jobId: entry.jobId,
+                  jobNumber: entry.jobNumber,
+                  jobTitle: entry.jobTitle,
+                  date: entry.date,
+                  hours: entry.hours,
+                  description: entry.description,
+                  editingEntryId: entry.id
+                })
+                setManualEntryOpen(true)
+              }}
+              onRefresh={fetchTimeData}
+            />
+          )}
+
+          {/* For admins viewing a specific user */}
+          {(user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && selectedViewUser && (
+            <WeeklyTimesheetDisplay
+              userId={selectedViewUser.id}
+              selectedUserId={selectedViewUser.id}
+              isAdmin={true}
+              onEditEntry={(entry) => {
+                setPreselectedJob({
+                  jobId: entry.jobId,
+                  jobNumber: entry.jobNumber,
+                  jobTitle: entry.jobTitle,
+                  date: entry.date,
+                  hours: entry.hours,
+                  description: entry.description,
+                  editingEntryId: entry.id
+                })
+                setManualEntryOpen(true)
+              }}
+              onRefresh={fetchTimeData}
+            />
+          )}
+
+          {/* For admins - show all jobs summary when no user selected */}
+          {(user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && !selectedViewUser && (
+            <CompanyWeeklyJobsSummary />
+          )}
+        </Box>
+
+        {/* Scheduled Job Suggestions - Only for field workers */}
+        {user?.role === 'EMPLOYEE' && (
+          <Box sx={{ mb: 3, mt: 3 }}>
+            <ScheduledJobSuggestions onCreateTimeEntry={(schedule) => {
+              // Open the manual entry dialog with the schedule pre-filled
+              setPreselectedJob({
+                jobId: schedule.jobId || schedule.job?.id,
+                jobNumber: schedule.job?.jobNumber,
+                jobTitle: schedule.job?.title,
+                estimatedHours: schedule.estimatedHours
+              })
+              setManualEntryOpen(true)
+            }} />
+          </Box>
+        )}
+
       </ResponsiveContainer>
 
       {/* Manual Time Entry Dialog for Employees */}
@@ -466,175 +445,6 @@ export default function TimePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Request Dialog */}
-      <Dialog
-        open={editRequestOpen}
-        onClose={() => {
-          setEditRequestOpen(false)
-          setSelectedEditEntry(null)
-        }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          pb: 1
-        }}>
-          Request Time Change
-          <IconButton onClick={() => setEditRequestOpen(false)} size="small">
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {selectedEditEntry && (
-            <Stack spacing={3}>
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Current Entry Details
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
-                  <Grid container spacing={1}>
-                    <Grid size={12}>
-                      <Typography variant="body2">
-                        <strong>Job:</strong> {selectedEditEntry.jobNumber} - {selectedEditEntry.jobTitle}
-                      </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                      <Typography variant="body2">
-                        <strong>Date:</strong> {new Date(selectedEditEntry.date + 'T00:00:00').toLocaleDateString()}
-                      </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                      <Typography variant="body2">
-                        <strong>Current Hours:</strong> {selectedEditEntry.hours?.toFixed(1) || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                      <Typography variant="body2">
-                        <strong>Start Time:</strong> {new Date(selectedEditEntry.startTime).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                      <Typography variant="body2">
-                        <strong>End Time:</strong> {selectedEditEntry.endTime
-                          ? new Date(selectedEditEntry.endTime).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                          : 'Active'
-                        }
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Paper>
-              </Box>
-
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Requested Changes
-                </Typography>
-                <Stack spacing={2}>
-                  <TextField
-                    label="New Start Time"
-                    type="time"
-                    value={editRequestForm.newStartTime}
-                    onChange={(e) => setEditRequestForm({...editRequestForm, newStartTime: e.target.value})}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                    helperText="Leave blank to keep current start time"
-                  />
-                  <TextField
-                    label="New End Time"
-                    type="time"
-                    value={editRequestForm.newEndTime}
-                    onChange={(e) => setEditRequestForm({...editRequestForm, newEndTime: e.target.value})}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                    helperText="Leave blank to keep current end time"
-                  />
-                  <TextField
-                    label="Or Enter Total Hours"
-                    type="number"
-                    value={editRequestForm.newHours}
-                    onChange={(e) => setEditRequestForm({...editRequestForm, newHours: e.target.value})}
-                    fullWidth
-                    inputProps={{ step: 0.5, min: 0, max: 24 }}
-                    helperText="Alternative: directly enter the total hours worked"
-                  />
-                  <TextField
-                    label="Reason for Change (Required)"
-                    multiline
-                    rows={3}
-                    value={editRequestForm.reason}
-                    onChange={(e) => setEditRequestForm({...editRequestForm, reason: e.target.value})}
-                    fullWidth
-                    required
-                    placeholder="Please explain why this time change is needed..."
-                  />
-                </Stack>
-              </Box>
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button
-            onClick={() => {
-              setEditRequestOpen(false)
-              setSelectedEditEntry(null)
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={async () => {
-              // TODO: Submit edit request to API
-              if (!editRequestForm.reason.trim()) {
-                alert('Please provide a reason for the time change request')
-                return
-              }
-
-              try {
-                const response = await fetch('/api/time-entries/edit-request', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  credentials: 'include',
-                  body: JSON.stringify({
-                    timeEntryId: selectedEditEntry?.id,
-                    newStartTime: editRequestForm.newStartTime || null,
-                    newEndTime: editRequestForm.newEndTime || null,
-                    newHours: editRequestForm.newHours ? parseFloat(editRequestForm.newHours) : null,
-                    reason: editRequestForm.reason,
-                  })
-                })
-
-                if (response.ok) {
-                  alert('Time change request submitted successfully. Your manager will review it.')
-                  setEditRequestOpen(false)
-                  setSelectedEditEntry(null)
-                  fetchTimeData()
-                } else {
-                  const error = await response.json()
-                  alert(error.message || 'Failed to submit edit request')
-                }
-              } catch (error) {
-                console.error('Error submitting edit request:', error)
-                alert('Failed to submit edit request. Please try again.')
-              }
-            }}
-            disabled={!editRequestForm.reason.trim()}
-          >
-            Submit Request
-          </Button>
-        </DialogActions>
-      </Dialog>
     </ResponsiveLayout>
   )
 }

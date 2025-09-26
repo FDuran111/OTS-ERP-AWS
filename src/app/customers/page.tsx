@@ -26,6 +26,8 @@ import {
   Stack,
   useTheme,
   useMediaQuery,
+  Tabs,
+  Tab,
 } from '@mui/material'
 import {
   People as PeopleIcon,
@@ -56,6 +58,8 @@ interface Customer {
   totalJobs: number
   activeJobs: number
   status: string
+  createdBy?: string
+  createdAt?: string
 }
 
 export default function CustomersPage() {
@@ -65,10 +69,12 @@ export default function CustomersPage() {
   const [user, setUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [employeeCustomers, setEmployeeCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [currentTab, setCurrentTab] = useState(0)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -76,8 +82,13 @@ export default function CustomersPage() {
       router.push('/login')
       return
     }
-    setUser(JSON.parse(storedUser))
+    const parsedUser = JSON.parse(storedUser)
+    setUser(parsedUser)
     fetchCustomers()
+    // If admin or foreman, also fetch employee-created customers
+    if (parsedUser.role === 'OWNER_ADMIN' || parsedUser.role === 'FOREMAN') {
+      fetchEmployeeCustomers()
+    }
   }, [router])
 
   const fetchCustomers = async () => {
@@ -95,6 +106,21 @@ export default function CustomersPage() {
       console.error('Error fetching customers:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchEmployeeCustomers = async () => {
+    try {
+      const response = await fetch('/api/customers?employeeCreatedOnly=true', {
+        credentials: 'include'
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch employee customers')
+      }
+      const data = await response.json()
+      setEmployeeCustomers(data.customers || [])
+    } catch (error) {
+      console.error('Error fetching employee customers:', error)
     }
   }
 
@@ -154,9 +180,16 @@ export default function CustomersPage() {
           </Box>
           
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              Total Jobs: <strong>{customer.totalJobs}</strong>
-            </Typography>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                Total Jobs: <strong>{customer.totalJobs}</strong>
+              </Typography>
+              {customer.createdBy && (
+                <Typography variant="body2" color="primary">
+                  Created by: {customer.createdBy}
+                </Typography>
+              )}
+            </Box>
             <CustomerActionsMenu
               customer={customer}
               onEdit={handleEditCustomer}
@@ -238,8 +271,19 @@ export default function CustomersPage() {
         title="Customer Management"
         actions={actionButtons}
       >
+        {/* Only show tabs for admin/foreman */}
+        {(user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && (
+          <Tabs
+            value={currentTab}
+            onChange={(_, newValue) => setCurrentTab(newValue)}
+            sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab label="All Customers" />
+            <Tab label="Employee Created" />
+          </Tabs>
+        )}
 
-          <Card sx={{ 
+          <Card sx={{
             mb: 3,
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
@@ -252,12 +296,14 @@ export default function CustomersPage() {
                 placeholder="Search customers by name, email, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }
                 }}
               />
             </CardContent>
@@ -269,20 +315,45 @@ export default function CustomersPage() {
                 <Typography align="center" sx={{ py: 4 }}>
                   Loading customers...
                 </Typography>
-              ) : customers.length === 0 ? (
-                <Typography align="center" sx={{ py: 4 }} color="text.secondary">
-                  No customers found
-                </Typography>
               ) : (
-                customers
-                  .filter(customer => 
-                    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                    customer.phone.includes(searchTerm)
-                  )
-                  .map((customer) => (
-                    <CustomerCard key={customer.id} customer={customer} />
-                  ))
+                <>
+                  {/* Show different customers based on tab */}
+                  {currentTab === 1 && (user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') ? (
+                    // Employee Created Customers
+                    employeeCustomers.length === 0 ? (
+                      <Typography align="center" sx={{ py: 4 }} color="text.secondary">
+                        No employee-created customers found
+                      </Typography>
+                    ) : (
+                      employeeCustomers
+                        .filter(customer =>
+                          customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                          customer.phone.includes(searchTerm)
+                        )
+                        .map((customer) => (
+                          <CustomerCard key={customer.id} customer={customer} />
+                        ))
+                    )
+                  ) : (
+                    // All Customers
+                    customers.length === 0 ? (
+                      <Typography align="center" sx={{ py: 4 }} color="text.secondary">
+                        No customers found
+                      </Typography>
+                    ) : (
+                      customers
+                        .filter(customer =>
+                          customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                          customer.phone.includes(searchTerm)
+                        )
+                        .map((customer) => (
+                          <CustomerCard key={customer.id} customer={customer} />
+                        ))
+                    )
+                  )}
+                </>
               )}
             </Box>
           ) : (
@@ -302,6 +373,9 @@ export default function CustomersPage() {
                   <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Type</TableCell>
                   <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Contact</TableCell>
                   <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Address</TableCell>
+                  {currentTab === 1 && (user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && (
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Created By</TableCell>
+                  )}
                   <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Total Jobs</TableCell>
                   <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Status</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Actions</TableCell>
@@ -310,77 +384,160 @@ export default function CustomersPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center">
+                    <TableCell colSpan={currentTab === 1 ? 9 : 8} align="center">
                       Loading customers...
                     </TableCell>
                   </TableRow>
-                ) : customers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} align="center">
-                      No customers found
-                    </TableCell>
-                  </TableRow>
                 ) : (
-                  customers
-                    .filter(customer => 
-                      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                      customer.phone.includes(searchTerm)
-                    )
-                    .map((customer) => (
-                      <TableRow key={customer.id} hover sx={{ 
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
-                        },
-                      }}>
-                        <TableCell>{customer.id.slice(0, 8)}</TableCell>
-                        <TableCell>{customer.name}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={customer.type}
-                            color={customer.type === 'Commercial' ? 'primary' : 'default'}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2">{customer.phone}</Typography>
-                            </Box>
-                            {customer.email && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Email sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                <Typography variant="body2">{customer.email}</Typography>
-                              </Box>
-                            )}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
-                            <Typography variant="body2">{customer.address || 'No address'}</Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>{customer.totalJobs}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={customer.status}
-                            color={customer.status === 'active' ? 'success' : 'default'}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <CustomerActionsMenu
-                            customer={customer}
-                            onEdit={handleEditCustomer}
-                            onDelete={handleDeleteCustomer}
-                            onView={handleViewCustomer}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))
+                  <>
+                    {/* Show different customers based on tab */}
+                    {currentTab === 1 && (user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') ? (
+                      // Employee Created Customers
+                      employeeCustomers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} align="center">
+                            No employee-created customers found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        employeeCustomers
+                          .filter(customer =>
+                            customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                            customer.phone.includes(searchTerm)
+                          )
+                          .map((customer) => (
+                            <TableRow key={customer.id} hover sx={{
+                              '&:hover': {
+                                backgroundColor: 'action.hover',
+                              },
+                            }}>
+                              <TableCell>{customer.id.slice(0, 8)}</TableCell>
+                              <TableCell>{customer.name}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={customer.type}
+                                  color={customer.type === 'Commercial' ? 'primary' : 'default'}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                    <Typography variant="body2">{customer.phone}</Typography>
+                                  </Box>
+                                  {customer.email && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                      <Email sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                      <Typography variant="body2">{customer.email}</Typography>
+                                    </Box>
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                  <Typography variant="body2">{customer.address || 'No address'}</Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" color="primary">
+                                  {customer.createdBy || 'Unknown'}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>{customer.totalJobs}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={customer.status}
+                                  color={customer.status === 'active' ? 'success' : 'default'}
+                                  size="small"
+                                />
+                              </TableCell>
+                              <TableCell align="right">
+                                <CustomerActionsMenu
+                                  customer={customer}
+                                  onEdit={handleEditCustomer}
+                                  onDelete={handleDeleteCustomer}
+                                  onView={handleViewCustomer}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )
+                    ) : (
+                      // All Customers
+                      customers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} align="center">
+                            No customers found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        customers
+                          .filter(customer =>
+                            customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                            customer.phone.includes(searchTerm)
+                          )
+                          .map((customer) => (
+                            <TableRow key={customer.id} hover sx={{
+                              '&:hover': {
+                                backgroundColor: 'action.hover',
+                              },
+                            }}>
+                              <TableCell>{customer.id.slice(0, 8)}</TableCell>
+                              <TableCell>{customer.name}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={customer.type}
+                                  color={customer.type === 'Commercial' ? 'primary' : 'default'}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                    <Typography variant="body2">{customer.phone}</Typography>
+                                  </Box>
+                                  {customer.email && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                      <Email sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                      <Typography variant="body2">{customer.email}</Typography>
+                                    </Box>
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                  <Typography variant="body2">{customer.address || 'No address'}</Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>{customer.totalJobs}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={customer.status}
+                                  color={customer.status === 'active' ? 'success' : 'default'}
+                                  size="small"
+                                />
+                              </TableCell>
+                              <TableCell align="right">
+                                <CustomerActionsMenu
+                                  customer={customer}
+                                  onEdit={handleEditCustomer}
+                                  onDelete={handleDeleteCustomer}
+                                  onView={handleViewCustomer}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )
+                    )}
+                  </>
                 )}
               </TableBody>
             </Table>

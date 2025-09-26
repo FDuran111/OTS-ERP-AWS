@@ -18,6 +18,8 @@ export const GET = withRBAC({
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     const active = searchParams.get('active') === 'true'
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
     const limit = parseInt(searchParams.get('limit') || '50')
 
     // Build WHERE conditions
@@ -29,7 +31,14 @@ export const GET = withRBAC({
       conditions.push(`te."userId" = $${paramIndex++}`)
       params.push(userId)
     }
-    
+
+    if (startDate && endDate) {
+      conditions.push(`te.date >= $${paramIndex++}::date`)
+      conditions.push(`te.date <= $${paramIndex++}::date`)
+      params.push(startDate)
+      params.push(endDate)
+    }
+
     if (active) {
       conditions.push(`te."endTime" IS NULL`)
     }
@@ -37,19 +46,19 @@ export const GET = withRBAC({
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
     const timeEntriesResult = await query(
-      `SELECT 
+      `SELECT
         te.*,
         u.name as user_name,
-        j."jobNumber",
-        j.description as job_description,
-        c."companyName",
+        COALESCE(j."jobNumber", te."jobId"::text) as "jobNumber",
+        COALESCE(j.description, 'Job details pending') as job_description,
+        COALESCE(c."companyName", 'Customer pending') as "companyName",
         c."firstName",
         c."lastName",
         p.name as phase_name
       FROM "TimeEntry" te
       INNER JOIN "User" u ON te."userId" = u.id
-      INNER JOIN "Job" j ON te."jobId" = j.id
-      INNER JOIN "Customer" c ON j."customerId" = c.id
+      LEFT JOIN "Job" j ON te."jobId" = j.id
+      LEFT JOIN "Customer" c ON j."customerId" = c.id
       LEFT JOIN "JobPhase" p ON te."phaseId" = p.id
       ${whereClause}
       ORDER BY te."startTime" DESC

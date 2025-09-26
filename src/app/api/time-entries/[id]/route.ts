@@ -195,6 +195,51 @@ export async function PATCH(
   }
 }
 
+// PUT fully update a time entry
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params
+  try {
+    const body = await request.json()
+
+    // Update the time entry with all fields
+    const updateResult = await query(
+      `UPDATE "TimeEntry"
+       SET "jobId" = $1,
+           date = $2,
+           hours = $3,
+           description = $4,
+           "updatedAt" = NOW()
+       WHERE id = $5
+       RETURNING *`,
+      [
+        body.jobId,
+        body.date,
+        body.hours,
+        body.description || null,
+        resolvedParams.id
+      ]
+    )
+
+    if (updateResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Time entry not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(updateResult.rows[0])
+  } catch (error) {
+    console.error('Error updating time entry:', error)
+    return NextResponse.json(
+      { error: 'Failed to update time entry' },
+      { status: 500 }
+    )
+  }
+}
+
 // DELETE a time entry
 export async function DELETE(
   request: NextRequest,

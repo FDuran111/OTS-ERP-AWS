@@ -94,28 +94,6 @@ export const GET = withRBAC({
       ORDER BY j."createdAt" DESC
     `, params)
 
-    // Get job phases separately for simplicity
-    const phasesResult = await query(`
-      SELECT 
-        jp."jobId",
-        jp.id,
-        jp.name,
-        jp.status
-      FROM "JobPhase" jp
-    `)
-
-    // Group phases by job
-    const phasesByJob = phasesResult.rows.reduce((acc, phase) => {
-      if (!acc[phase.jobId]) {
-        acc[phase.jobId] = []
-      }
-      acc[phase.jobId].push({
-        id: phase.id,
-        name: phase.name,
-        status: phase.status
-      })
-      return acc
-    }, {} as Record<string, any[]>)
 
     // Transform the data to match the frontend format
     const transformedJobs = jobsResult.rows.map(job => ({
@@ -138,9 +116,7 @@ export const GET = withRBAC({
       address: job.address,
       city: job.city,
       state: job.state,
-      zip: job.zip,
-      jobPhases: phasesByJob[job.id] || [],
-      phases: [] // Legacy field
+      zip: job.zip
     }))
 
     // Get user role to determine pricing visibility (use already retrieved userRole)
@@ -167,6 +143,7 @@ const createJobSchema = z.object({
   customerId: z.string(),
   type: z.enum(['SERVICE_CALL', 'INSTALLATION']),
   division: z.enum(['LOW_VOLTAGE', 'LINE_VOLTAGE']).optional().default('LINE_VOLTAGE'),
+  category: z.string().optional(),
   description: z.string(),
   customerPO: z.string().optional(),
   address: z.string().optional(),
@@ -182,12 +159,15 @@ const createJobSchema = z.object({
 
 // POST create a new job
 export const POST = withRBAC({
-  requiredRoles: ['OWNER_ADMIN']
+  requiredRoles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
 })(async (request: NextRequest) => {
   let body: any
   try {
     body = await request.json()
     const data = createJobSchema.parse(body)
+
+    // Get the authenticated user from the request
+    const user = (request as any).user
 
     // Get the current year for job numbering
     const year = new Date().getFullYear().toString().slice(-2)
@@ -213,16 +193,17 @@ export const POST = withRBAC({
     // Create the job
     const jobResult = await query(
       `INSERT INTO "Job" (
-        id, "jobNumber", "customerId", type, division, description, status,
+        id, "jobNumber", "customerId", type, division, category, description, status,
         address, city, state, zip, "scheduledDate",
         "estimatedHours", "estimatedCost", "createdAt", "updatedAt"
-      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *`,
       [
         jobNumber,
         data.customerId,
         data.type,
         data.division || 'LINE_VOLTAGE',
+        data.category || null,
         data.description,
         data.status || 'ESTIMATE',
         data.address || null,
@@ -239,9 +220,27 @@ export const POST = withRBAC({
 
     const job = jobResult.rows[0]
 
-    // Create assignments if provided
+    // Auto-assign the creating employee to the job if they are an employee
+    if (user.role === 'EMPLOYEE') {
+      await query(
+        `INSERT INTO "JobAssignment" (
+          id, "jobId", "userId", "assignedBy", "assignedAt"
+        ) VALUES (gen_random_uuid(), $1, $2, $3, $4)`,
+        [
+          job.id,
+          user.id,
+          user.id, // Self-assigned
+          new Date()
+        ]
+      )
+    }
+
+    // Create assignments if provided (for additional users)
     if (data.assignedUserIds && data.assignedUserIds.length > 0) {
       for (const userId of data.assignedUserIds) {
+        // Skip if this is the creating employee (already assigned above)
+        if (user.role === 'EMPLOYEE' && userId === user.id) continue;
+
         await query(
           `INSERT INTO "JobAssignment" (
             id, "jobId", "userId", "assignedBy", "assignedAt"
@@ -249,7 +248,7 @@ export const POST = withRBAC({
           [
             job.id,
             userId,
-            'system', // TODO: Get from authenticated user
+            user.id || 'system',
             new Date()
           ]
         )
@@ -258,11 +257,12 @@ export const POST = withRBAC({
 
     // If scheduledDate is provided, create a JobSchedule entry
     if (data.scheduledDate) {
-      await query(
+      const scheduleResult = await query(
         `INSERT INTO "JobSchedule" (
-          id, "jobId", "startDate", "endDate", "estimatedHours", 
-          status, "createdAt", "updatedAt", "createdBy"
-        ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)`,
+          id, "jobId", "startDate", "endDate", "estimatedHours",
+          status, "createdAt", "updatedAt"
+        ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
+        RETURNING id`,
         [
           job.id,
           new Date(data.scheduledDate),
@@ -270,37 +270,50 @@ export const POST = withRBAC({
           data.estimatedHours || 8, // Default to 8 hours if not specified
           'SCHEDULED',
           new Date(),
-          new Date(),
-          'system' // TODO: Get from authenticated user
+          new Date()
         ]
       )
-      
+
+      const scheduleId = scheduleResult.rows[0].id
+
+      // Auto-assign the creating employee to the crew if they are an employee
+      if (user.role === 'EMPLOYEE') {
+        await query(
+          `INSERT INTO "CrewAssignment" (
+            id, "scheduleId", "userId", "jobId", role, status, "createdAt", "updatedAt"
+          ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)`,
+          [
+            scheduleId,
+            user.id,
+            job.id,
+            'TECHNICIAN',
+            'ASSIGNED',
+            new Date(),
+            new Date()
+          ]
+        )
+      }
+
       // If assignedUserIds provided, create crew assignments for the schedule
       if (data.assignedUserIds && data.assignedUserIds.length > 0) {
-        // Get the schedule ID we just created
-        const scheduleResult = await query(
-          `SELECT id FROM "JobSchedule" WHERE "jobId" = $1 ORDER BY "createdAt" DESC LIMIT 1`,
-          [job.id]
-        )
-        
-        if (scheduleResult.rows.length > 0) {
-          const scheduleId = scheduleResult.rows[0].id
-          
-          for (const userId of data.assignedUserIds) {
-            await query(
-              `INSERT INTO "CrewAssignment" (
-                id, "scheduleId", "userId", role, status, "assignedAt", "assignedBy"
-              ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)`,
-              [
-                scheduleId,
-                userId,
-                'TECHNICIAN',
-                'ASSIGNED',
-                new Date(),
-                'system' // TODO: Get from authenticated user
-              ]
-            )
-          }
+        for (const userId of data.assignedUserIds) {
+          // Skip if this is the creating employee (already assigned above)
+          if (user.role === 'EMPLOYEE' && userId === user.id) continue;
+
+          await query(
+            `INSERT INTO "CrewAssignment" (
+              id, "scheduleId", "userId", "jobId", role, status, "assignedAt", "assignedBy"
+            ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)`,
+            [
+              scheduleId,
+              userId,
+              job.id,
+              'TECHNICIAN',
+              'ASSIGNED',
+              new Date(),
+              user.id || 'system'
+            ]
+          )
         }
       }
     }

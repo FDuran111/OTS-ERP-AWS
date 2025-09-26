@@ -266,14 +266,12 @@ export async function PATCH(
       for (const userId of data.assignedUserIds) {
         await query(
           `INSERT INTO "JobAssignment" (
-            id, "jobId", "userId", "assignedBy", "assignedAt", "createdAt", "updatedAt"
-          ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)`,
+            id, "jobId", "userId", "assignedBy", "assignedAt"
+          ) VALUES (gen_random_uuid(), $1, $2, $3, $4)`,
           [
             resolvedParams.id,
             userId,
             'system', // TODO: Get from authenticated user
-            new Date(),
-            new Date(),
             new Date()
           ]
         )

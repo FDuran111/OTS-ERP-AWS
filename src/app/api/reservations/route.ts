@@ -65,8 +65,8 @@ export async function GET(request: NextRequest) {
         -- Calculate remaining quantity to reserve
         (mr."quantityReserved" - COALESCE(mr."fulfilledQuantity", 0)) as "remainingQuantity",
         -- Check if material has sufficient stock
-        ma.available_stock as "availableStock",
-        ma.total_reserved as "totalReserved"
+        ma."availableQuantity" as "availableStock",
+        ma."reservedQuantity" as "totalReserved"
       FROM "MaterialReservation" mr
       INNER JOIN "Material" m ON mr."materialId" = m.id
       INNER JOIN "Job" j ON mr."jobId" = j.id
@@ -143,19 +143,19 @@ export async function POST(request: NextRequest) {
     if (!availabilityCheck.rows[0].available) {
       // Get current availability info for error message
       const stockInfo = await query(
-        'SELECT total_stock, total_reserved, available_stock FROM "MaterialAvailability" WHERE id = $1',
+        'SELECT "totalQuantity", "reservedQuantity", "availableQuantity" FROM "MaterialAvailability" WHERE id = $1',
         [data.materialId]
       )
-      
+
       const stock = stockInfo.rows[0]
       return NextResponse.json(
-        { 
+        {
           error: 'Insufficient stock available',
           details: {
             requested: data.quantityReserved,
-            totalStock: parseFloat(stock?.total_stock || 0),
-            reserved: parseFloat(stock?.total_reserved || 0),
-            available: parseFloat(stock?.available_stock || 0)
+            totalStock: parseFloat(stock?.totalQuantity || 0),
+            reserved: parseFloat(stock?.reservedQuantity || 0),
+            available: parseFloat(stock?.availableQuantity || 0)
           }
         },
         { status: 400 }

@@ -67,12 +67,6 @@ interface User {
   role: string
 }
 
-interface JobPhase {
-  id: string
-  name: 'UG' | 'RI' | 'FN'
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
-}
-
 interface Job {
   id: string
   jobNumber: string
@@ -94,7 +88,6 @@ interface Job {
   city?: string
   state?: string
   zip?: string
-  jobPhases?: JobPhase[]
 }
 
 // Job data now comes from API
@@ -194,27 +187,6 @@ function JobCard({ job, onEdit, onDelete, onView }: {
           <strong>Crew:</strong> {job.crew.join(', ') || 'Unassigned'}
         </Typography>
         
-        {job.jobPhases && job.jobPhases.length > 0 && (
-          <Box sx={{ mb: 1.5 }}>
-            <Typography variant="body2" sx={{ mb: 0.5 }}>
-              <strong>Phases:</strong>
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {job.jobPhases.map((phase) => (
-                <Chip
-                  key={phase.id}
-                  label={phase.name}
-                  color={
-                    phase.status === 'COMPLETED' ? 'success' :
-                    phase.status === 'IN_PROGRESS' ? 'warning' : 'default'
-                  }
-                  size="small"
-                  variant={phase.status === 'NOT_STARTED' ? 'outlined' : 'filled'}
-                />
-              ))}
-            </Box>
-          </Box>
-        )}
         
         <Box 
           sx={{ display: 'flex', justifyContent: 'flex-end' }}
@@ -355,8 +327,7 @@ export default function JobsPage() {
     const matchesPriority = !priorityFilter || job.priority.toLowerCase() === priorityFilter.toLowerCase()
     
     // Phase filter
-    const matchesPhase = !phaseFilter || 
-      (job.jobPhases && job.jobPhases.some(phase => phase.name === phaseFilter))
+    const matchesPhase = !phaseFilter
     
     return matchesSearch && matchesStatus && matchesType && matchesPriority && matchesPhase
   })
@@ -402,8 +373,7 @@ export default function JobsPage() {
       job.actualHours || '',
       job.estimatedCost || '',
       job.actualCost || '',
-      job.billedAmount || '',
-      job.jobPhases?.map(p => `${p.name}:${p.status}`).join('; ') || ''
+      job.billedAmount || ''
     ])
 
     const csvContent = [headers, ...csvData]
@@ -686,7 +656,6 @@ export default function JobsPage() {
                     <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Customer</TableCell>
                     <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Status</TableCell>
                     <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Priority</TableCell>
-                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Phases</TableCell>
                     <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Due Date</TableCell>
                     <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Crew</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Actions</TableCell>
@@ -735,22 +704,6 @@ export default function JobsPage() {
                             size="small"
                             variant="outlined"
                           />
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                            {job.jobPhases?.map((phase) => (
-                              <Chip
-                                key={phase.id}
-                                label={phase.name}
-                                color={
-                                  phase.status === 'COMPLETED' ? 'success' :
-                                  phase.status === 'IN_PROGRESS' ? 'warning' : 'default'
-                                }
-                                size="small"
-                                variant={phase.status === 'NOT_STARTED' ? 'outlined' : 'filled'}
-                              />
-                            )) || '-'}
-                          </Box>
                         </TableCell>
                         <TableCell>
                           {job.dueDate ? new Date(job.dueDate).toLocaleDateString() : '-'}

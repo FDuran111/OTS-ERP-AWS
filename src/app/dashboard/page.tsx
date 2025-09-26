@@ -53,6 +53,7 @@ import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import LowStockNotification from '@/components/notifications/LowStockNotification'
 import EmployeeJobQuickAccess from '@/components/dashboard/EmployeeJobQuickAccess'
 import NewEmployeeJobs from '@/components/dashboard/NewEmployeeJobs'
+import CreateJobDialog from '@/components/jobs/CreateJobDialog'
 import { useAuthCheck } from '@/hooks/useAuthCheck'
 
 
@@ -141,6 +142,7 @@ export default function DashboardPage() {
     jobId: '',
     jobNumber: ''
   })
+  const [createJobDialogOpen, setCreateJobDialogOpen] = useState(false)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -316,6 +318,22 @@ export default function DashboardPage() {
         size={isMobile ? 'large' : 'medium'}
       >
         My Jobs
+      </Button>
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => setCreateJobDialogOpen(true)}
+        sx={{
+          width: { xs: '100%', md: 'auto' },
+          minWidth: { xs: 'auto', md: '120px' },
+          backgroundColor: '#2ecc71',
+          '&:hover': {
+            backgroundColor: '#27ae60',
+          },
+        }}
+        size={isMobile ? 'large' : 'medium'}
+      >
+        Create Job
       </Button>
       <Button
         variant="outlined"
@@ -1023,6 +1041,23 @@ export default function DashboardPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Create Job Dialog for Employees */}
+      {user?.role === 'EMPLOYEE' && (
+        <CreateJobDialog
+          open={createJobDialogOpen}
+          onClose={() => setCreateJobDialogOpen(false)}
+          onJobCreated={() => {
+            setCreateJobDialogOpen(false)
+            fetchDashboardData() // Refresh dashboard data
+            setSnackbar({
+              open: true,
+              message: 'Job created successfully! It will be sent for admin approval.',
+              severity: 'success'
+            })
+          }}
+        />
+      )}
 
       {/* Success/Error Snackbar */}
       <Snackbar

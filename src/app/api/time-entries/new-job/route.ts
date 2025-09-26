@@ -54,11 +54,19 @@ export async function POST(request: NextRequest) {
     newEntry.userEmail = user?.email || ''
 
     return NextResponse.json(newEntry, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid request data', details: error.errors },
         { status: 400 }
+      )
+    }
+
+    // If table doesn't exist, return error message
+    if (error?.originalError?.code === '42P01') {
+      return NextResponse.json(
+        { error: 'New job entry system is not yet configured. Please contact administrator.' },
+        { status: 503 }
       )
     }
 
@@ -89,7 +97,11 @@ export async function GET(request: NextRequest) {
     `, [status])
 
     return NextResponse.json(result.rows)
-  } catch (error) {
+  } catch (error: any) {
+    // If table doesn't exist, return empty array
+    if (error?.originalError?.code === '42P01') {
+      return NextResponse.json([])
+    }
     console.error('Error fetching new job entries:', error)
     return NextResponse.json(
       { error: 'Failed to fetch new job entries' },

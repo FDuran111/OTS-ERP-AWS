@@ -30,6 +30,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = directTimeEntrySchema.parse(body)
 
+    // Validate job exists
+    const jobCheck = await query(
+      'SELECT id FROM "Job" WHERE id = $1',
+      [data.jobId]
+    )
+
+    if (jobCheck.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Invalid job ID. Job does not exist.' },
+        { status: 400 }
+      )
+    }
+
     let startTime: Date
     let endTime: Date
     let finalHours = data.hours

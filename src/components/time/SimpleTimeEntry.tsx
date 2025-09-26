@@ -61,6 +61,10 @@ interface SimpleTimeEntryProps {
     jobNumber?: string
     jobTitle?: string
     estimatedHours?: number
+    date?: string
+    hours?: number
+    description?: string
+    editingEntryId?: string // If present, we're editing an existing entry
   } | null
 }
 
@@ -72,12 +76,12 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
   const [entryMode, setEntryMode] = useState<'scheduled' | 'manual' | 'new'>('manual') // Default to manual
   
   // Form state
-  const [date, setDate] = useState<Date>(new Date())
+  const [date, setDate] = useState<Date>(preselectedJob?.date ? new Date(preselectedJob.date + 'T00:00:00') : new Date())
   const [startTime, setStartTime] = useState<Date>(new Date())
   const [endTime, setEndTime] = useState<Date>(addHours(new Date(), 8))
-  const [hours, setHours] = useState<string>('8.0') // Direct hours input
+  const [hours, setHours] = useState<string>(preselectedJob?.hours ? preselectedJob.hours.toString() : '8.0') // Direct hours input
   const [useTimeRange, setUseTimeRange] = useState<boolean>(false) // Toggle between hours input and time range
-  const [description, setDescription] = useState('')
+  const [description, setDescription] = useState(preselectedJob?.description || '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -296,8 +300,14 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
         ).toISOString()
       }
       
-      const response = await fetch('/api/time-entries/direct', {
-        method: 'POST',
+      // If we're editing an existing entry, use PUT, otherwise POST
+      const isEditing = preselectedJob?.editingEntryId
+      const url = isEditing
+        ? `/api/time-entries/${preselectedJob.editingEntryId}`
+        : '/api/time-entries/direct'
+
+      const response = await fetch(url, {
+        method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(timeData),
@@ -305,7 +315,7 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create time entry')
+        throw new Error(errorData.error || `Failed to ${isEditing ? 'update' : 'create'} time entry`)
       }
 
       // Reset form

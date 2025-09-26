@@ -91,7 +91,7 @@ const navigationItems: NavItem[] = [
     roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
   },
   {
-    title: 'Time Tracking',
+    title: 'Time Card',
     icon: <TimeIcon />,
     path: '/time',
     roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
