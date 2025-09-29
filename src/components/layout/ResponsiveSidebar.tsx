@@ -179,9 +179,12 @@ export default function ResponsiveSidebar({
   const handleLogout = async () => {
     handleMenuClose()
     try {
-      // Call logout API
+      // Call logout API with credentials and Authorization header
+      const token = localStorage.getItem('auth-token')
       await fetch('/api/auth/logout', {
         method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
       })
       
       // Clear localStorage

@@ -78,7 +78,14 @@ export function DashboardShell({ children, title = 'Dashboard' }: DashboardShell
   }
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    const token = localStorage.getItem('auth-token')
+    await fetch('/api/auth/logout', { 
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      credentials: 'include'
+    })
+    localStorage.removeItem('user')
+    localStorage.removeItem('auth-token')
     router.push('/login')
   }
 

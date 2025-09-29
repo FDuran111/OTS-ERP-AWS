@@ -67,13 +67,11 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for:
-     * - api/healthz (health check endpoint)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public assets
+     * Only apply middleware to API routes that need authentication
+     * Exclude public API routes and static assets
+     * This prevents page navigation from being blocked by middleware
+     * when cookies are unavailable (like in Replit iframe)
      */
-    '/((?!api/healthz|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/api/((?!auth/login|auth/logout|auth/debug|healthz|public).*)',
   ],
 }

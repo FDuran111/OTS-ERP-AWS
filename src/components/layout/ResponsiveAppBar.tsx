@@ -87,8 +87,14 @@ export default function ResponsiveAppBar({
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
+      const token = localStorage.getItem('auth-token')
+      await fetch('/api/auth/logout', { 
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
       localStorage.removeItem('user')
+      localStorage.removeItem('auth-token')
       router.push('/login')
     } catch (error) {
       console.error('Logout error:', error)

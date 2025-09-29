@@ -110,6 +110,7 @@ export function useAuthState(): AuthContextType {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       })
 
@@ -117,6 +118,10 @@ export function useAuthState(): AuthContextType {
         const data = await response.json()
         setUser(data.user)
         localStorage.setItem('user', JSON.stringify(data.user))
+        // Store token for Replit environment where cookies may not work
+        if (data.token) {
+          localStorage.setItem('auth-token', data.token)
+        }
         return true
       } else {
         const error = await response.json()
@@ -134,12 +139,18 @@ export function useAuthState(): AuthContextType {
     try {
       setLoading(true)
       
-      // Call logout API
-      await fetch('/api/auth/logout', { method: 'POST' })
+      // Call logout API with credentials and Authorization header
+      const token = localStorage.getItem('auth-token')
+      await fetch('/api/auth/logout', { 
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
       
-      // Clear local state
+      // Clear local state including token
       setUser(null)
       localStorage.removeItem('user')
+      localStorage.removeItem('auth-token')
       
       // Redirect to login
       window.location.href = '/login'
