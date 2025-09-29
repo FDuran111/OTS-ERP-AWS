@@ -21,6 +21,10 @@ import {
   CircularProgress,
   Alert,
   Grid,
+  useTheme,
+  useMediaQuery,
+  IconButton,
+  Stack,
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -106,8 +110,97 @@ const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | '
   }
 }
 
+// Mobile Invoice Card Component
+function InvoiceCard({ 
+  invoice, 
+  onEdit, 
+  onDelete,
+  onStatusUpdated 
+}: { 
+  invoice: Invoice
+  onEdit: (invoice: Invoice) => void
+  onDelete: (invoice: Invoice) => void
+  onStatusUpdated: () => void
+}) {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  return (
+    <Card sx={{ 
+      mb: 2,
+      transition: 'all 0.2s ease-in-out',
+      '&:hover': {
+        boxShadow: 3,
+        transform: 'translateY(-2px)',
+      },
+    }}>
+      <CardContent sx={{ p: 2.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+              {invoice.invoiceNumber}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Job: {invoice.job.jobNumber}
+            </Typography>
+          </Box>
+          <Chip
+            label={invoice.status}
+            color={getStatusColor(invoice.status)}
+            size="small"
+          />
+        </Box>
+
+        <Box sx={{ mb: 1.5 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+            Customer: <strong>{invoice.customer.firstName} {invoice.customer.lastName}</strong>
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 600, color: 'primary.main' }}>
+            ${invoice.totalAmount.toFixed(2)}
+          </Typography>
+        </Box>
+
+        <Stack direction="row" spacing={2} sx={{ mb: 1.5 }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary">Due Date</Typography>
+            <Typography variant="body2">{formatDate(invoice.dueDate)}</Typography>
+          </Box>
+          {invoice.sentDate && (
+            <Box>
+              <Typography variant="caption" color="text.secondary">Sent Date</Typography>
+              <Typography variant="body2">{formatDate(invoice.sentDate)}</Typography>
+            </Box>
+          )}
+        </Stack>
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <InvoiceActionsMenu
+            invoice={{
+              ...invoice,
+              job: {
+                jobNumber: invoice.job.jobNumber,
+                description: invoice.job.description
+              },
+              customer: {
+                firstName: invoice.customer.firstName,
+                lastName: invoice.customer.lastName
+              }
+            } as any}
+            onEdit={onEdit as any}
+            onDelete={onDelete as any}
+            onStatusUpdated={onStatusUpdated}
+          />
+        </Box>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function InvoicingPage() {
   const router = useRouter()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -362,6 +455,29 @@ export default function InvoicingPage() {
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
+          </Box>
+        ) : isMobile ? (
+          <Box>
+            {invoices
+              .filter(invoice => 
+                invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                invoice.job?.jobNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                `${invoice.customer?.firstName || ''} ${invoice.customer?.lastName || ''}`.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((invoice) => (
+                <InvoiceCard
+                  key={invoice.id}
+                  invoice={invoice}
+                  onEdit={handleEditInvoice}
+                  onDelete={handleDeleteInvoice}
+                  onStatusUpdated={handleStatusUpdated}
+                />
+              ))}
+            {invoices.length === 0 && (
+              <Typography align="center" color="text.secondary" sx={{ py: 4 }}>
+                No invoices found
+              </Typography>
+            )}
           </Box>
         ) : (
           <TableContainer component={Paper} sx={{
