@@ -2,6 +2,17 @@
 
 This is the Ortmeier Technical Service Job Management Platform - a comprehensive Next.js 15 application designed for electrical subcontractors. The platform handles job scheduling, time tracking, material management, invoicing, and customer portal functionality. The project is currently in an AWS migration phase, transitioning from Supabase/Coolify infrastructure to AWS-only services.
 
+## Recent Updates (September 29, 2025)
+
+### Enhanced Material Tracking System
+Successfully implemented advanced material management features:
+- **Per-Location Stock Tracking**: MaterialLocationStock table tracks inventory at each storage location with automatic Material.inStock synchronization
+- **Inter-Location Transfers**: Full workflow for moving materials between locations with PENDING → IN_TRANSIT → COMPLETED states
+- **Offline-Capable Operations**: StockMovement enhanced with clientRequestId for idempotency and offline sync support
+- **Vendor Management**: MaterialVendorPrice table tracks vendor pricing, lead times, and price breaks for automated PO generation
+- **Material Documentation**: MaterialDocument table links photos and spec sheets to materials via FileAttachment
+- **CSV Import/Export**: Bulk material operations with robust validation, vendor lookup, and partial update support
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
