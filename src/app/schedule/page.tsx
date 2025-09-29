@@ -65,7 +65,11 @@ export default function SchedulePage() {
 
   const fetchUpcomingReminders = async () => {
     try {
-      const remindersResponse = await fetch('/api/schedule/reminders')
+      const token = localStorage.getItem('auth-token')
+      const remindersResponse = await fetch('/api/schedule/reminders', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
       
       if (remindersResponse.ok) {
         const remindersData = await remindersResponse.json()

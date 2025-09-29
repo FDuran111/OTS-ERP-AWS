@@ -93,9 +93,12 @@ export default function CrewAssignmentDialog({
       const startDate = schedule.startDate
       const endDate = schedule.endDate || schedule.startDate
 
+      const token = localStorage.getItem('auth-token')
+      const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {}
+      
       const [availableRes, assignedRes] = await Promise.all([
-        fetch(`/api/crew/available?startDate=${startDate}&endDate=${endDate}`),
-        fetch(`/api/schedule/${schedule.id}/crew`)
+        fetch(`/api/crew/available?startDate=${startDate}&endDate=${endDate}`, { headers: authHeaders, credentials: 'include' }),
+        fetch(`/api/schedule/${schedule.id}/crew`, { headers: authHeaders, credentials: 'include' })
       ])
 
       if (availableRes.ok) {
@@ -131,9 +134,13 @@ export default function CrewAssignmentDialog({
       setSubmitting(true)
       setError(null)
 
+      const token = localStorage.getItem('auth-token')
       const response = await fetch(`/api/schedule/${schedule.id}/crew`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           crewIds: selectedCrew
         })

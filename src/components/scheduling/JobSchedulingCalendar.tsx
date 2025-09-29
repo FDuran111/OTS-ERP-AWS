@@ -173,15 +173,18 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
         scheduleUrl += `&userId=${user.id}`
       }
 
+      const token = localStorage.getItem('auth-token')
+      const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {}
+      
       const promises: Promise<Response>[] = [
-        fetch(scheduleUrl)
+        fetch(scheduleUrl, { headers: authHeaders, credentials: 'include' })
       ]
 
       // Only fetch unscheduled jobs and crew list for non-employees
       if (user.role !== 'EMPLOYEE') {
         promises.push(
-          fetch('/api/jobs?status=estimate,scheduled,dispatched&unscheduled=true'),
-          fetch('/api/users?role=field_crew,admin')
+          fetch('/api/jobs?status=estimate,scheduled,dispatched&unscheduled=true', { headers: authHeaders, credentials: 'include' }),
+          fetch('/api/users?role=field_crew,admin', { headers: authHeaders, credentials: 'include' })
         )
       }
 
@@ -235,10 +238,12 @@ export default function JobSchedulingCalendar({ onJobScheduled }: JobSchedulingC
       // Debug: Log the date being sent
       console.log('Scheduling job with date:', formData.startDate)
 
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/schedule', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           jobId: formData.jobId,

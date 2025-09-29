@@ -98,7 +98,11 @@ export default function ReminderManagement({
       setLoading(true)
       setError(null)
       
-      const response = await fetch('/api/schedule/reminders?daysAhead=14')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/schedule/reminders?daysAhead=14', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
       if (!response.ok) {
         throw new Error(`Failed to fetch reminders: ${response.status}`)
       }
@@ -116,9 +120,13 @@ export default function ReminderManagement({
 
   const handleReminderAction = async (reminderId: string, action: string, snoozedUntil?: string) => {
     try {
+      const token = localStorage.getItem('auth-token')
       const response = await fetch(`/api/schedule/reminders/${reminderId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ action, snoozedUntil }),
       })
 
@@ -148,9 +156,13 @@ export default function ReminderManagement({
 
   const createReminder = async () => {
     try {
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/schedule/reminders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(newReminder),
       })
 
