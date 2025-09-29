@@ -118,7 +118,9 @@ export default function TimePage() {
 
   const fetchAllUsers = async () => {
     try {
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/users', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         credentials: 'include'
       })
       if (response.ok) {
@@ -139,10 +141,12 @@ export default function TimePage() {
       // Use passed user or state user
       const activeUser = currentUser || user
 
+      const token = localStorage.getItem('auth-token')
       const statsResponse = await fetch(
         activeUser?.role === 'EMPLOYEE'
           ? `/api/time-entries/stats?userId=${activeUser.id}`
           : '/api/time-entries/stats', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           credentials: 'include'
         }
       )
@@ -160,7 +164,9 @@ export default function TimePage() {
       if (activeUser?.role === 'OWNER_ADMIN' || activeUser?.role === 'FOREMAN') {
         try {
           // Fetch pending time entries
+          const token = localStorage.getItem('auth-token')
           const pendingResponse = await fetch('/api/time-entries?status=submitted&limit=100', {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             credentials: 'include'
           })
           if (pendingResponse.ok) {
@@ -170,6 +176,7 @@ export default function TimePage() {
 
           // Fetch pending job entries
           const jobsResponse = await fetch('/api/jobs/pending', {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             credentials: 'include'
           })
           if (jobsResponse.ok) {

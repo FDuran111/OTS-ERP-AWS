@@ -202,9 +202,14 @@ export default function MaterialsPage() {
       setLoading(true)
       setError(null)
       
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/materials/combined', {
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       })
       
       if (!response.ok) {

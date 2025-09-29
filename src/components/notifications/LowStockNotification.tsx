@@ -54,9 +54,14 @@ export default function LowStockNotification({ refreshTrigger }: LowStockNotific
   const fetchLowStockItems = async () => {
     try {
       setLoading(true)
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/materials/low-stock', {
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       })
       
       if (response.ok) {

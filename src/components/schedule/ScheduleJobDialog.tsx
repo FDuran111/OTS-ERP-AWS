@@ -78,7 +78,11 @@ export default function ScheduleJobDialog({ open, onClose, onJobScheduled }: Sch
   const fetchAvailableJobs = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/jobs?status=ESTIMATE,SCHEDULED&limit=50')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/jobs?status=ESTIMATE,SCHEDULED&limit=50', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
       if (response.ok) {
         const data = await response.json()
         console.log('Fetched jobs for scheduling:', data)

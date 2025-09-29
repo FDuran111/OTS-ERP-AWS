@@ -128,8 +128,12 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem('auth-token')
+      const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {}
+      
       const requests: Promise<Response>[] = [
         fetch('/api/jobs?status=estimate,scheduled,dispatched,in_progress', {
+          headers: authHeaders,
           credentials: 'include'
         })
       ]
@@ -138,6 +142,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       if (isAdmin) {
         requests.push(
           fetch('/api/users', {
+            headers: authHeaders,
             credentials: 'include'
           })
         )

@@ -135,11 +135,16 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem('auth-token')
+      const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {}
+      
       const requests: Promise<Response>[] = [
         fetch('/api/jobs?status=estimate,scheduled,dispatched,in_progress', {
+          headers: authHeaders,
           credentials: 'include'
         }),
         fetch(`/api/schedule?startDate=${format(startOfDay(new Date()), 'yyyy-MM-dd')}&endDate=${format(startOfDay(new Date()), 'yyyy-MM-dd')}`, {
+          headers: authHeaders,
           credentials: 'include'
         })
       ]
@@ -148,6 +153,7 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
       if (isAdmin) {
         requests.push(
           fetch('/api/users', {
+            headers: authHeaders,
             credentials: 'include'
           })
         )

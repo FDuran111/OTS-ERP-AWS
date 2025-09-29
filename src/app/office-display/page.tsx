@@ -94,9 +94,12 @@ export default function OfficeDisplayPage() {
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1)
 
+      const token = localStorage.getItem('auth-token')
+      const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {}
+      
       const [remindersResponse, scheduleResponse] = await Promise.all([
-        fetch('/api/schedule/reminders'),
-        fetch(`/api/schedule?viewType=week&date=${today.toISOString()}`)
+        fetch('/api/schedule/reminders', { headers: authHeaders, credentials: 'include' }),
+        fetch(`/api/schedule?viewType=week&date=${today.toISOString()}`, { headers: authHeaders, credentials: 'include' })
       ])
 
       let remindersData: any = { reminders: [] }
