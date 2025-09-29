@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import {
   Box,
@@ -48,20 +49,21 @@ interface UpcomingReminder {
 export default function SchedulePage() {
   const router = useRouter()
   const theme = useTheme()
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading: authLoading } = useAuth()
   const [upcomingReminders, setUpcomingReminders] = useState<UpcomingReminder[]>([])
   const [showReminders, setShowReminders] = useState(true)
   const [reminderManagementOpen, setReminderManagementOpen] = useState(false)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (!storedUser) {
+    if (authLoading) return // Wait for auth to complete
+    
+    if (!user) {
       router.push('/login')
       return
     }
-    setUser(JSON.parse(storedUser))
+    
     fetchUpcomingReminders()
-  }, [router])
+  }, [user, authLoading, router])
 
   const fetchUpcomingReminders = async () => {
     try {

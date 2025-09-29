@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
@@ -150,7 +151,7 @@ export default function MaterialsPage() {
   const router = useRouter()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading: authLoading } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -175,19 +176,15 @@ export default function MaterialsPage() {
   const [showQuickActions, setShowQuickActions] = useState(false)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (!storedUser) {
+    if (authLoading) return // Wait for auth to complete
+    
+    if (!user) {
       router.push('/login')
       return
     }
-    setUser(JSON.parse(storedUser))
-  }, [router])
-
-  useEffect(() => {
-    if (user) {
-      fetchCombinedData()
-    }
-  }, [user])
+    
+    fetchCombinedData()
+  }, [user, authLoading, router])
 
   // Check URL params for filters on component mount
   useEffect(() => {

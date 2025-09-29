@@ -49,10 +49,7 @@ export default function RootLayout({
       </head>
       <body className="overflow-x-hidden">
         <ThemeProvider>
-          <AuthProvider>
-            {children}
-            <LayoutDebugger />
-          </AuthProvider>
+          {children}
         </ThemeProvider>
       </body>
     </html>

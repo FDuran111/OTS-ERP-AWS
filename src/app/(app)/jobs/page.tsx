@@ -208,7 +208,7 @@ export default function JobsPage() {
   const router = useRouter()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading: authLoading } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
@@ -223,36 +223,28 @@ export default function JobsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table')
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/me', {
-          credentials: 'include'
-        })
-        if (!response.ok) {
-          router.push('/login')
-          return
-        }
-        const userData = await response.json()
-        setUser(userData)
-
-        // Redirect employees to schedule page instead
-        if (userData.role === 'EMPLOYEE') {
-          router.push('/schedule')
-          return
-        }
-        fetchJobs()
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        router.push('/login')
-      }
+    if (authLoading) return // Wait for auth to complete
+    
+    if (!user) {
+      router.push('/login')
+      return
     }
-    checkAuth()
-  }, [router])
+
+    // Redirect employees to schedule page instead
+    if (user.role === 'EMPLOYEE') {
+      router.push('/schedule')
+      return
+    }
+    
+    fetchJobs()
+  }, [user, authLoading, router])
 
   const fetchJobs = async () => {
     try {
       setLoading(true)
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/jobs', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         credentials: 'include'
       })
       if (!response.ok) {
@@ -282,8 +274,10 @@ export default function JobsPage() {
 
   const handleDeleteJob = async (job: Job) => {
     try {
+      const token = localStorage.getItem('auth-token')
       const response = await fetch(`/api/jobs/${job.id}`, {
         method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         credentials: 'include'
       })
       
