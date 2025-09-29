@@ -35,7 +35,9 @@ export default function LoginPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/me')
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include' // Include cookies
+        })
         if (response.ok) {
           router.push('/dashboard')
         }
@@ -59,6 +61,7 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include cookies in requests
         body: JSON.stringify({ email, password }),
       })
 
@@ -73,14 +76,23 @@ export default function LoginPage() {
       
       console.log('Login successful, redirecting to dashboard...')
       console.log('User data:', data.user)
-      console.log('Response headers:', response.headers)
       
-      // Wait briefly for cookie to be set
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // Wait for cookie to be properly set and verify authentication
+      await new Promise(resolve => setTimeout(resolve, 500))
       
-      // Use router.push for client-side navigation
-      console.log('Login successful, navigating to dashboard...')
-      router.push('/dashboard')
+      // Verify authentication before redirecting
+      const authCheck = await fetch('/api/auth/me', {
+        credentials: 'include'
+      })
+      
+      if (authCheck.ok) {
+        console.log('Authentication verified, navigating to dashboard...')
+        router.push('/dashboard')
+      } else {
+        // Force page reload to ensure cookies are properly set
+        console.log('Auth verification failed, using window.location...')
+        window.location.href = '/dashboard'
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
