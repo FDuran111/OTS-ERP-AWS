@@ -35,6 +35,9 @@ import {
   Fab,
   Badge,
   MenuItem,
+  useTheme,
+  useMediaQuery,
+  Stack,
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -127,8 +130,97 @@ const getPriorityColor = (priority?: string): 'default' | 'error' | 'warning' | 
   }
 }
 
+// Mobile Purchase Order Card Component
+function PurchaseOrderCard({ 
+  po, 
+  onEdit, 
+  onDelete,
+  onView 
+}: { 
+  po: PurchaseOrder
+  onEdit: (po: PurchaseOrder) => void
+  onDelete: (id: string) => void
+  onView: (po: PurchaseOrder) => void
+}) {
+  const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString()
+  }
+
+  return (
+    <Card sx={{ 
+      mb: 2,
+      transition: 'all 0.2s ease-in-out',
+      '&:hover': {
+        boxShadow: 3,
+        transform: 'translateY(-2px)',
+      },
+    }}>
+      <CardContent sx={{ p: 2.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+              {po.poNumber}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {po.vendorName || 'Unknown Vendor'}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+            <Chip
+              label={po.status.replace('_', ' ')}
+              color={getStatusColor(po.status)}
+              size="small"
+            />
+            {po.priority && (
+              <Chip
+                label={po.priority}
+                color={getPriorityColor(po.priority)}
+                size="small"
+                variant="outlined"
+              />
+            )}
+          </Box>
+        </Box>
+
+        {po.jobNumber && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Job: <strong>{po.jobNumber}</strong>
+          </Typography>
+        )}
+
+        <Box sx={{ mb: 1.5 }}>
+          <Typography variant="h5" sx={{ fontWeight: 600, color: 'primary.main' }}>
+            ${po.totalAmount.toFixed(2)}
+          </Typography>
+        </Box>
+
+        <Stack direction="row" spacing={2} sx={{ mb: 1.5 }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary">Order Date</Typography>
+            <Typography variant="body2">{formatDate(po.orderDate)}</Typography>
+          </Box>
+          {po.deliveryDate && (
+            <Box>
+              <Typography variant="caption" color="text.secondary">Delivery Date</Typography>
+              <Typography variant="body2">{formatDate(po.deliveryDate)}</Typography>
+            </Box>
+          )}
+        </Stack>
+
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+          <Button size="small" variant="outlined" onClick={() => onView(po)}>View</Button>
+          <Button size="small" variant="outlined" onClick={() => onEdit(po)}>Edit</Button>
+          <Button size="small" variant="outlined" color="error" onClick={() => onDelete(po.id)}>Delete</Button>
+        </Box>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function PurchaseOrdersPage() {
   const router = useRouter()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { user: authUser } = useAuth()
   const [user, setUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -433,6 +525,24 @@ export default function PurchaseOrdersPage() {
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
+          </Box>
+        ) : isMobile ? (
+          <Box>
+            {filteredPOs.length === 0 ? (
+              <Typography align="center" color="text.secondary" sx={{ py: 4 }}>
+                No purchase orders found
+              </Typography>
+            ) : (
+              filteredPOs.map((po) => (
+                <PurchaseOrderCard
+                  key={po.id}
+                  po={po}
+                  onEdit={handleEditPO}
+                  onDelete={handleDeletePO}
+                  onView={handleViewDetails}
+                />
+              ))
+            )}
           </Box>
         ) : (
           <TableContainer component={Paper}>
