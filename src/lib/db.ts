@@ -133,6 +133,25 @@ export async function connectToDatabase() {
   return { client }
 }
 
+// Transaction helper - ensures all operations use the same client
+export async function withTransaction<T>(
+  callback: (client: any) => Promise<T>
+): Promise<T> {
+  const client = await pool.connect()
+  
+  try {
+    await client.query('BEGIN')
+    const result = await callback(client)
+    await client.query('COMMIT')
+    return result
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
 // Close all connections (for cleanup)
 export async function closePool() {
   await pool.end()
