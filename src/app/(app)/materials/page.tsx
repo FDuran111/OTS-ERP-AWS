@@ -70,6 +70,9 @@ import StorageLocationDialog from '@/components/materials/StorageLocationDialog'
 import StockMovementHistory from '@/components/materials/StockMovementHistory'
 import StockAnalyticsDashboard from '@/components/analytics/StockAnalyticsDashboard'
 import ReorderSuggestions from '@/components/materials/ReorderSuggestions'
+import QuickMaterialUsage from '@/components/materials/QuickMaterialUsage'
+import MaterialTransfers from '@/components/materials/MaterialTransfers'
+import MaterialCSVManager from '@/components/materials/MaterialCSVManager'
 
 const drawerWidth = 240
 
@@ -174,6 +177,9 @@ export default function MaterialsPage() {
   const [reservationDialogOpen, setReservationDialogOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [showQuickActions, setShowQuickActions] = useState(false)
+  const [quickUsageDialogOpen, setQuickUsageDialogOpen] = useState(false)
+  const [transfersDialogOpen, setTransfersDialogOpen] = useState(false)
+  const [csvManagerDialogOpen, setCsvManagerDialogOpen] = useState(false)
 
   useEffect(() => {
     if (authLoading) return // Wait for auth to complete
@@ -393,6 +399,19 @@ export default function MaterialsPage() {
       }}
     >
       <Button
+        variant="outlined"
+        startIcon={<InventoryIcon />}
+        onClick={() => setQuickUsageDialogOpen(true)}
+        size="medium"
+        sx={{
+          flex: { xs: 1, sm: 'none' },
+          minWidth: 0,
+          display: { xs: 'flex', sm: 'none' }
+        }}
+      >
+        Quick Use
+      </Button>
+      <Button
         variant="contained"
         startIcon={<AddIcon />}
         onClick={() => setAddDialogOpen(true)}
@@ -437,6 +456,28 @@ export default function MaterialsPage() {
                     gap: 1.5,
                     justifyContent: 'center',
                   }}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setQuickUsageDialogOpen(true)}
+                      size="small"
+                      sx={{ 
+                        minWidth: 0,
+                        flex: '1 0 calc(50% - 4px)',
+                      }}
+                    >
+                      Quick Use
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setTransfersDialogOpen(true)}
+                      size="small"
+                      sx={{ 
+                        minWidth: 0,
+                        flex: '1 0 calc(50% - 4px)',
+                      }}
+                    >
+                      Transfers
+                    </Button>
                     <Button
                       variant="outlined"
                       onClick={() => setStorageLocationDialogOpen(true)}
@@ -492,6 +533,17 @@ export default function MaterialsPage() {
                     >
                       Reserve
                     </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setCsvManagerDialogOpen(true)}
+                      size="small"
+                      sx={{ 
+                        minWidth: 0,
+                        flex: '1 0 calc(50% - 4px)',
+                      }}
+                    >
+                      Import/Export
+                    </Button>
                   </Box>
                 )}
               </Box>
@@ -503,6 +555,24 @@ export default function MaterialsPage() {
                 justifyContent: 'flex-end',
                 mb: 3
               }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<InventoryIcon />}
+                  onClick={() => setQuickUsageDialogOpen(true)}
+                  size="medium"
+                  sx={{ minWidth: 120 }}
+                >
+                  Quick Use
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => setTransfersDialogOpen(true)}
+                  size="medium"
+                  sx={{ minWidth: 120 }}
+                >
+                  Transfers
+                </Button>
                 <Button
                   variant="outlined"
                   startIcon={<InventoryIcon />}
@@ -547,6 +617,14 @@ export default function MaterialsPage() {
                   sx={{ minWidth: 150 }}
                 >
                   Reserve Materials
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => setCsvManagerDialogOpen(true)}
+                  size="medium"
+                  sx={{ minWidth: 140 }}
+                >
+                  Import / Export
                 </Button>
               </Box>
             )}
@@ -1019,6 +1097,27 @@ export default function MaterialsPage() {
               fetchCombinedData()
               setRefreshTrigger(prev => prev + 1)
             }}
+          />
+
+          {/* Quick Material Usage Dialog */}
+          <QuickMaterialUsage
+            open={quickUsageDialogOpen}
+            onClose={() => setQuickUsageDialogOpen(false)}
+            onStockUpdated={handleStockUpdated}
+          />
+
+          {/* Material Transfers Dialog */}
+          <MaterialTransfers
+            open={transfersDialogOpen}
+            onClose={() => setTransfersDialogOpen(false)}
+            onTransferCompleted={handleStockUpdated}
+          />
+
+          {/* CSV Import/Export Manager */}
+          <MaterialCSVManager
+            open={csvManagerDialogOpen}
+            onClose={() => setCsvManagerDialogOpen(false)}
+            onImportComplete={handleMaterialCreated}
           />
       </ResponsiveContainer>
     </ResponsiveLayout>
