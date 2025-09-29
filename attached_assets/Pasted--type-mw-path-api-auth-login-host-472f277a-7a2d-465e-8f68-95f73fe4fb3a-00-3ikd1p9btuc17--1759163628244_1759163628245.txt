@@ -1,0 +1,25 @@
+{"type":"mw","path":"/api/auth/login","host":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfProto":"https","xfHost":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfFor":"24.72.219.46, 10.83.10.66","ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap","hasToken":false,"isPublic":true,"url":"https://0.0.0.0:5000/api/auth/login"}
+Executed query {
+  text: 'SELECT * FROM "User" WHERE email = $1',
+  duration: '162ms',
+  rows: 1
+}
+Login successful for: admin@admin.com
+Cookie settings: {
+  secure: false,
+  isProduction: false,
+  isLocalhost: false,
+  host: '472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev',
+  proto: 'https',
+  url: 'https://0.0.0.0:5000/api/auth/login'
+}
+ POST /api/auth/login 200 in 640ms
+{"type":"mw","path":"/api/auth/me","host":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfProto":"https","xfHost":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfFor":"24.72.219.46, 10.83.2.47","ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap","hasToken":false,"isPublic":true,"url":"https://0.0.0.0:5000/api/auth/me"}
+ GET /api/auth/me 401 in 14ms
+{"type":"mw","path":"/dashboard","host":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfProto":"https","xfHost":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfFor":"24.72.219.46, 10.83.5.189","ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap","hasToken":false,"isPublic":false,"url":"https://0.0.0.0:5000/dashboard"}
+{"type":"mw","path":"/login","host":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfProto":"https","xfHost":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfFor":"24.72.219.46, 10.83.11.252","ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap","hasToken":false,"isPublic":true,"url":"https://0.0.0.0:5000/login"}
+ GET /login 200 in 64ms
+{"type":"mw","path":"/api/auth/me","host":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfProto":"https","xfHost":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfFor":"24.72.219.46, 10.83.11.252","ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap","hasToken":false,"isPublic":true,"url":"https://0.0.0.0:5000/api/auth/me"}
+{"type":"mw","path":"/api/auth/me","host":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfProto":"https","xfHost":"472f277a-7a2d-465e-8f68-95f73fe4fb3a-00-3ikd1p9btuc17.worf.replit.dev","xfFor":"24.72.219.46, 10.83.2.47","ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap","hasToken":false,"isPublic":true,"url":"https://0.0.0.0:5000/api/auth/me"}
+ GET /api/auth/me 401 in 28ms
+ GET /api/auth/me 401 in 25ms
