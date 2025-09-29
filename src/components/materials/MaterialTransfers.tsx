@@ -116,9 +116,14 @@ export default function MaterialTransfers({
   const fetchTransfers = async () => {
     try {
       setLoading(true)
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/stock-transfers', {
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' },
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       })
 
       if (!response.ok) throw new Error('Failed to fetch transfers')
@@ -139,9 +144,14 @@ export default function MaterialTransfers({
     }
 
     try {
+      const token = localStorage.getItem('auth-token')
       const response = await fetch(`/api/stock-transfers/${transfer.id}/complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       })
 
       if (!response.ok) {
@@ -164,8 +174,13 @@ export default function MaterialTransfers({
     }
 
     try {
+      const token = localStorage.getItem('auth-token')
       const response = await fetch(`/api/stock-transfers/${transfer.id}`, {
         method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       })
 
       if (!response.ok) {
@@ -184,9 +199,14 @@ export default function MaterialTransfers({
 
   const handleMarkInTransit = async (transfer: Transfer) => {
     try {
+      const token = localStorage.getItem('auth-token')
       const response = await fetch(`/api/stock-transfers/${transfer.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
         body: JSON.stringify({ status: 'IN_TRANSIT' }),
       })
 
@@ -457,9 +477,22 @@ function CreateTransferDialog({
   const fetchData = async () => {
     try {
       setLoading(true)
+      const token = localStorage.getItem('auth-token')
+      const headers = {
+        'Cache-Control': 'no-cache',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
       const [locationsRes, materialsRes] = await Promise.all([
-        fetch('/api/storage-locations', { cache: 'no-store' }),
-        fetch('/api/materials', { cache: 'no-store' }),
+        fetch('/api/storage-locations', { 
+          cache: 'no-store',
+          headers,
+          credentials: 'include'
+        }),
+        fetch('/api/materials', { 
+          cache: 'no-store',
+          headers,
+          credentials: 'include'
+        }),
       ])
 
       if (locationsRes.ok) setLocations(await locationsRes.json())
@@ -531,9 +564,14 @@ function CreateTransferDialog({
     try {
       setSubmitting(true)
 
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/stock-transfers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
         body: JSON.stringify({
           fromLocationId: fromLocation.id,
           toLocationId: toLocation.id,
