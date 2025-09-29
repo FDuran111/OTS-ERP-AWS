@@ -54,7 +54,9 @@ export default function ResponsiveAppBar({
     // Fetch notification count
     const fetchNotificationCount = async () => {
       try {
+        const token = localStorage.getItem('auth-token')
         const response = await fetch('/api/notifications', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           credentials: 'include'
         })
         if (response.ok) {
