@@ -22,8 +22,10 @@ import {
   Edit as EditIcon,
   CheckCircle as ApproveIcon,
   Send as SubmitIcon,
+  Add as AddIcon,
 } from '@mui/icons-material'
 import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
+import HoursBreakdownDisplay from './HoursBreakdownDisplay'
 
 interface TimesheetEntry {
   id: string
@@ -33,9 +35,19 @@ interface TimesheetEntry {
   customer: string
   date: string
   hours: number
+  regularHours?: number
+  overtimeHours?: number
+  doubleTimeHours?: number
+  estimatedPay?: number
   description?: string
+  status?: 'draft' | 'submitted' | 'approved' | 'rejected'
+  submittedAt?: string
+  submittedBy?: string
   approvedAt?: string
   approvedBy?: string
+  rejectedAt?: string
+  rejectedBy?: string
+  rejectionReason?: string
 }
 
 interface WeeklyTimesheetDisplayProps {
@@ -58,9 +70,18 @@ export default function WeeklyTimesheetDisplay({
   const [loading, setLoading] = useState(false)
   const [weekStatus, setWeekStatus] = useState<'draft' | 'submitted' | 'approved'>('draft')
   const [editMode, setEditMode] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
   const weekDates = weekDays.map((_, index) => addDays(currentWeek, index))
+
+  // Get current user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser))
+    }
+  }, [])
 
   useEffect(() => {
     fetchWeekData()
@@ -82,13 +103,14 @@ export default function WeeklyTimesheetDisplay({
         const data = await response.json()
         setEntries(data)
 
-        // Check if all entries are approved
-        const allApproved = data.length > 0 && data.every((e: TimesheetEntry) => e.approvedAt)
-        const anyApproved = data.some((e: TimesheetEntry) => e.approvedAt)
+        // Check status based on entries
+        const allApproved = data.length > 0 && data.every((e: TimesheetEntry) => e.status === 'approved' || e.approvedAt)
+        const anySubmitted = data.some((e: TimesheetEntry) => e.status === 'submitted')
+        const anyApproved = data.some((e: TimesheetEntry) => e.status === 'approved' || e.approvedAt)
 
         if (allApproved) {
           setWeekStatus('approved')
-        } else if (anyApproved) {
+        } else if (anySubmitted) {
           setWeekStatus('submitted')
         } else {
           setWeekStatus('draft')
@@ -142,6 +164,17 @@ export default function WeeklyTimesheetDisplay({
     return entries.reduce((sum, entry) => sum + entry.hours, 0)
   }
 
+  // Calculate weekly hours breakdown
+  const calculateWeekBreakdown = () => {
+    const regularHours = entries.reduce((sum, entry) => sum + (entry.regularHours || 0), 0)
+    const overtimeHours = entries.reduce((sum, entry) => sum + (entry.overtimeHours || 0), 0)
+    const doubleTimeHours = entries.reduce((sum, entry) => sum + (entry.doubleTimeHours || 0), 0)
+    const totalEarnings = entries.reduce((sum, entry) => sum + (entry.estimatedPay || 0), 0)
+    return { regularHours, overtimeHours, doubleTimeHours, totalEarnings }
+  }
+
+  const weekBreakdown = calculateWeekBreakdown()
+
   const handleDeleteEntry = async (entryId: string) => {
     if (!confirm('Are you sure you want to delete this time entry?')) return
 
@@ -168,7 +201,11 @@ export default function WeeklyTimesheetDisplay({
       for (const entry of entries) {
         await fetch(`/api/time-entries/${entry.id}/submit`, {
           method: 'POST',
-          credentials: 'include'
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            submittedBy: currentUser?.id
+          })
         })
       }
 
@@ -223,6 +260,7 @@ export default function WeeklyTimesheetDisplay({
             }
           />
 
+          {/* Edit button for employees on their own timesheet */}
           {!isAdmin && weekStatus === 'draft' && entries.length > 0 && (
             <Stack direction="row" spacing={1}>
               <Button
@@ -242,6 +280,49 @@ export default function WeeklyTimesheetDisplay({
               >
                 Submit Week
               </Button>
+            </Stack>
+          )}
+
+          {/* Edit button for admins viewing employee timesheets - always show */}
+          {isAdmin && (
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                startIcon={<EditIcon />}
+                onClick={() => setEditMode(!editMode)}
+                size="small"
+                color={editMode ? 'primary' : 'inherit'}
+              >
+                {editMode ? 'Done Editing' : 'Edit'}
+              </Button>
+
+              {/* New Entry button - only show in edit mode when there are entries */}
+              {editMode && entries.length > 0 && onEditEntry && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    // Get the first day of the week as default date
+                    const defaultDate = format(weekDates[0], 'yyyy-MM-dd')
+                    // Create a new entry without a specific job (user will select in dialog)
+                    const newEntry = {
+                      id: '', // Empty ID indicates new entry
+                      jobId: '', // Empty job ID - user will select
+                      jobNumber: '',
+                      jobTitle: '',
+                      customer: '',
+                      date: defaultDate,
+                      hours: 0,
+                      description: ''
+                    } as TimesheetEntry
+                    onEditEntry(newEntry)
+                  }}
+                  size="small"
+                  color="success"
+                >
+                  New Entry
+                </Button>
+              )}
             </Stack>
           )}
 
@@ -283,9 +364,36 @@ export default function WeeklyTimesheetDisplay({
             {jobRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
-                  <Typography color="text.secondary">
-                    No time entries for this week. Use the "Manual Time Entry" button to add hours.
-                  </Typography>
+                  <Stack spacing={2} alignItems="center">
+                    <Typography color="text.secondary">
+                      No time entries for this week
+                    </Typography>
+                    {editMode && onEditEntry && (
+                      <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => {
+                          // Get the first day of the week as default date
+                          const defaultDate = format(weekDates[0], 'yyyy-MM-dd')
+                          // Create a new entry without a specific job (user will select in dialog)
+                          const newEntry = {
+                            id: '', // Empty ID indicates new entry
+                            jobId: '', // Empty job ID - user will select
+                            jobNumber: '',
+                            jobTitle: '',
+                            customer: '',
+                            date: defaultDate,
+                            hours: 0,
+                            description: ''
+                          } as TimesheetEntry
+                          onEditEntry(newEntry)
+                        }}
+                        size="small"
+                      >
+                        Add Time Entry
+                      </Button>
+                    )}
+                  </Stack>
                 </TableCell>
               </TableRow>
             ) : (
@@ -305,42 +413,124 @@ export default function WeeklyTimesheetDisplay({
                     </Stack>
                   </TableCell>
 
-                  {weekDays.map((day) => {
+                  {weekDays.map((day, dayIndex) => {
                     const dayKey = day.toLowerCase()
                     const dayData = job.days[dayKey]
+
+                    // Calculate if this day is editable (within 14 days)
+                    const dayDate = weekDates[dayIndex]
+                    const today = new Date()
+                    const daysDifference = Math.floor((today.getTime() - dayDate.getTime()) / (1000 * 60 * 60 * 24))
+                    const isEditable = isAdmin || daysDifference <= 14
 
                     return (
                       <TableCell key={day} align="center">
                         {dayData ? (
                           <Box
                             onClick={() => {
-                              if (editMode && weekStatus === 'draft' && !isAdmin) {
+                              // Admins can always edit, employees need draft status and within 14 days
+                              const canEdit = isAdmin || (editMode && weekStatus === 'draft' && isEditable)
+
+                              if (editMode && canEdit) {
                                 const entry = entries.find(e => e.id === dayData.id)
                                 if (entry && onEditEntry) onEditEntry(entry)
+                              } else if (!isEditable && !isAdmin) {
+                                // Show a message that this is too old to edit
+                                alert('This entry is older than 14 days. Please contact your administrator to request changes.')
                               }
                             }}
                             sx={{
-                              cursor: editMode && weekStatus === 'draft' && !isAdmin ? 'pointer' : 'default',
-                              '&:hover': editMode && weekStatus === 'draft' && !isAdmin ? {
+                              cursor: editMode && (isAdmin || (weekStatus === 'draft' && isEditable)) ? 'pointer' : 'default',
+                              '&:hover': editMode && (isAdmin || (weekStatus === 'draft' && isEditable)) ? {
                                 backgroundColor: 'action.hover',
                                 borderRadius: 1,
                               } : {},
                               padding: 0.5,
                               transition: 'background-color 0.2s',
+                              opacity: !isEditable && !isAdmin ? 0.7 : 1,
+                            }}
+                          >
+                            <Stack alignItems="center" spacing={0.5}>
+                              <Typography
+                                variant="body2"
+                                fontWeight={dayData.hours > 0 ? 'bold' : 'normal'}
+                                color={dayData.approved ? 'success.main' : 'text.primary'}
+                              >
+                                {dayData.hours.toFixed(1)}
+                              </Typography>
+                              {/* Status indicator */}
+                              {(() => {
+                                const entry = entries.find(e => e.id === dayData.id)
+                                if (entry?.status === 'approved' || entry?.approvedAt) {
+                                  return (
+                                    <ApproveIcon
+                                      sx={{ fontSize: 14, color: 'success.main' }}
+                                      titleAccess="Approved"
+                                    />
+                                  )
+                                } else if (entry?.status === 'submitted') {
+                                  return (
+                                    <SubmitIcon
+                                      sx={{ fontSize: 14, color: 'warning.main' }}
+                                      titleAccess="Submitted for approval"
+                                    />
+                                  )
+                                } else if (entry?.status === 'rejected') {
+                                  return (
+                                    <Typography
+                                      variant="caption"
+                                      color="error"
+                                      sx={{ fontSize: 10 }}
+                                    >
+                                      ❌
+                                    </Typography>
+                                  )
+                                }
+                                return null
+                              })()}
+                            </Stack>
+                          </Box>
+                        ) : (
+                          <Box
+                            onClick={() => {
+                              // Allow adding new entries for empty days
+                              const canEdit = isAdmin || (editMode && weekStatus === 'draft' && isEditable)
+
+                              if (editMode && canEdit && onEditEntry) {
+                                // Create a new entry object for this day
+                                const newEntry = {
+                                  id: '', // Empty ID indicates new entry
+                                  jobId: job.jobId,
+                                  jobNumber: job.jobNumber,
+                                  jobTitle: job.jobTitle,
+                                  customer: job.customer,
+                                  date: format(weekDates[dayIndex], 'yyyy-MM-dd'),
+                                  hours: 0,
+                                  description: ''
+                                } as TimesheetEntry
+                                onEditEntry(newEntry)
+                              } else if (!isEditable && !isAdmin) {
+                                alert('This date is older than 14 days. Please contact your administrator to add entries.')
+                              }
+                            }}
+                            sx={{
+                              cursor: editMode && (isAdmin || (weekStatus === 'draft' && isEditable)) ? 'pointer' : 'default',
+                              '&:hover': editMode && (isAdmin || (weekStatus === 'draft' && isEditable)) ? {
+                                backgroundColor: 'action.hover',
+                                borderRadius: 1,
+                              } : {},
+                              padding: 0.5,
+                              transition: 'background-color 0.2s',
+                              opacity: !isEditable && !isAdmin ? 0.5 : 1,
                             }}
                           >
                             <Typography
                               variant="body2"
-                              fontWeight={dayData.hours > 0 ? 'bold' : 'normal'}
-                              color={dayData.approved ? 'success.main' : 'text.primary'}
+                              color={editMode && (isAdmin || (weekStatus === 'draft' && isEditable)) ? "text.secondary" : "text.disabled"}
                             >
-                              {dayData.hours.toFixed(1)}
+                              -
                             </Typography>
                           </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.disabled">
-                            -
-                          </Typography>
                         )}
                       </TableCell>
                     )
@@ -360,58 +550,86 @@ export default function WeeklyTimesheetDisplay({
             )}
 
             {jobRows.length > 0 && (
-              <TableRow sx={{ bgcolor: 'grey.50' }}>
-                <TableCell>
-                  <Typography variant="body2" fontWeight="bold">
-                    Daily Total
-                  </Typography>
-                </TableCell>
-                {weekDays.map((day) => {
-                  const dayTotal = calculateDayTotal(day.toLowerCase())
-                  return (
-                    <TableCell key={day} align="center">
-                      <Typography
-                        variant="body2"
-                        fontWeight="bold"
-                        color={dayTotal > 10 ? 'warning.main' : 'text.primary'}
-                      >
-                        {dayTotal > 0 ? dayTotal.toFixed(1) : '-'}
-                      </Typography>
-                    </TableCell>
-                  )
-                })}
-                <TableCell align="center">
-                  <Typography
-                    variant="body1"
-                    fontWeight="bold"
-                    color={calculateWeekTotal() > 40 ? 'warning.main' : 'primary.main'}
-                  >
-                    {calculateWeekTotal().toFixed(1)}
-                  </Typography>
-                </TableCell>
-                <TableCell />
-              </TableRow>
+              <>
+                <TableRow sx={{ bgcolor: 'background.paper' }}>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight="bold">
+                      Daily Total
+                    </Typography>
+                  </TableCell>
+                  {weekDays.map((day) => {
+                    const dayTotal = calculateDayTotal(day.toLowerCase())
+                    return (
+                      <TableCell key={day} align="center">
+                        <Typography
+                          variant="body2"
+                          fontWeight="bold"
+                          color={dayTotal > 10 ? 'warning.main' : 'text.primary'}
+                        >
+                          {dayTotal > 0 ? dayTotal.toFixed(1) : '-'}
+                        </Typography>
+                      </TableCell>
+                    )
+                  })}
+                  <TableCell align="center">
+                    <Typography
+                      variant="body1"
+                      fontWeight="bold"
+                      color={calculateWeekTotal() > 40 ? 'warning.main' : 'primary.main'}
+                    >
+                      {calculateWeekTotal().toFixed(1)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell />
+                </TableRow>
+                {/* Weekly Hours Breakdown Row - Only show for admins when NOT viewing a specific user */}
+                {isAdmin && !selectedUserId && (
+                  <>
+                    <TableRow sx={{ bgcolor: 'background.paper' }}>
+                      <TableCell colSpan={10}>
+                        <Box sx={{ py: 1 }}>
+                          <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>
+                            Weekly Hours Breakdown
+                          </Typography>
+                          <HoursBreakdownDisplay
+                            regularHours={weekBreakdown.regularHours}
+                            overtimeHours={weekBreakdown.overtimeHours}
+                            doubleTimeHours={weekBreakdown.doubleTimeHours}
+                            totalHours={calculateWeekTotal()}
+                            weeklyTotal={calculateWeekTotal()}
+                            weeklyThreshold={40}
+                            showDetails={true}
+                          />
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                    {/* Weekly Earnings Row - Only show for admins when NOT viewing a specific user */}
+                    <TableRow sx={{ bgcolor: 'background.default' }}>
+                      <TableCell colSpan={10}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1 }}>
+                          <Typography variant="body1" fontWeight="bold" color="success.main">
+                            Estimated Weekly Earnings
+                          </Typography>
+                          <Typography variant="h6" fontWeight="bold" color="success.main">
+                            ${weekBreakdown.totalEarnings.toFixed(2)}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  </>
+                )}
+              </>
             )}
           </TableBody>
         </Table>
       </TableContainer>
 
-      {/* Legend */}
-      {entries.length > 0 && (
+      {/* Legend - Only show edit mode tip */}
+      {entries.length > 0 && editMode && (
         <Stack direction="row" spacing={2} mt={2}>
-          {editMode && (
-            <Typography variant="caption" color="primary.main">
-              • Click on any hour value to edit it
-            </Typography>
-          )}
-          <Typography variant="caption" color="text.secondary">
-            • Hours shown in <span style={{ color: '#2e7d32' }}>green</span> are approved
+          <Typography variant="caption" color="primary.main">
+            • Click on any hour value to edit it
           </Typography>
-          {calculateWeekTotal() > 40 && (
-            <Typography variant="caption" color="warning.main">
-              • Overtime hours detected (&gt;40 hrs/week)
-            </Typography>
-          )}
         </Stack>
       )}
     </Paper>

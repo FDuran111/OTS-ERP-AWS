@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { calculateDailyHours, calculateWeeklyHours, getWeekDateRange } from '@/lib/timeCalculations'
+import { format } from 'date-fns'
 
 const directTimeEntrySchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
@@ -108,21 +110,128 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the time entry with a UUID
+    // Get overtime settings for calculation
+    let overtimeSettings
+    try {
+      const settingsResult = await query(`
+        SELECT * FROM "OvertimeSettings"
+        WHERE "companyId" = '00000000-0000-0000-0000-000000000001'
+        LIMIT 1
+      `)
+
+      if (settingsResult.rows.length > 0) {
+        overtimeSettings = {
+          dailyOTThreshold: parseFloat(settingsResult.rows[0].dailyOTThreshold),
+          weeklyOTThreshold: parseFloat(settingsResult.rows[0].weeklyOTThreshold),
+          dailyDTThreshold: parseFloat(settingsResult.rows[0].dailyDTThreshold),
+          weeklyDTThreshold: parseFloat(settingsResult.rows[0].weeklyDTThreshold),
+          otMultiplier: parseFloat(settingsResult.rows[0].otMultiplier),
+          dtMultiplier: parseFloat(settingsResult.rows[0].dtMultiplier),
+          seventhDayOT: settingsResult.rows[0].seventhDayOT,
+          seventhDayDT: settingsResult.rows[0].seventhDayDT,
+          useDailyOT: settingsResult.rows[0].useDailyOT ?? false,
+          useWeeklyOT: settingsResult.rows[0].useWeeklyOT ?? true,
+          roundingInterval: parseInt(settingsResult.rows[0].roundingInterval),
+          roundingType: settingsResult.rows[0].roundingType
+        }
+      }
+    } catch (error) {
+      // Use default settings if table doesn't exist
+      overtimeSettings = {
+        dailyOTThreshold: 8,
+        weeklyOTThreshold: 40,
+        dailyDTThreshold: 12,
+        weeklyDTThreshold: 60,
+        otMultiplier: 1.5,
+        dtMultiplier: 2.0,
+        seventhDayOT: true,
+        seventhDayDT: true,
+        useDailyOT: false,
+        useWeeklyOT: true,
+        roundingInterval: 15,
+        roundingType: 'nearest'
+      }
+    }
+
+    // Get week entries for weekly calculation
+    const { weekNumber } = getWeekDateRange(new Date(data.date))
+    const weekEntriesResult = await query(`
+      SELECT date, hours, "userId" FROM "TimeEntry"
+      WHERE "userId" = $1
+      AND "weekNumber" = $2
+      AND date != $3
+      ORDER BY date
+    `, [data.userId, weekNumber, data.date])
+
+    // Add current entry to calculate - ensure dates are strings
+    const allEntries = [
+      ...weekEntriesResult.rows.map(r => ({
+        date: typeof r.date === 'string' ? r.date : format(r.date, 'yyyy-MM-dd'),
+        hours: parseFloat(r.hours),
+        userId: r.userId
+      })),
+      { date: data.date, hours: finalHours, userId: data.userId }
+    ]
+
+    // Calculate with weekly context
+    const weeklyCalc = calculateWeeklyHours(allEntries, overtimeSettings)
+    const dailyBreakdown = weeklyCalc.entries.get(data.date) || {
+      regularHours: finalHours,
+      overtimeHours: 0,
+      doubleTimeHours: 0,
+      totalHours: finalHours,
+      consecutiveDay: 1,
+      isSeventhDay: false
+    }
+
+    // Fetch user's pay rates for earnings calculation
+    let estimatedPay = 0
+    try {
+      const userRates = await query(
+        'SELECT "regularRate", "overtimeRate", "doubleTimeRate" FROM "User" WHERE id = $1',
+        [data.userId]
+      )
+
+      if (userRates.rows.length > 0) {
+        const rates = userRates.rows[0]
+        const regularRate = parseFloat(rates.regularRate) || 15.00
+        const overtimeRate = parseFloat(rates.overtimeRate) || (regularRate * 1.5)
+        const doubleTimeRate = parseFloat(rates.doubleTimeRate) || (regularRate * 2.0)
+
+        // Calculate estimated pay
+        estimatedPay =
+          (dailyBreakdown.regularHours * regularRate) +
+          (dailyBreakdown.overtimeHours * overtimeRate) +
+          (dailyBreakdown.doubleTimeHours * doubleTimeRate)
+      }
+    } catch (error) {
+      console.error('Error calculating pay:', error)
+      // Continue without pay calculation
+    }
+
+    // Create the time entry with calculated hours and estimated pay
     const timeEntryResult = await query(
       `INSERT INTO "TimeEntry" (
         id, "userId", "jobId", "phaseId", date, "startTime", "endTime",
-        hours, description, synced, "createdAt", "updatedAt"
-      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        hours, "regularHours", "overtimeHours", "doubleTimeHours",
+        "weekNumber", "consecutiveDay", "estimatedPay",
+        description, synced, "createdAt", "updatedAt"
+      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`,
       [
         data.userId,
         data.jobId,
         data.phaseId || null,
-        data.date, // Pass date string directly, let PostgreSQL handle it
+        data.date,
         startTime,
         endTime,
         finalHours,
+        dailyBreakdown.regularHours,
+        dailyBreakdown.overtimeHours,
+        dailyBreakdown.doubleTimeHours,
+        weekNumber,
+        dailyBreakdown.consecutiveDay,
+        estimatedPay,
         data.description || null,
         false,
         new Date(),
@@ -132,10 +241,47 @@ export async function POST(request: NextRequest) {
 
     const timeEntry = timeEntryResult.rows[0]
 
+    // Log the CREATE action for audit trail
+    try {
+      console.log('[AUDIT] Creating audit entry for new time entry:', timeEntry.id)
+      await query(`
+        INSERT INTO "TimeEntryAudit" (
+          id, entry_id, user_id, action,
+          old_hours, new_hours,
+          old_regular, new_regular,
+          old_overtime, new_overtime,
+          old_doubletime, new_doubletime,
+          old_pay, new_pay,
+          changed_by, changed_at
+        ) VALUES (
+          gen_random_uuid(), $1, $2, 'CREATE',
+          NULL, $3,
+          NULL, $4,
+          NULL, $5,
+          NULL, $6,
+          NULL, $7,
+          $8, NOW()
+        )
+      `, [
+        timeEntry.id,
+        data.userId,
+        finalHours,
+        dailyBreakdown.regularHours,
+        dailyBreakdown.overtimeHours,
+        dailyBreakdown.doubleTimeHours,
+        estimatedPay,
+        data.userId // For now, use the same user as changed_by
+      ])
+      console.log('[AUDIT] Successfully created audit entry')
+    } catch (auditError) {
+      // Log but don't fail if audit table doesn't exist yet
+      console.error('[AUDIT] Failed to create audit entry:', auditError)
+    }
+
     // If this entry is linked to a schedule, update the schedule status
     if (data.scheduleId) {
       await query(`
-        UPDATE "JobSchedule" 
+        UPDATE "JobSchedule"
         SET "actualHours" = COALESCE("actualHours", 0) + $1,
             "updatedAt" = NOW()
         WHERE id = $2
@@ -172,6 +318,9 @@ export async function POST(request: NextRequest) {
       startTime: timeEntry.startTime,
       endTime: timeEntry.endTime,
       hours: parseFloat(timeEntry.hours),
+      regularHours: parseFloat(timeEntry.regularHours || 0),
+      overtimeHours: parseFloat(timeEntry.overtimeHours || 0),
+      doubleTimeHours: parseFloat(timeEntry.doubleTimeHours || 0),
       calculatedHours: finalHours,
       description: timeEntry.description,
       synced: timeEntry.synced,

@@ -20,6 +20,7 @@ export const GET = withRBAC({
     const active = searchParams.get('active') === 'true'
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const status = searchParams.get('status')
     const limit = parseInt(searchParams.get('limit') || '50')
 
     // Build WHERE conditions
@@ -43,12 +44,34 @@ export const GET = withRBAC({
       conditions.push(`te."endTime" IS NULL`)
     }
 
+    // Add status filter
+    if (status) {
+      conditions.push(`te."status" = $${paramIndex++}`)
+      params.push(status)
+    }
+
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
     const timeEntriesResult = await query(
       `SELECT
         te.*,
+        te."regularHours",
+        te."overtimeHours",
+        te."doubleTimeHours",
+        te."estimatedPay",
+        te."status",
+        te."submittedAt",
+        te."submittedBy",
+        te."approvedAt",
+        te."approvedBy",
+        te."rejectedAt",
+        te."rejectedBy",
+        te."rejectionReason",
         u.name as user_name,
+        u.email as user_email,
+        u."regularRate",
+        u."overtimeRate",
+        u."doubleTimeRate",
         COALESCE(j."jobNumber", te."jobId"::text) as "jobNumber",
         COALESCE(j.description, 'Job details pending') as job_description,
         COALESCE(c."companyName", 'Customer pending') as "companyName",
@@ -68,14 +91,28 @@ export const GET = withRBAC({
 
     // Transform data for frontend
     const transformedEntries = timeEntriesResult.rows.map(entry => {
-      const duration = entry.endTime 
+      const duration = entry.endTime
         ? Math.round((new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60) * 100) / 100
         : null
+
+      // Calculate estimated pay if not stored
+      let estimatedPay = parseFloat(entry.estimatedPay || 0)
+      if (!estimatedPay && entry.hours) {
+        const regularRate = parseFloat(entry.regularRate) || 15.00
+        const overtimeRate = parseFloat(entry.overtimeRate) || (regularRate * 1.5)
+        const doubleTimeRate = parseFloat(entry.doubleTimeRate) || (regularRate * 2.0)
+
+        estimatedPay =
+          (parseFloat(entry.regularHours || 0) * regularRate) +
+          (parseFloat(entry.overtimeHours || 0) * overtimeRate) +
+          (parseFloat(entry.doubleTimeHours || 0) * doubleTimeRate)
+      }
 
       return {
         id: entry.id,
         userId: entry.userId,
         userName: entry.user_name,
+        userEmail: entry.user_email,
         jobId: entry.jobId,
         jobNumber: entry.jobNumber,
         jobTitle: entry.job_description,
@@ -86,10 +123,22 @@ export const GET = withRBAC({
         startTime: entry.startTime,
         endTime: entry.endTime,
         hours: parseFloat(entry.hours) || 0,
+        regularHours: parseFloat(entry.regularHours || 0),
+        overtimeHours: parseFloat(entry.overtimeHours || 0),
+        doubleTimeHours: parseFloat(entry.doubleTimeHours || 0),
+        estimatedPay: estimatedPay,
         calculatedHours: duration,
         description: entry.description,
         synced: entry.synced || false,
         isActive: !entry.endTime,
+        status: entry.status || 'draft',
+        submittedAt: entry.submittedAt,
+        submittedBy: entry.submittedBy,
+        approvedAt: entry.approvedAt,
+        approvedBy: entry.approvedBy,
+        rejectedAt: entry.rejectedAt,
+        rejectedBy: entry.rejectedBy,
+        rejectionReason: entry.rejectionReason,
         createdAt: entry.createdAt,
         updatedAt: entry.updatedAt,
       }

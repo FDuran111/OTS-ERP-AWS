@@ -52,17 +52,40 @@ export async function GET(
       [resolvedParams.id]
     )
 
-    // Get time entries with user info
+    // Get time entries with user info and pay rates
     const timeEntriesResult = await query(
-      `SELECT 
+      `SELECT
         te.*,
-        u.name as user_name
+        u.name as user_name,
+        u."regularRate",
+        u."overtimeRate",
+        u."doubleTimeRate"
       FROM "TimeEntry" te
       INNER JOIN "User" u ON te."userId" = u.id
       WHERE te."jobId" = $1
       ORDER BY te.date DESC`,
       [resolvedParams.id]
     )
+
+    // Calculate actual hours and cost from time entries
+    const actualHoursFromEntries = timeEntriesResult.rows.reduce((sum, entry) => {
+      return sum + (parseFloat(entry.hours) || 0)
+    }, 0)
+
+    // Calculate actual labor cost based on time entry breakdown
+    const actualLaborCost = timeEntriesResult.rows.reduce((sum, entry) => {
+      const regularHours = parseFloat(entry.regularHours) || 0
+      const overtimeHours = parseFloat(entry.overtimeHours) || 0
+      const doubleTimeHours = parseFloat(entry.doubleTimeHours) || 0
+      const regularRate = parseFloat(entry.regularRate) || 15
+      const overtimeRate = parseFloat(entry.overtimeRate) || (regularRate * 1.5)
+      const doubleTimeRate = parseFloat(entry.doubleTimeRate) || (regularRate * 2)
+
+      const entryCost = (regularHours * regularRate) +
+                       (overtimeHours * overtimeRate) +
+                       (doubleTimeHours * doubleTimeRate)
+      return sum + entryCost
+    }, 0)
 
     // Get material usage with material info
     const materialUsageResult = await query(
@@ -118,8 +141,8 @@ export async function GET(
       completedDate: job.completedDate,
       estimatedHours: parseFloat(job.estimatedHours) || 0,
       estimatedCost: parseFloat(job.estimatedCost) || 0,
-      actualHours: parseFloat(job.actualHours) || 0,
-      actualCost: parseFloat(job.actualCost) || 0,
+      actualHours: actualHoursFromEntries, // Use calculated hours from time entries
+      actualCost: actualLaborCost, // Use calculated cost from time entries
       billedAmount: parseFloat(job.billedAmount) || 0,
       billedDate: job.billedDate,
       createdAt: job.createdAt,

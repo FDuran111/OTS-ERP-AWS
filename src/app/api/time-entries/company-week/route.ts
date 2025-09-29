@@ -24,6 +24,9 @@ export const GET = withRBAC({
       `SELECT
         te.*,
         te."userId",
+        te."regularHours",
+        te."overtimeHours",
+        te."doubleTimeHours",
         u.name as userName,
         COALESCE(j."jobNumber", te."jobId"::text) as "jobNumber",
         COALESCE(j.description, 'Job details pending') as jobTitle,
@@ -51,6 +54,9 @@ export const GET = withRBAC({
       customer: entry.companyName || `${entry.firstName} ${entry.lastName}`,
       date: entry.date,
       hours: parseFloat(entry.hours || 0),
+      regularHours: parseFloat(entry.regularHours || 0),
+      overtimeHours: parseFloat(entry.overtimeHours || 0),
+      doubleTimeHours: parseFloat(entry.doubleTimeHours || 0),
       description: entry.description,
       approvedAt: entry.approvedAt,
       approvedBy: entry.approvedBy

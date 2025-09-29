@@ -65,6 +65,7 @@ interface SimpleTimeEntryProps {
     hours?: number
     description?: string
     editingEntryId?: string // If present, we're editing an existing entry
+    userId?: string // The user to select when editing
   } | null
 }
 
@@ -122,6 +123,16 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
     }
   }, [preselectedJob, jobs])
 
+  // Set preselected user when prop changes (for admin editing)
+  useEffect(() => {
+    if (preselectedJob?.userId && users.length > 0 && isAdmin) {
+      const user = users.find(u => u.id === preselectedJob.userId)
+      if (user) {
+        setSelectedUser(user)
+      }
+    }
+  }, [preselectedJob?.userId, users, isAdmin])
+
   const fetchData = async () => {
     try {
       const requests: Promise<Response>[] = [
@@ -159,7 +170,8 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
         const usersData = await usersRes.json()
         // Handle both response formats (with and without 'users' wrapper)
         const usersList = Array.isArray(usersData) ? usersData : (usersData.users || [])
-        setUsers(usersList.filter((u: User) => u.role !== 'OWNER_ADMIN' || u.id === currentUser?.id))
+        // Show all users for admins to select from
+        setUsers(usersList)
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -275,7 +287,7 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
       // Create the time entry directly (no timer needed)
       const timeData: any = {
         userId: selectedUser?.id || currentUser?.id,
-        jobId: selectedJob.id,
+        jobId: selectedJob!.id,
         date: format(date, 'yyyy-MM-dd'),
         hours: calculateHours(),
         description: description || undefined,
@@ -401,6 +413,7 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
                   getOptionLabel={(option) => `${option.name} (${option.email})`}
                   value={selectedUser}
                   onChange={(_, value) => setSelectedUser(value)}
+                  disabled={!!preselectedJob?.userId} // Disable when employee is preselected
                   renderOption={(props, option) => {
                     const { key, ...otherProps } = props as any
                     return (
@@ -417,11 +430,11 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
                     )
                   }}
                   renderInput={(params) => (
-                    <TextField 
-                      {...params} 
-                      label="Select Employee" 
-                      required 
-                      helperText="As an admin, you can enter time for any employee"
+                    <TextField
+                      {...params}
+                      label={preselectedJob?.userId ? "Employee (Auto-selected)" : "Select Employee"}
+                      required
+                      helperText={preselectedJob?.userId ? "This employee was selected from their timesheet" : "As an admin, you can enter time for any employee"}
                     />
                   )}
                 />
@@ -498,7 +511,7 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
                   getOptionLabel={(option) => `${option.jobNumber} - ${option.title} (${option.customer})`}
                   value={selectedJob}
                   onChange={(_, value) => handleJobSelect(value)}
-                  disabled={!!preselectedJob} // Disable when job is preselected
+                  disabled={!!preselectedJob?.jobId} // Disable only when job is preselected with an ID
                   renderOption={(props, option) => {
                     const { key, ...otherProps } = props as any
                     return (
@@ -517,9 +530,9 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label={preselectedJob ? "Job (Auto-selected)" : "Select Job"}
+                      label={preselectedJob?.jobId ? "Job (Auto-selected)" : "Select Job"}
                       required
-                      helperText={preselectedJob ? "This job was selected from your scheduled jobs" : undefined}
+                      helperText={preselectedJob?.jobId ? "This job was selected from your timesheet" : "Choose the job for this time entry"}
                     />
                   )}
                 />
