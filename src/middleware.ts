@@ -17,19 +17,8 @@ export function middleware(request: NextRequest) {
     // Fallback to Authorization header if no cookie (for Replit environment)
     if (!token) {
       const authHeader = request.headers.get('authorization')
-      // Debug logging for Authorization header
-      if (pathname.includes('/api/auth/me')) {
-        console.log('Debug auth header check:', {
-          hasAuthHeader: !!authHeader,
-          authHeaderValue: authHeader ? authHeader.substring(0, 20) + '...' : 'none',
-          startsWithBearer: authHeader ? authHeader.startsWith('Bearer ') : false
-        })
-      }
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7)
-        if (pathname.includes('/api/auth/me')) {
-          console.log('Token extracted from Authorization header:', token ? 'present' : 'missing')
-        }
       }
     }
 

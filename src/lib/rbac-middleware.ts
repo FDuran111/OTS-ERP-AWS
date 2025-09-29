@@ -22,9 +22,17 @@ export function withRBAC(config: RBACConfig = {}) {
   ) {
     return async function(request: NextRequest, context?: any): Promise<Response> {
       try {
-        // Get auth token from cookies
+        // Get auth token from cookies first
         const cookieStore = await cookies()
-        const token = cookieStore.get('auth-token')?.value
+        let token = cookieStore.get('auth-token')?.value
+
+        // Fallback to Authorization header if no cookie (for Replit environment)
+        if (!token) {
+          const authHeader = request.headers.get('authorization')
+          if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.substring(7)
+          }
+        }
 
         if (!token) {
           return NextResponse.json(

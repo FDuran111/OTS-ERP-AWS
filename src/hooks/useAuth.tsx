@@ -63,7 +63,11 @@ export function useAuthState(): AuthContextType {
     const loadUser = async () => {
       try {
         // Always verify with server first to ensure correct role
-        const response = await fetch('/api/auth/me')
+        const token = localStorage.getItem('auth-token')
+        const response = await fetch('/api/auth/me', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          credentials: 'include'
+        })
         
         if (response.ok) {
           const userData = await response.json()
@@ -152,7 +156,11 @@ export function useAuthState(): AuthContextType {
 
   const refreshUser = useCallback(async (): Promise<void> => {
     try {
-      const response = await fetch('/api/auth/me')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/auth/me', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
       
       if (response.ok) {
         const userData = await response.json()
