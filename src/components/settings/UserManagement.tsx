@@ -66,7 +66,11 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/users')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/users', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
       if (!response.ok) {
         throw new Error('Failed to fetch users')
       }
