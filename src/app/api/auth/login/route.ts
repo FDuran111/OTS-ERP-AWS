@@ -63,18 +63,23 @@ export async function POST(request: NextRequest) {
     })
 
     // Determine if we should use secure cookies
-    // Only use secure if we're actually serving over HTTPS
+    // For Replit environment, use less restrictive settings for development
     const isProduction = process.env.NODE_ENV === 'production'
     const isLocalhost = request.headers.get('host')?.includes('localhost') || request.headers.get('host')?.includes('127.0.0.1')
-    const isSecure = !isLocalhost && (request.headers.get('x-forwarded-proto') === 'https' || 
-                     request.url.startsWith('https://') ||
-                     (isProduction && process.env.FORCE_HTTPS === 'true'))
+    const isReplit = request.headers.get('host')?.includes('replit.dev') || request.headers.get('host')?.includes('replit.co')
+    
+    // Use secure cookies only in production, not in Replit development
+    const isSecure = isProduction && !isReplit && !isLocalhost && (
+      request.headers.get('x-forwarded-proto') === 'https' || 
+      request.url.startsWith('https://') ||
+      process.env.FORCE_HTTPS === 'true'
+    )
 
-    // Set HTTP-only cookie
+    // Set HTTP-only cookie with Replit-compatible settings
     response.cookies.set('auth-token', token, {
       httpOnly: true,
       secure: isSecure,
-      sameSite: 'lax',
+      sameSite: 'lax', // Use 'lax' for better compatibility in all environments
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     })
