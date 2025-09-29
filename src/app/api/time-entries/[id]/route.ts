@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { calculateWeeklyHours, getWeekDateRange } from '@/lib/timeCalculations'
+import { format } from 'date-fns'
 
 const updateTimeEntrySchema = z.object({
   endTime: z.string().optional(),
@@ -16,6 +18,8 @@ const updateTimeEntrySchema = z.object({
       { message: 'Hours must be in 15-minute (0.25 hour) increments' }
     ),
   description: z.string().optional(),
+  jobId: z.string().optional(),
+  date: z.string().optional(),
 })
 
 // GET a specific time entry
@@ -26,7 +30,7 @@ export async function GET(
   const resolvedParams = await params
   try {
     const result = await query(
-      `SELECT 
+      `SELECT
         te.*,
         u.name as user_name,
         j."jobNumber",
@@ -46,13 +50,17 @@ export async function GET(
     }
 
     const timeEntry = result.rows[0]
-    
+
     // Transform to match expected format
     const transformedEntry = {
       id: timeEntry.id,
       startTime: timeEntry.startTime,
       endTime: timeEntry.endTime,
       hours: parseFloat(timeEntry.hours || 0),
+      regularHours: parseFloat(timeEntry.regularHours || 0),
+      overtimeHours: parseFloat(timeEntry.overtimeHours || 0),
+      doubleTimeHours: parseFloat(timeEntry.doubleTimeHours || 0),
+      estimatedPay: parseFloat(timeEntry.estimatedPay || 0),
       description: timeEntry.description,
       date: timeEntry.date,
       user: {
@@ -76,7 +84,147 @@ export async function GET(
   }
 }
 
-// PATCH update a time entry (stop timer)
+// Helper function for safe recalculation with transaction support
+async function recalculateWeeklyHours(
+  entryId: string,
+  userId: string,
+  date: string,
+  newHours: number,
+  weekNumber: number
+) {
+  // Get overtime settings
+  let overtimeSettings
+  try {
+    const settingsResult = await query(`
+      SELECT * FROM "OvertimeSettings"
+      WHERE "companyId" = '00000000-0000-0000-0000-000000000001'
+      LIMIT 1
+    `)
+
+    if (settingsResult.rows.length > 0) {
+      overtimeSettings = {
+        dailyOTThreshold: parseFloat(settingsResult.rows[0].dailyOTThreshold),
+        weeklyOTThreshold: parseFloat(settingsResult.rows[0].weeklyOTThreshold),
+        dailyDTThreshold: parseFloat(settingsResult.rows[0].dailyDTThreshold),
+        weeklyDTThreshold: parseFloat(settingsResult.rows[0].weeklyDTThreshold),
+        otMultiplier: parseFloat(settingsResult.rows[0].otMultiplier),
+        dtMultiplier: parseFloat(settingsResult.rows[0].dtMultiplier),
+        seventhDayOT: settingsResult.rows[0].seventhDayOT,
+        seventhDayDT: settingsResult.rows[0].seventhDayDT,
+        useDailyOT: settingsResult.rows[0].useDailyOT ?? false,
+        useWeeklyOT: settingsResult.rows[0].useWeeklyOT ?? true,
+        roundingInterval: parseInt(settingsResult.rows[0].roundingInterval),
+        roundingType: settingsResult.rows[0].roundingType
+      }
+    }
+  } catch (error) {
+    // Use default settings if table doesn't exist
+    overtimeSettings = {
+      dailyOTThreshold: 8,
+      weeklyOTThreshold: 40,
+      dailyDTThreshold: 12,
+      weeklyDTThreshold: 60,
+      otMultiplier: 1.5,
+      dtMultiplier: 2.0,
+      seventhDayOT: true,
+      seventhDayDT: true,
+      useDailyOT: false,
+      useWeeklyOT: true,
+      roundingInterval: 15,
+      roundingType: 'nearest'
+    }
+  }
+
+  // Get all entries for the week to recalculate with context
+  const weekEntriesResult = await query(`
+    SELECT id, date, hours, "userId"
+    FROM "TimeEntry"
+    WHERE "userId" = $1
+    AND "weekNumber" = $2
+    ORDER BY date ASC
+  `, [userId, weekNumber])
+
+  // Build the entries array with the updated hours - ensure dates are strings
+  const allEntries = weekEntriesResult.rows.map(entry => ({
+    id: entry.id,
+    date: typeof entry.date === 'string' ? entry.date : format(entry.date, 'yyyy-MM-dd'),
+    hours: entry.id === entryId ? newHours : parseFloat(entry.hours),
+    userId: entry.userId
+  }))
+
+  // Calculate weekly hours with overtime/double-time
+  const weeklyCalc = calculateWeeklyHours(allEntries, overtimeSettings!)
+
+  // Get user pay rates for earnings calculation
+  const userRatesResult = await query(
+    'SELECT "regularRate", "overtimeRate", "doubleTimeRate" FROM "User" WHERE id = $1',
+    [userId]
+  )
+
+  const rates = userRatesResult.rows[0] || {}
+  const regularRate = parseFloat(rates.regularRate) || 15.00
+  const overtimeRate = parseFloat(rates.overtimeRate) || (regularRate * 1.5)
+  const doubleTimeRate = parseFloat(rates.doubleTimeRate) || (regularRate * 2.0)
+
+  // Update all affected entries in the week
+  const updates = []
+  for (const entry of allEntries) {
+    // Ensure we use string date for Map lookup
+    const entryDateKey = typeof entry.date === 'string' ? entry.date : format(entry.date, 'yyyy-MM-dd')
+    const dayBreakdown = weeklyCalc.entries.get(entryDateKey) || {
+      regularHours: entry.hours,
+      overtimeHours: 0,
+      doubleTimeHours: 0,
+      totalHours: entry.hours,
+      consecutiveDay: 1,
+      isSeventhDay: false
+    }
+
+    // Calculate estimated pay for this entry
+    const estimatedPay =
+      (dayBreakdown.regularHours * regularRate) +
+      (dayBreakdown.overtimeHours * overtimeRate) +
+      (dayBreakdown.doubleTimeHours * doubleTimeRate)
+
+    // Update the entry with recalculated values
+    updates.push(query(`
+      UPDATE "TimeEntry"
+      SET "regularHours" = $1,
+          "overtimeHours" = $2,
+          "doubleTimeHours" = $3,
+          "estimatedPay" = $4,
+          "consecutiveDay" = $5,
+          "updatedAt" = NOW()
+      WHERE id = $6
+    `, [
+      dayBreakdown.regularHours,
+      dayBreakdown.overtimeHours,
+      dayBreakdown.doubleTimeHours,
+      estimatedPay,
+      dayBreakdown.consecutiveDay,
+      entry.id
+    ]))
+  }
+
+  // Execute all updates
+  await Promise.all(updates)
+
+  // Return the breakdown for the specific entry being edited - ensure date is a string
+  const dateKey = typeof date === 'string' ? date : format(date, 'yyyy-MM-dd')
+  const editedDayBreakdown = weeklyCalc.entries.get(dateKey)
+  return {
+    regularHours: editedDayBreakdown?.regularHours || newHours,
+    overtimeHours: editedDayBreakdown?.overtimeHours || 0,
+    doubleTimeHours: editedDayBreakdown?.doubleTimeHours || 0,
+    estimatedPay: editedDayBreakdown ?
+      (editedDayBreakdown.regularHours * regularRate) +
+      (editedDayBreakdown.overtimeHours * overtimeRate) +
+      (editedDayBreakdown.doubleTimeHours * doubleTimeRate) :
+      newHours * regularRate
+  }
+}
+
+// PATCH update a time entry with recalculation
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -86,28 +234,67 @@ export async function PATCH(
     const body = await request.json()
     const data = updateTimeEntrySchema.parse(body)
 
-    // If stopping the timer, calculate hours
-    let calculatedHours = data.hours
-    if (data.endTime && !calculatedHours) {
-      const timeEntryResult = await query(
-        'SELECT "startTime" FROM "TimeEntry" WHERE id = $1',
-        [resolvedParams.id]
+    // First, get the current entry to check status and get needed info
+    const currentEntryResult = await query(
+      `SELECT
+        te.*,
+        te."weekNumber",
+        te."userId",
+        te.date,
+        te."approvedAt"
+      FROM "TimeEntry" te
+      WHERE te.id = $1`,
+      [resolvedParams.id]
+    )
+
+    if (currentEntryResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Time entry not found' },
+        { status: 404 }
       )
-      
-      if (timeEntryResult.rows.length > 0) {
-        const timeEntry = timeEntryResult.rows[0]
-        const endTime = new Date(data.endTime)
-        const startTime = new Date(timeEntry.startTime)
-        // Calculate hours and round to nearest 15-minute increment
-        const rawHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
-        calculatedHours = Math.round(rawHours * 4) / 4
+    }
+
+    const currentEntry = currentEntryResult.rows[0]
+
+    // Check if entry is approved/locked (only for non-admins)
+    // Admins can edit approved entries for corrections
+    const userRole = body.userRole // Should be passed from frontend based on logged-in user
+    if (currentEntry.approvedAt && userRole !== 'OWNER_ADMIN' && userRole !== 'FOREMAN') {
+      return NextResponse.json(
+        { error: 'This entry is unavailable for editing. Please contact your supervisor for changes.' },
+        { status: 400 }
+      )
+    }
+
+    // Check if entry is older than 14 days (only for employees)
+    if (userRole === 'EMPLOYEE') {
+      const entryDate = new Date(currentEntry.date)
+      const today = new Date()
+      const daysDifference = Math.floor((today.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24))
+
+      if (daysDifference > 14) {
+        return NextResponse.json(
+          { error: 'This entry is older than 14 days. Please contact your administrator to request changes.' },
+          { status: 403 }
+        )
       }
     }
 
-    // Update the time entry
+    // If stopping the timer, calculate hours
+    let calculatedHours = data.hours
+    if (data.endTime && !calculatedHours) {
+      const endTime = new Date(data.endTime)
+      const startTime = new Date(currentEntry.startTime)
+      // Calculate hours and round to nearest 15-minute increment
+      const rawHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
+      calculatedHours = Math.round(rawHours * 4) / 4
+    }
+
+    // Build update query
     const updateFields = []
     const updateParams = []
     let paramIndex = 1
+    let needsRecalculation = false
 
     if (data.endTime) {
       updateFields.push(`"endTime" = $${paramIndex++}`)
@@ -117,6 +304,7 @@ export async function PATCH(
     if (calculatedHours !== undefined) {
       updateFields.push(`hours = $${paramIndex++}`)
       updateParams.push(calculatedHours)
+      needsRecalculation = true // Hours changed, need to recalculate
     }
 
     if (data.description !== undefined) {
@@ -124,13 +312,50 @@ export async function PATCH(
       updateParams.push(data.description)
     }
 
+    if (data.jobId !== undefined) {
+      updateFields.push(`"jobId" = $${paramIndex++}`)
+      updateParams.push(data.jobId)
+    }
+
+    if (data.date !== undefined) {
+      updateFields.push(`date = $${paramIndex++}`)
+      updateParams.push(data.date)
+      needsRecalculation = true // Date changed, affects week calculation
+    }
+
+    // If hours changed, recalculate overtime/double-time and pay
+    let recalculatedValues = null
+    if (needsRecalculation && calculatedHours !== undefined) {
+      recalculatedValues = await recalculateWeeklyHours(
+        resolvedParams.id,
+        currentEntry.userId,
+        data.date || currentEntry.date,
+        calculatedHours,
+        currentEntry.weekNumber
+      )
+
+      // Add recalculated fields to update
+      updateFields.push(`"regularHours" = $${paramIndex++}`)
+      updateParams.push(recalculatedValues.regularHours)
+
+      updateFields.push(`"overtimeHours" = $${paramIndex++}`)
+      updateParams.push(recalculatedValues.overtimeHours)
+
+      updateFields.push(`"doubleTimeHours" = $${paramIndex++}`)
+      updateParams.push(recalculatedValues.doubleTimeHours)
+
+      updateFields.push(`"estimatedPay" = $${paramIndex++}`)
+      updateParams.push(recalculatedValues.estimatedPay)
+    }
+
     updateFields.push(`"updatedAt" = $${paramIndex++}`)
     updateParams.push(new Date())
 
     updateParams.push(resolvedParams.id)
 
+    // Execute the update
     const updateResult = await query(
-      `UPDATE "TimeEntry" 
+      `UPDATE "TimeEntry"
        SET ${updateFields.join(', ')}
        WHERE id = $${paramIndex}
        RETURNING *`,
@@ -144,9 +369,46 @@ export async function PATCH(
       )
     }
 
+    // Log the change for audit trail
+    try {
+      await query(`
+        INSERT INTO "TimeEntryAudit" (
+          id, entry_id, user_id, action,
+          old_hours, new_hours,
+          old_regular, new_regular,
+          old_overtime, new_overtime,
+          old_doubletime, new_doubletime,
+          changed_by, changed_at
+        ) VALUES (
+          gen_random_uuid(), $1, $2, $3,
+          $4, $5,
+          $6, $7,
+          $8, $9,
+          $10, $11,
+          $12, NOW()
+        )
+      `, [
+        resolvedParams.id,
+        currentEntry.userId,
+        'UPDATE',
+        currentEntry.hours,
+        calculatedHours || currentEntry.hours,
+        currentEntry.regularHours,
+        recalculatedValues?.regularHours || currentEntry.regularHours,
+        currentEntry.overtimeHours,
+        recalculatedValues?.overtimeHours || currentEntry.overtimeHours,
+        currentEntry.doubleTimeHours,
+        recalculatedValues?.doubleTimeHours || currentEntry.doubleTimeHours,
+        body.updatedBy || currentEntry.userId // Should pass current user from auth
+      ])
+    } catch (auditError) {
+      // Log but don't fail if audit table doesn't exist yet
+      console.log('Audit log skipped:', auditError)
+    }
+
     // Get the updated entry with related data
     const result = await query(
-      `SELECT 
+      `SELECT
         te.*,
         u.name as user_name,
         j."jobNumber",
@@ -159,12 +421,16 @@ export async function PATCH(
     )
 
     const timeEntry = result.rows[0]
-    
+
     const transformedEntry = {
       id: timeEntry.id,
       startTime: timeEntry.startTime,
       endTime: timeEntry.endTime,
       hours: parseFloat(timeEntry.hours || 0),
+      regularHours: parseFloat(timeEntry.regularHours || 0),
+      overtimeHours: parseFloat(timeEntry.overtimeHours || 0),
+      doubleTimeHours: parseFloat(timeEntry.doubleTimeHours || 0),
+      estimatedPay: parseFloat(timeEntry.estimatedPay || 0),
       description: timeEntry.description,
       date: timeEntry.date,
       user: {
@@ -175,7 +441,8 @@ export async function PATCH(
         id: timeEntry.jobId,
         jobNumber: timeEntry.jobNumber || 'Unknown Job',
         description: timeEntry.job_description || ''
-      }
+      },
+      recalculated: needsRecalculation // Let frontend know if recalculation occurred
     }
 
     return NextResponse.json(transformedEntry)
@@ -186,7 +453,7 @@ export async function PATCH(
         { status: 400 }
       )
     }
-    
+
     console.error('Error updating time entry:', error)
     return NextResponse.json(
       { error: 'Failed to update time entry' },
@@ -195,7 +462,7 @@ export async function PATCH(
   }
 }
 
-// PUT fully update a time entry
+// PUT fully update a time entry with recalculation
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -204,6 +471,46 @@ export async function PUT(
   try {
     const body = await request.json()
 
+    // Get current entry info first
+    const currentEntryResult = await query(
+      `SELECT * FROM "TimeEntry" WHERE id = $1`,
+      [resolvedParams.id]
+    )
+
+    if (currentEntryResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Time entry not found' },
+        { status: 404 }
+      )
+    }
+
+    const currentEntry = currentEntryResult.rows[0]
+
+    // Check if entry is approved/locked
+    if (currentEntry.approvedAt) {
+      return NextResponse.json(
+        { error: 'Cannot edit approved time entries' },
+        { status: 403 }
+      )
+    }
+
+    // Get week number for the new date
+    const { weekNumber } = getWeekDateRange(new Date(body.date))
+
+    // Recalculate if hours changed
+    let recalculatedValues = null
+    if (body.hours !== currentEntry.hours) {
+      // Ensure date is a string for the recalculation
+      const dateString = typeof body.date === 'string' ? body.date : format(body.date, 'yyyy-MM-dd')
+      recalculatedValues = await recalculateWeeklyHours(
+        resolvedParams.id,
+        currentEntry.userId,
+        dateString,
+        body.hours,
+        weekNumber
+      )
+    }
+
     // Update the time entry with all fields
     const updateResult = await query(
       `UPDATE "TimeEntry"
@@ -211,14 +518,24 @@ export async function PUT(
            date = $2,
            hours = $3,
            description = $4,
+           "weekNumber" = $5,
+           "regularHours" = $6,
+           "overtimeHours" = $7,
+           "doubleTimeHours" = $8,
+           "estimatedPay" = $9,
            "updatedAt" = NOW()
-       WHERE id = $5
+       WHERE id = $10
        RETURNING *`,
       [
         body.jobId,
         body.date,
         body.hours,
         body.description || null,
+        weekNumber,
+        recalculatedValues?.regularHours || currentEntry.regularHours,
+        recalculatedValues?.overtimeHours || currentEntry.overtimeHours,
+        recalculatedValues?.doubleTimeHours || currentEntry.doubleTimeHours,
+        recalculatedValues?.estimatedPay || currentEntry.estimatedPay,
         resolvedParams.id
       ]
     )
@@ -247,17 +564,36 @@ export async function DELETE(
 ) {
   const resolvedParams = await params
   try {
-    const result = await query(
-      'DELETE FROM "TimeEntry" WHERE id = $1 RETURNING id',
+    // Get entry details before deletion for potential recalculation
+    const entryResult = await query(
+      `SELECT "userId", "weekNumber", date FROM "TimeEntry" WHERE id = $1`,
       [resolvedParams.id]
     )
 
-    if (result.rows.length === 0) {
+    if (entryResult.rows.length === 0) {
       return NextResponse.json(
         { error: 'Time entry not found' },
         { status: 404 }
       )
     }
+
+    const entry = entryResult.rows[0]
+
+    // Delete the entry
+    const result = await query(
+      'DELETE FROM "TimeEntry" WHERE id = $1 RETURNING id',
+      [resolvedParams.id]
+    )
+
+    // After deletion, recalculate the week for remaining entries
+    // This ensures overtime calculations remain correct
+    await recalculateWeeklyHours(
+      '', // No specific entry ID since it's deleted
+      entry.userId,
+      entry.date,
+      0, // Zero hours since entry is deleted
+      entry.weekNumber
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -4,11 +4,15 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
-import SimpleTimeEntry from '@/components/time/SimpleTimeEntry'
+import MultiJobTimeEntry from '@/components/time/MultiJobTimeEntry'
 import ScheduledJobSuggestions from '@/components/time/ScheduledJobSuggestions'
 import WeeklyTimesheetDisplay from '@/components/time/WeeklyTimesheetDisplay'
 import CompanyWeeklyJobsSummary from '@/components/time/CompanyWeeklyJobsSummary'
 import PendingJobEntries from '@/components/admin/PendingJobEntries'
+import OvertimeSettings from '@/components/admin/OvertimeSettings'
+import PayrollSummary from '@/components/admin/PayrollSummary'
+import TimeEntryAuditTrail from '@/components/admin/TimeEntryAuditTrail'
+import ApprovalDashboard from '@/components/admin/ApprovalDashboard'
 import {
   Box,
   Typography,
@@ -17,8 +21,6 @@ import {
   Paper,
   Button,
   Stack,
-  useMediaQuery,
-  useTheme,
   Grid,
   CircularProgress,
   Dialog,
@@ -34,7 +36,9 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
-  Divider,
+  Tabs,
+  Tab,
+  Badge,
 } from '@mui/material'
 import {
   Timer,
@@ -46,6 +50,15 @@ import {
   ExpandMore,
   ExpandLess,
   Person,
+  Assessment as ReportsIcon,
+  Assessment,
+  AttachMoney as MoneyIcon,
+  CheckCircle as ApprovalIcon,
+  Work as JobIcon,
+  People as PeopleIcon,
+  History as HistoryIcon,
+  AccountBalanceWallet as PayrollIcon,
+  FilterList as FilterIcon,
 } from '@mui/icons-material'
 
 interface User {
@@ -71,23 +84,8 @@ const iconMap = {
   group: Group,
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'Active':
-      return 'success'
-    case 'Pending':
-      return 'warning'
-    case 'Approved':
-      return 'info'
-    default:
-      return 'default'
-  }
-}
-
 export default function TimePage() {
   const router = useRouter()
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [user, setUser] = useState<User | null>(null)
   const [stats, setStats] = useState<TimeStat[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,10 +93,12 @@ export default function TimePage() {
   const [preselectedJob, setPreselectedJob] = useState<any>(null)
 
   // Admin view controls
-  const [adminViewExpanded, setAdminViewExpanded] = useState(false)
+  const [adminTabValue, setAdminTabValue] = useState(0)
   const [selectedRole, setSelectedRole] = useState<'EMPLOYEE' | 'FOREMAN' | 'OWNER_ADMIN'>('EMPLOYEE')
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [selectedViewUser, setSelectedViewUser] = useState<User | null>(null)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [pendingJobsCount, setPendingJobsCount] = useState(0)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -135,10 +135,10 @@ export default function TimePage() {
   const fetchTimeData = async (currentUser?: User) => {
     try {
       setLoading(true)
-      
+
       // Use passed user or state user
       const activeUser = currentUser || user
-      
+
       const statsResponse = await fetch(
         activeUser?.role === 'EMPLOYEE'
           ? `/api/time-entries/stats?userId=${activeUser.id}`
@@ -155,6 +155,31 @@ export default function TimePage() {
         }))
         setStats(transformedStats)
       }
+
+      // Fetch pending counts for admins
+      if (activeUser?.role === 'OWNER_ADMIN' || activeUser?.role === 'FOREMAN') {
+        try {
+          // Fetch pending time entries
+          const pendingResponse = await fetch('/api/time-entries?status=submitted&limit=100', {
+            credentials: 'include'
+          })
+          if (pendingResponse.ok) {
+            const pendingData = await pendingResponse.json()
+            setPendingCount(pendingData.length)
+          }
+
+          // Fetch pending job entries
+          const jobsResponse = await fetch('/api/jobs/pending', {
+            credentials: 'include'
+          })
+          if (jobsResponse.ok) {
+            const jobsData = await jobsResponse.json()
+            setPendingJobsCount(jobsData.length || 0)
+          }
+        } catch (err) {
+          console.error('Error fetching pending counts:', err)
+        }
+      }
     } catch (error) {
       console.error('Error fetching time data:', error)
     } finally {
@@ -167,19 +192,34 @@ export default function TimePage() {
 
   // Action buttons for the page header - Manual Time Entry button for all users
   const actionButtons = (
-    <Button
-      variant="contained"
-      startIcon={<AddIcon />}
-      onClick={() => setManualEntryOpen(true)}
-      sx={{
-        backgroundColor: '#00bf9a',
-        '&:hover': {
-          backgroundColor: '#00a884',
-        },
-      }}
-    >
-      Manual Time Entry
-    </Button>
+    <Stack direction="row" spacing={1}>
+      {(user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && (
+        <>
+          <OvertimeSettings triggerButton />
+          <Button
+            variant="outlined"
+            startIcon={<ReportsIcon />}
+            onClick={() => alert('Reports feature coming soon!')}
+            color="primary"
+          >
+            Reports
+          </Button>
+        </>
+      )}
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => setManualEntryOpen(true)}
+        sx={{
+          backgroundColor: '#00bf9a',
+          '&:hover': {
+            backgroundColor: '#00a884',
+          },
+        }}
+      >
+        Manual Time Entry
+      </Button>
+    </Stack>
   )
 
 
@@ -251,39 +291,91 @@ export default function TimePage() {
           )}
         </Grid>
 
-        {/* Pending Job Entries - Admin only */}
-        {(user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && (
-          <Box sx={{ mb: 3 }}>
-            <PendingJobEntries />
-          </Box>
-        )}
-
-        {/* Admin User Timesheet Viewer */}
+        {/* Admin Tab Interface */}
         {(user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                }}
-                onClick={() => setAdminViewExpanded(!adminViewExpanded)}
+              <Tabs
+                value={adminTabValue}
+                onChange={(_, newValue) => setAdminTabValue(newValue)}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
               >
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Person />
-                  <Typography variant="h6">
-                    View Employee Timesheets
-                  </Typography>
-                </Stack>
-                <IconButton size="small">
-                  {adminViewExpanded ? <ExpandLess /> : <ExpandMore />}
-                </IconButton>
-              </Box>
+                <Tab
+                  icon={<Assessment />}
+                  label="Dashboard"
+                  iconPosition="start"
+                />
+                <Tab
+                  icon={
+                    pendingCount > 0 ? (
+                      <Badge badgeContent={pendingCount} color="error">
+                        <ApprovalIcon />
+                      </Badge>
+                    ) : (
+                      <ApprovalIcon />
+                    )
+                  }
+                  label="Approvals"
+                  iconPosition="start"
+                />
+                <Tab
+                  icon={<PeopleIcon />}
+                  label="Employee Timesheets"
+                  iconPosition="start"
+                />
+                <Tab
+                  icon={
+                    pendingJobsCount > 0 ? (
+                      <Badge badgeContent={pendingJobsCount} color="warning">
+                        <JobIcon />
+                      </Badge>
+                    ) : (
+                      <JobIcon />
+                    )
+                  }
+                  label="Pending Job Entries"
+                  iconPosition="start"
+                />
+              </Tabs>
 
-              <Collapse in={adminViewExpanded}>
-                <Box sx={{ mt: 2 }}>
+              {/* Tab Panel: Dashboard */}
+              {adminTabValue === 0 && (
+                <Box>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    📊 Company Weekly Overview
+                  </Typography>
+                  <Box sx={{ mb: 3 }}>
+                    <CompanyWeeklyJobsSummary />
+                  </Box>
+
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    💰 Payroll Summary
+                  </Typography>
+                  <Box sx={{ mb: 3 }}>
+                    <PayrollSummary />
+                  </Box>
+
+                  <Box>
+                    <TimeEntryAuditTrail showFilters={true} showTitle={true} />
+                  </Box>
+                </Box>
+              )}
+
+              {/* Tab Panel: Approvals */}
+              {adminTabValue === 1 && (
+                <Box>
+                  <ApprovalDashboard
+                    onCountChange={(count: number) => setPendingCount(count)}
+                    isVisible={adminTabValue === 1}
+                  />
+                </Box>
+              )}
+
+              {/* Tab Panel: Employee Timesheets */}
+              {adminTabValue === 2 && (
+                <Box>
                   <FormControl fullWidth sx={{ mb: 2 }}>
                     <InputLabel>Role</InputLabel>
                     <Select
@@ -304,7 +396,7 @@ export default function TimePage() {
                     Select a user to view their timesheet:
                   </Typography>
 
-                  <Paper variant="outlined" sx={{ maxHeight: 200, overflow: 'auto' }}>
+                  <Paper variant="outlined" sx={{ maxHeight: 200, overflow: 'auto', mb: 3 }}>
                     <List dense>
                       {allUsers && Array.isArray(allUsers) && allUsers
                         .filter(u => u.role === selectedRole)
@@ -331,21 +423,52 @@ export default function TimePage() {
                       )}
                     </List>
                   </Paper>
+
+                  {selectedViewUser && (
+                    <Box>
+                      <Typography variant="h6" sx={{ mb: 2 }}>
+                        📅 {selectedViewUser.name}'s Weekly Timesheet
+                      </Typography>
+                      <WeeklyTimesheetDisplay
+                        userId={selectedViewUser.id}
+                        selectedUserId={selectedViewUser.id}
+                        isAdmin={true}
+                        onEditEntry={(entry) => {
+                          setPreselectedJob({
+                            jobId: entry.jobId,
+                            jobNumber: entry.jobNumber,
+                            jobTitle: entry.jobTitle,
+                            date: entry.date,
+                            hours: entry.hours,
+                            description: entry.description,
+                            editingEntryId: entry.id || undefined,
+                            userId: selectedViewUser.id
+                          })
+                          setManualEntryOpen(true)
+                        }}
+                        onRefresh={fetchTimeData}
+                      />
+                    </Box>
+                  )}
                 </Box>
-              </Collapse>
+              )}
+
+              {/* Tab Panel: Pending Job Entries */}
+              {adminTabValue === 3 && (
+                <Box>
+                  <PendingJobEntries />
+                </Box>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* Weekly Timesheet - Primary feature */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            📅 {selectedViewUser ? `${selectedViewUser.name}'s Weekly Timesheet` :
-               (user?.role === 'EMPLOYEE' ? 'My Weekly Timesheet' : 'All Jobs This Week - Company Overview')}
-          </Typography>
-
-          {/* For employees, show their own timesheet */}
-          {user?.role === 'EMPLOYEE' && (
+        {/* Weekly Timesheet - For employees only */}
+        {user?.role === 'EMPLOYEE' && (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              📅 My Weekly Timesheet
+            </Typography>
             <WeeklyTimesheetDisplay
               userId={user.id}
               isAdmin={false}
@@ -357,41 +480,15 @@ export default function TimePage() {
                   date: entry.date,
                   hours: entry.hours,
                   description: entry.description,
-                  editingEntryId: entry.id
+                  editingEntryId: entry.id || undefined
                 })
                 setManualEntryOpen(true)
               }}
               onRefresh={fetchTimeData}
             />
-          )}
+          </Box>
+        )}
 
-          {/* For admins viewing a specific user */}
-          {(user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && selectedViewUser && (
-            <WeeklyTimesheetDisplay
-              userId={selectedViewUser.id}
-              selectedUserId={selectedViewUser.id}
-              isAdmin={true}
-              onEditEntry={(entry) => {
-                setPreselectedJob({
-                  jobId: entry.jobId,
-                  jobNumber: entry.jobNumber,
-                  jobTitle: entry.jobTitle,
-                  date: entry.date,
-                  hours: entry.hours,
-                  description: entry.description,
-                  editingEntryId: entry.id
-                })
-                setManualEntryOpen(true)
-              }}
-              onRefresh={fetchTimeData}
-            />
-          )}
-
-          {/* For admins - show all jobs summary when no user selected */}
-          {(user?.role === 'OWNER_ADMIN' || user?.role === 'FOREMAN') && !selectedViewUser && (
-            <CompanyWeeklyJobsSummary />
-          )}
-        </Box>
 
         {/* Scheduled Job Suggestions - Only for field workers */}
         {user?.role === 'EMPLOYEE' && (
@@ -409,9 +506,10 @@ export default function TimePage() {
           </Box>
         )}
 
+
       </ResponsiveContainer>
 
-      {/* Manual Time Entry Dialog for Employees */}
+      {/* Manual Time Entry Dialog */}
       <Dialog
         open={manualEntryOpen}
         onClose={() => {
@@ -428,19 +526,22 @@ export default function TimePage() {
           pb: 1
         }}>
           Manual Time Entry
-          <IconButton onClick={() => setManualEntryOpen(false)} size="small">
+          <IconButton onClick={() => {
+            setManualEntryOpen(false)
+            setPreselectedJob(null)
+          }} size="small">
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <SimpleTimeEntry
-            noCard={true}
-            preselectedJob={preselectedJob}
-            onTimeEntryCreated={() => {
+          <MultiJobTimeEntry
+            onTimeEntriesCreated={() => {
               fetchTimeData()
               setManualEntryOpen(false)
               setPreselectedJob(null)
             }}
+            preselectedEmployee={selectedViewUser}
+            preselectedJob={preselectedJob}
           />
         </DialogContent>
       </Dialog>

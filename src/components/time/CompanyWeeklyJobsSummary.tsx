@@ -29,6 +29,7 @@ import {
   NavigateNext,
 } from '@mui/icons-material'
 import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
+import HoursBreakdownDisplay from './HoursBreakdownDisplay'
 
 interface JobSummary {
   jobId: string
@@ -51,6 +52,7 @@ export default function CompanyWeeklyJobsSummary() {
   const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [jobSummaries, setJobSummaries] = useState<JobSummary[]>([])
   const [loading, setLoading] = useState(false)
+  const [weekBreakdown, setWeekBreakdown] = useState({ regularHours: 0, overtimeHours: 0, doubleTimeHours: 0 })
   const [employeeDialog, setEmployeeDialog] = useState<{
     open: boolean
     jobNumber: string
@@ -79,6 +81,43 @@ export default function CompanyWeeklyJobsSummary() {
 
       if (response.ok) {
         const data = await response.json()
+
+        // Calculate total breakdown for all entries
+        let totalRegular = 0
+        let totalOvertime = 0
+        let totalDoubleTime = 0
+
+        data.forEach((entry: any) => {
+          const totalHours = parseFloat(entry.hours || 0)
+          let regularHours = parseFloat(entry.regularHours || 0)
+          let overtimeHours = parseFloat(entry.overtimeHours || 0)
+          let doubleTimeHours = parseFloat(entry.doubleTimeHours || 0)
+
+          // If the breakdown fields are not populated (old entries), estimate them
+          if (regularHours === 0 && overtimeHours === 0 && doubleTimeHours === 0 && totalHours > 0) {
+            // Basic estimation if fields are missing - this is per-day calculation
+            if (totalHours <= 8) {
+              regularHours = totalHours
+            } else if (totalHours <= 12) {
+              regularHours = 8
+              overtimeHours = totalHours - 8
+            } else {
+              regularHours = 8
+              overtimeHours = 4
+              doubleTimeHours = totalHours - 12
+            }
+          }
+
+          totalRegular += regularHours
+          totalOvertime += overtimeHours
+          totalDoubleTime += doubleTimeHours
+        })
+
+        setWeekBreakdown({
+          regularHours: totalRegular,
+          overtimeHours: totalOvertime,
+          doubleTimeHours: totalDoubleTime
+        })
 
         // Group by job number (not jobId) and aggregate hours by day
         const jobMap = new Map<string, JobSummary>()
@@ -204,8 +243,7 @@ export default function CompanyWeeklyJobsSummary() {
   }
 
   const getTotalEmployees = (): number => {
-    const uniqueEmployees = new Set()
-    // This would need actual employee data from the API
+    // This returns the maximum employee count from any job
     return jobSummaries.reduce((max, job) => Math.max(max, job.employeeCount), 0)
   }
 
@@ -352,7 +390,7 @@ export default function CompanyWeeklyJobsSummary() {
                 ))}
 
                 {/* Daily totals row */}
-                <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableRow sx={{ bgcolor: 'background.paper' }}>
                   <TableCell>
                     <Typography variant="body2" fontWeight="bold">
                       Daily Company Total
@@ -382,6 +420,25 @@ export default function CompanyWeeklyJobsSummary() {
                     </Typography>
                   </TableCell>
                   <TableCell />
+                </TableRow>
+                {/* Company Weekly Hours Breakdown Row */}
+                <TableRow sx={{ bgcolor: 'background.paper' }}>
+                  <TableCell colSpan={10}>
+                    <Box sx={{ py: 1 }}>
+                      <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>
+                        Company Weekly Hours Breakdown
+                      </Typography>
+                      <HoursBreakdownDisplay
+                        regularHours={weekBreakdown.regularHours}
+                        overtimeHours={weekBreakdown.overtimeHours}
+                        doubleTimeHours={weekBreakdown.doubleTimeHours}
+                        totalHours={calculateWeekTotal()}
+                        weeklyTotal={calculateWeekTotal()}
+                        weeklyThreshold={40 * getTotalEmployees()}
+                        showDetails={false}
+                      />
+                    </Box>
+                  </TableCell>
                 </TableRow>
               </>
             )}
