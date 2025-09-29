@@ -119,7 +119,11 @@ export default function ServiceCallsPage() {
       if (priorityFilter.length > 0) params.append('priority', priorityFilter.join(','))
       if (searchQuery) params.append('search', searchQuery)
       
-      const response = await fetch(`/api/service-calls?${params}`)
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch(`/api/service-calls?${params}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
       const data = await response.json()
       
       if (data.success) {
@@ -136,7 +140,11 @@ export default function ServiceCallsPage() {
 
   const loadStats = async () => {
     try {
-      const response = await fetch('/api/service-calls/stats')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/service-calls/stats', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
       const data = await response.json()
       
       if (data.success) {

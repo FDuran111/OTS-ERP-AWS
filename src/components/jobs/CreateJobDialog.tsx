@@ -119,7 +119,9 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
   const fetchCustomers = async () => {
     try {
       // For employees, only fetch customers they created
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/customers?createdByEmployee=true', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         credentials: 'include'
       })
       if (response.ok) {
@@ -136,7 +138,11 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/users')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/users', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
       if (response.ok) {
         const data = await response.json()
         // Extract users array from API response
