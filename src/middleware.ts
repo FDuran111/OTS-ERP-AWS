@@ -11,8 +11,27 @@ export function middleware(request: NextRequest) {
     const xfFor = request.headers.get("x-forwarded-for") || "";
     const ua = request.headers.get("user-agent") || "";
     
-    // Handle internal admin routes
-    const token = request.cookies.get('auth-token')?.value
+    // Handle internal admin routes - check both cookie and Authorization header
+    let token = request.cookies.get('auth-token')?.value
+    
+    // Fallback to Authorization header if no cookie (for Replit environment)
+    if (!token) {
+      const authHeader = request.headers.get('authorization')
+      // Debug logging for Authorization header
+      if (pathname.includes('/api/auth/me')) {
+        console.log('Debug auth header check:', {
+          hasAuthHeader: !!authHeader,
+          authHeaderValue: authHeader ? authHeader.substring(0, 20) + '...' : 'none',
+          startsWithBearer: authHeader ? authHeader.startsWith('Bearer ') : false
+        })
+      }
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7)
+        if (pathname.includes('/api/auth/me')) {
+          console.log('Token extracted from Authorization header:', token ? 'present' : 'missing')
+        }
+      }
+    }
 
     // Public routes that don't require authentication
     const publicRoutes = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/debug', '/api/auth/me', '/api/auth/test', '/api/users/list', '/api/migrate-roles', '/api/check-roles', '/test-dashboard', '/api/migrate/fix-crew-roles', '/api/healthz', '/api/public/forms']

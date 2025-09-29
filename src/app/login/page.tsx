@@ -35,8 +35,16 @@ export default function LoginPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Get token from localStorage for Authorization header
+        const token = localStorage.getItem('auth-token')
+        const headers: HeadersInit = {}
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+        }
+        
         const response = await fetch('/api/auth/me', {
-          credentials: 'include' // Include cookies
+          credentials: 'include', // Include cookies
+          headers
         })
         if (response.ok) {
           router.push('/dashboard')
@@ -71,25 +79,30 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed')
       }
 
-      // Store user data in localStorage for client-side use
+      // Store user data and token in localStorage for client-side use
       localStorage.setItem('user', JSON.stringify(data.user))
+      localStorage.setItem('auth-token', data.token)
       
       console.log('Login successful, redirecting to dashboard...')
       console.log('User data:', data.user)
+      console.log('Token stored in localStorage')
       
-      // Wait for cookie to be properly set and verify authentication
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Wait briefly then verify authentication
+      await new Promise(resolve => setTimeout(resolve, 200))
       
-      // Verify authentication before redirecting
+      // Verify authentication with both cookie and Authorization header
       const authCheck = await fetch('/api/auth/me', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${data.token}`
+        }
       })
       
       if (authCheck.ok) {
         console.log('Authentication verified, navigating to dashboard...')
         router.push('/dashboard')
       } else {
-        // Force page reload to ensure cookies are properly set
+        // Force page reload with token in URL hash for fallback
         console.log('Auth verification failed, using window.location...')
         window.location.href = '/dashboard'
       }

@@ -52,15 +52,20 @@ export async function POST(request: NextRequest) {
       role: user.role,
     })
 
-    const response = NextResponse.json({
+    // Include token in response body for Replit environment (localStorage fallback)
+    const responseData = {
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
       },
+      // Always include token for frontend localStorage fallback
       token,
-    })
+      success: true
+    }
+
+    const response = NextResponse.json(responseData)
 
     // Determine if we should use secure cookies
     // For Replit environment, use less restrictive settings for development
