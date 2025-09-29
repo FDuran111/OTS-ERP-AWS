@@ -224,16 +224,21 @@ $$ LANGUAGE plpgsql;
 -- Function to sync Material.inStock from location stocks
 CREATE OR REPLACE FUNCTION sync_material_total_stock()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_material_id TEXT;
 BEGIN
+    -- Handle both INSERT/UPDATE (NEW) and DELETE (OLD)
+    v_material_id := COALESCE(NEW."materialId", OLD."materialId");
+    
     UPDATE "Material" m
     SET "inStock" = (
         SELECT COALESCE(SUM(mls.quantity), 0)
         FROM "MaterialLocationStock" mls
-        WHERE mls."materialId" = NEW."materialId"
+        WHERE mls."materialId" = v_material_id
     )
-    WHERE m.id = NEW."materialId";
+    WHERE m.id = v_material_id;
     
-    RETURN NEW;
+    RETURN NULL; -- Return value ignored for AFTER triggers
 END;
 $$ LANGUAGE plpgsql;
 
