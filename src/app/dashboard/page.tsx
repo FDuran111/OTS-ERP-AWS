@@ -177,10 +177,12 @@ export default function DashboardPage() {
 
   const handleMarkComplete = async (jobId: string, jobNumber: string) => {
     try {
+      const token = localStorage.getItem('auth-token')
       const response = await fetch(`/api/jobs/${jobId}/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           completedBy: user?.id,
@@ -215,9 +217,12 @@ export default function DashboardPage() {
       setLoading(true)
       
       // Only fetch phases data for non-employees
-      const requests = [fetch('/api/dashboard/stats')]
+      const token = localStorage.getItem('auth-token')
+      const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {}
+      
+      const requests = [fetch('/api/dashboard/stats', { headers: authHeaders, credentials: 'include' })]
       if (user?.role !== 'EMPLOYEE') {
-        requests.push(fetch('/api/dashboard/phases'))
+        requests.push(fetch('/api/dashboard/phases', { headers: authHeaders, credentials: 'include' }))
       }
       
       const responses = await Promise.all(requests)
