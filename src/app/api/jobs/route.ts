@@ -122,9 +122,9 @@ export const GET = withRBAC({
     // Get user role to determine pricing visibility (use already retrieved userRole)
     if (userRole) {
       // Strip pricing data if user is EMPLOYEE
-      if (!permissions.canViewJobCosts(userRole)) {
+      if (!permissions.canViewJobCosts(userRole as any)) {
         const pricingFields = ['estimatedCost', 'actualCost']
-        return NextResponse.json(stripPricingFromArray(transformedJobs, userRole, pricingFields))
+        return NextResponse.json(stripPricingFromArray(transformedJobs, userRole as any, pricingFields))
       }
     }
 
