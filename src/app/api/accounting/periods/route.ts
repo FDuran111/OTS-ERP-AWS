@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
 import { addMonths, addQuarters, addYears, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, format } from 'date-fns'
+import { withRBAC, AuthenticatedRequest } from '@/lib/rbac-middleware'
 
 const createPeriodSchema = z.object({
   startDate: z.string().transform((str) => new Date(str)),
@@ -74,7 +75,9 @@ async function calculatePeriodNumber(startDate: Date, periodType: string): Promi
   }
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (request: AuthenticatedRequest) => {
   try {
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status')
@@ -132,9 +135,11 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (request: AuthenticatedRequest) => {
   try {
     const body = await request.json()
     const data = createPeriodSchema.parse(body)
@@ -214,4 +219,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { withRBAC, AuthenticatedRequest } from '@/lib/rbac-middleware'
 
 const updateAccountSchema = z.object({
   code: z.string().min(1).max(20).optional(),
@@ -14,16 +15,29 @@ const updateAccountSchema = z.object({
   description: z.string().optional().nullable(),
 })
 
-export async function GET(
-  request: NextRequest,
+export const GET = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (
+  request: AuthenticatedRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const { id } = await params
 
     const result = await query(
       `SELECT 
-        a.*,
+        a.id,
+        a.code,
+        a.name,
+        a."accountType",
+        a."accountSubType",
+        a."parentAccountId",
+        a."isActive",
+        a."isPosting",
+        a."balanceType",
+        a.description,
+        a."createdAt",
+        a."updatedAt",
         parent.name as "parentAccountName"
       FROM "Account" a
       LEFT JOIN "Account" parent ON a."parentAccountId" = parent.id
@@ -51,8 +65,6 @@ export async function GET(
       isPosting: row.isPosting,
       balanceType: row.balanceType,
       description: row.description,
-      quickbooksId: row.quickbooksId,
-      quickbooksSyncToken: row.quickbooksSyncToken,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }
@@ -65,12 +77,14 @@ export async function GET(
       { status: 500 }
     )
   }
-}
+})
 
-export async function PATCH(
-  request: NextRequest,
+export const PATCH = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (
+  request: AuthenticatedRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const { id } = await params
     const body = await request.json()
@@ -200,7 +214,9 @@ export async function PATCH(
       `UPDATE "Account" 
        SET ${updates.join(', ')}
        WHERE id = $${paramIndex}
-       RETURNING *`,
+       RETURNING id, code, name, "accountType", "accountSubType", "parentAccountId",
+                 "isActive", "isPosting", "balanceType", description,
+                 "createdAt", "updatedAt"`,
       values
     )
 
@@ -237,12 +253,14 @@ export async function PATCH(
       { status: 500 }
     )
   }
-}
+})
 
-export async function DELETE(
-  request: NextRequest,
+export const DELETE = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (
+  request: AuthenticatedRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const { id } = await params
 
@@ -292,4 +310,4 @@ export async function DELETE(
       { status: 500 }
     )
   }
-}
+})

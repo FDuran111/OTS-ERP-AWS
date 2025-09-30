@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { withRBAC, AuthenticatedRequest } from '@/lib/rbac-middleware'
 
 const updateSettingsSchema = z.object({
   periodFrequency: z.enum(['MONTHLY', 'QUARTERLY', 'SEMI_ANNUALLY', 'YEARLY']).optional(),
@@ -13,7 +14,9 @@ const updateSettingsSchema = z.object({
   enableBudgets: z.boolean().optional(),
 })
 
-export async function GET() {
+export const GET = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (request: AuthenticatedRequest) => {
   try {
     const result = await query(
       'SELECT * FROM "AccountingSettings" LIMIT 1'
@@ -77,9 +80,11 @@ export async function GET() {
       { status: 500 }
     )
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (request: AuthenticatedRequest) => {
   try {
     const body = await request.json()
     const data = updateSettingsSchema.parse(body)
@@ -213,4 +218,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { withRBAC, AuthenticatedRequest } from '@/lib/rbac-middleware'
 
 const createAccountSchema = z.object({
   code: z.string().min(1).max(20),
@@ -14,7 +15,9 @@ const createAccountSchema = z.object({
   description: z.string().optional().nullable(),
 })
 
-export async function GET(request: NextRequest) {
+export const GET = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (request: AuthenticatedRequest) => {
   try {
     const searchParams = request.nextUrl.searchParams
     const accountType = searchParams.get('accountType')
@@ -23,7 +26,18 @@ export async function GET(request: NextRequest) {
 
     let sql = `
       SELECT 
-        a.*,
+        a.id,
+        a.code,
+        a.name,
+        a."accountType",
+        a."accountSubType",
+        a."parentAccountId",
+        a."isActive",
+        a."isPosting",
+        a."balanceType",
+        a.description,
+        a."createdAt",
+        a."updatedAt",
         parent.name as "parentAccountName"
       FROM "Account" a
       LEFT JOIN "Account" parent ON a."parentAccountId" = parent.id
@@ -66,8 +80,6 @@ export async function GET(request: NextRequest) {
       isPosting: row.isPosting,
       balanceType: row.balanceType,
       description: row.description,
-      quickbooksId: row.quickbooksId,
-      quickbooksSyncToken: row.quickbooksSyncToken,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }))
@@ -80,9 +92,11 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (request: AuthenticatedRequest) => {
   try {
     const body = await request.json()
     const data = createAccountSchema.parse(body)
@@ -128,7 +142,9 @@ export async function POST(request: NextRequest) {
         code, name, "accountType", "accountSubType", "parentAccountId",
         "isActive", "isPosting", "balanceType", description
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *`,
+      RETURNING id, code, name, "accountType", "accountSubType", "parentAccountId",
+                "isActive", "isPosting", "balanceType", description, 
+                "createdAt", "updatedAt"`,
       [
         data.code,
         data.name,
@@ -178,4 +194,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { withRBAC, AuthenticatedRequest } from '@/lib/rbac-middleware'
 
-export async function GET(request: NextRequest) {
+export const GET = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (request: AuthenticatedRequest) => {
   try {
     const searchParams = request.nextUrl.searchParams
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const accountType = searchParams.get('accountType')
+    const includeZeroBalances = searchParams.get('includeZeroBalances') === 'true'
 
     let sql = `
       SELECT 
@@ -52,9 +56,16 @@ export async function GET(request: NextRequest) {
 
     sql += `
       GROUP BY a.id, a.code, a.name, a."accountType", a."accountSubType", a."balanceType", a."parentAccountId"
-      HAVING COALESCE(SUM(jel.debit), 0) != 0 OR COALESCE(SUM(jel.credit), 0) != 0
-      ORDER BY a.code
     `
+
+    // Only filter out zero balances if explicitly requested
+    if (!includeZeroBalances) {
+      sql += `
+        HAVING COALESCE(SUM(jel.debit), 0) != 0 OR COALESCE(SUM(jel.credit), 0) != 0
+      `
+    }
+
+    sql += ` ORDER BY a.code`
 
     const result = await query(sql, params)
 
@@ -106,6 +117,7 @@ export async function GET(request: NextRequest) {
         startDate: startDate || null,
         endDate: endDate || null,
         accountType: accountType || null,
+        includeZeroBalances,
       },
     })
   } catch (error) {
@@ -115,4 +127,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

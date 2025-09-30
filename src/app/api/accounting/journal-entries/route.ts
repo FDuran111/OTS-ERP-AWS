@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
+import { withRBAC, AuthenticatedRequest } from '@/lib/rbac-middleware'
 
 const journalEntryLineSchema = z.object({
   accountId: z.string().uuid(),
@@ -18,10 +19,14 @@ const createJournalEntrySchema = z.object({
   entryDate: z.string().transform((str) => new Date(str)),
   periodId: z.string().uuid(),
   description: z.string().optional(),
+  sourceModule: z.string().optional(),
+  sourceId: z.string().optional(),
   lines: z.array(journalEntryLineSchema).min(2),
 })
 
-export async function GET(request: NextRequest) {
+export const GET = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (request: AuthenticatedRequest) => {
   try {
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status')
@@ -152,15 +157,30 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withRBAC({
+  requiredRoles: ['OWNER_ADMIN']
+})(async (request: AuthenticatedRequest) => {
   try {
     const body = await request.json()
     const data = createJournalEntrySchema.parse(body)
+    const userId = request.user.id
 
-    // Get user ID from auth
-    const userId = request.headers.get('x-user-id') || 'system'
+    // Check for duplicate entry if sourceModule and sourceId provided
+    if (data.sourceModule && data.sourceId) {
+      const existingEntry = await query(
+        'SELECT id FROM "JournalEntry" WHERE "sourceModule" = $1 AND "sourceId" = $2',
+        [data.sourceModule, data.sourceId]
+      )
+
+      if (existingEntry.rows.length > 0) {
+        return NextResponse.json(
+          { error: 'Journal entry already exists for this source' },
+          { status: 409 }
+        )
+      }
+    }
 
     // Validate period exists and is open
     const periodResult = await query(
@@ -230,10 +250,17 @@ export async function POST(request: NextRequest) {
       // Create journal entry
       const entryResult = await query(
         `INSERT INTO "JournalEntry" (
-          "entryDate", "periodId", description, "createdBy", status, "sourceModule"
-        ) VALUES ($1, $2, $3, $4, 'DRAFT', 'MANUAL')
+          "entryDate", "periodId", description, "createdBy", status, "sourceModule", "sourceId"
+        ) VALUES ($1, $2, $3, $4, 'DRAFT', $5, $6)
         RETURNING *`,
-        [data.entryDate, data.periodId, data.description || null, userId]
+        [
+          data.entryDate, 
+          data.periodId, 
+          data.description || null, 
+          userId,
+          data.sourceModule || 'MANUAL',
+          data.sourceId || null
+        ]
       )
 
       const entry = entryResult.rows[0]
@@ -336,4 +363,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
