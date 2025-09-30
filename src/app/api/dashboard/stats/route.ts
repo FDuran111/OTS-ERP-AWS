@@ -7,6 +7,31 @@ import { cache, TTL } from '@/lib/cache'
 
 export async function GET(request: NextRequest) {
   try {
+    // STEP 1: Verify token and check cache FIRST (before any database work)
+    const token = request.cookies.get('auth-token')?.value
+    if (token) {
+      try {
+        const userPayload = verifyToken(token)
+        const userRole = userPayload.role
+        const userId = (userPayload as any).userId || userPayload.id
+        
+        // Check cache immediately for authenticated users
+        const today = new Date().toISOString().split('T')[0]
+        const cacheKey = `dashboard:stats:${userRole}:${userId}:${today}`
+        const cached = cache.get(cacheKey)
+        
+        if (cached) {
+          // Cache hit! Return immediately without any database queries
+          return NextResponse.json(cached)
+        }
+        
+        // Cache miss - continue to fetch data
+      } catch (error) {
+        // Token invalid - continue without cache but will return limited data
+      }
+    }
+
+    // STEP 2: No cache hit - fetch fresh data from database
     const now = new Date()
     const startOfThisMonth = startOfMonth(now)
     const endOfThisMonth = endOfMonth(now)
@@ -165,8 +190,7 @@ export async function GET(request: NextRequest) {
       },
     ]
 
-    // Get user role to determine what stats to show
-    const token = request.cookies.get('auth-token')?.value
+    // Get user role to determine what stats to show (reuse token from cache check)
     let filteredStats = stats
     let jobsToReturn: any[] = []
 
@@ -175,15 +199,6 @@ export async function GET(request: NextRequest) {
         const userPayload = verifyToken(token)
         const userRole = userPayload.role
         const userId = (userPayload as any).userId || userPayload.id
-
-        // Check cache for authenticated users ONLY (after successful token verification)
-        const today = new Date().toISOString().split('T')[0]
-        const cacheKey = `dashboard:stats:${userRole}:${userId}:${today}`
-        const cached = cache.get(cacheKey)
-        
-        if (cached) {
-          return NextResponse.json(cached)
-        }
 
         // Add pending review jobs count for admins
         if (permissions.canViewRevenueReports(userRole)) {
