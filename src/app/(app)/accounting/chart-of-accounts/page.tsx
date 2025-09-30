@@ -95,7 +95,9 @@ export default function ChartOfAccountsPage() {
   const fetchAccounts = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/accounting/accounts')
+      const response = await fetch('/api/accounting/accounts', {
+        credentials: 'include'
+      })
       if (!response.ok) throw new Error('Failed to fetch accounts')
       const data = await response.json()
       setAccounts(data.accounts)
@@ -120,6 +122,7 @@ export default function ChartOfAccountsPage() {
       const response = await fetch('/api/accounting/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       })
 
@@ -150,6 +153,7 @@ export default function ChartOfAccountsPage() {
       const response = await fetch(`/api/accounting/accounts/${selectedAccount.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       })
 
@@ -173,6 +177,7 @@ export default function ChartOfAccountsPage() {
     try {
       const response = await fetch(`/api/accounting/accounts/${accountId}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
 
       if (!response.ok) {
