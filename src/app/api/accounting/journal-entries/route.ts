@@ -39,8 +39,8 @@ export const GET = withRBAC({
       SELECT 
         je.*,
         ap.name as "periodName",
-        creator."firstName" || ' ' || creator."lastName" as "createdByName",
-        poster."firstName" || ' ' || poster."lastName" as "postedByName"
+        creator.name as "createdByName",
+        poster.name as "postedByName"
       FROM "JournalEntry" je
       LEFT JOIN "AccountingPeriod" ap ON je."periodId" = ap.id
       LEFT JOIN "User" creator ON je."createdBy" = creator.id

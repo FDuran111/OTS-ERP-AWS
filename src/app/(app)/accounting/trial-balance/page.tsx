@@ -103,7 +103,16 @@ export default function TrialBalancePage() {
       if (filters.accountType !== 'ALL') params.append('accountType', filters.accountType)
       params.append('includeZeroBalances', filters.includeZeroBalances.toString())
 
-      const response = await fetch(`/api/accounting/trial-balance?${params}`)
+      const headers: HeadersInit = {}
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const response = await fetch(`/api/accounting/trial-balance?${params}`, {
+        credentials: 'include',
+        headers
+      })
       if (!response.ok) throw new Error('Failed to fetch trial balance')
       
       const data = await response.json()

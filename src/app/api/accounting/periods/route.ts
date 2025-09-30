@@ -86,7 +86,7 @@ export const GET = withRBAC({
     let sql = `
       SELECT 
         ap.*,
-        u."firstName" || ' ' || u."lastName" as "closedByName",
+        u.name as "closedByName",
         (SELECT COUNT(*) FROM "JournalEntry" WHERE "periodId" = ap.id) as "entryCount"
       FROM "AccountingPeriod" ap
       LEFT JOIN "User" u ON ap."closedBy" = u.id
