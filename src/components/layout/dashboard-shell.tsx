@@ -33,6 +33,7 @@ import {
   Settings as SettingsIcon,
   AccessTime as TimeIcon,
 } from '@mui/icons-material'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 const drawerWidth = 240
 
@@ -196,7 +197,8 @@ export function DashboardShell({ children, title = 'Dashboard' }: DashboardShell
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {title}
           </Typography>
-          <IconButton onClick={handleMenuClick}>
+          <NotificationBell />
+          <IconButton onClick={handleMenuClick} sx={{ ml: 1 }}>
             <Avatar sx={{ bgcolor: 'primary.main' }}>
               {user?.name?.charAt(0) || 'U'}
             </Avatar>
