@@ -110,10 +110,17 @@ export default function ChartOfAccountsPage() {
 
   const handleCreateAccount = async () => {
     try {
+      const payload = {
+        ...formData,
+        parentAccountId: formData.parentAccountId || null,
+        accountSubType: formData.accountSubType || null,
+        description: formData.description || null,
+      }
+
       const response = await fetch('/api/accounting/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -133,10 +140,17 @@ export default function ChartOfAccountsPage() {
     if (!selectedAccount) return
 
     try {
+      const payload = {
+        ...formData,
+        parentAccountId: formData.parentAccountId || null,
+        accountSubType: formData.accountSubType || null,
+        description: formData.description || null,
+      }
+
       const response = await fetch(`/api/accounting/accounts/${selectedAccount.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
