@@ -3,6 +3,7 @@ import { query } from '@/lib/db'
 import { startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, format } from 'date-fns'
 import { permissions, stripPricingData } from '@/lib/permissions'
 import { verifyToken } from '@/lib/auth'
+import { cache, TTL } from '@/lib/cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -175,6 +176,15 @@ export async function GET(request: NextRequest) {
         const userRole = userPayload.role
         const userId = (userPayload as any).userId || userPayload.id
 
+        // Check cache for authenticated users ONLY (after successful token verification)
+        const today = new Date().toISOString().split('T')[0]
+        const cacheKey = `dashboard:stats:${userRole}:${userId}:${today}`
+        const cached = cache.get(cacheKey)
+        
+        if (cached) {
+          return NextResponse.json(cached)
+        }
+
         // Add pending review jobs count for admins
         if (permissions.canViewRevenueReports(userRole)) {
           // Always show the stat card, even if 0
@@ -275,22 +285,40 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check if user can see pending review jobs
+    // Check if user can see pending review jobs and prepare cache key for authenticated users
     let userCanSeeReviews = false
+    let shouldCache = false
+    let cacheKey = ''
+    
     if (token) {
       try {
         const userPayload = verifyToken(token)
         userCanSeeReviews = permissions.canViewRevenueReports(userPayload.role)
+        
+        // Only cache for authenticated users with valid tokens
+        const userId = (userPayload as any).userId || userPayload.id
+        const today = new Date().toISOString().split('T')[0]
+        cacheKey = `dashboard:stats:${userPayload.role}:${userId}:${today}`
+        shouldCache = true
       } catch {
         userCanSeeReviews = false
+        shouldCache = false
       }
     }
 
-    return NextResponse.json({
+    // Prepare response
+    const responseData = {
       stats: filteredStats,
       recentJobs: jobsToReturn,
       pendingReviewJobs: userCanSeeReviews ? pendingReviewJobs : [],
-    })
+    }
+
+    // Cache the response for 5 minutes (ONLY for authenticated users)
+    if (shouldCache) {
+      cache.set(cacheKey, responseData, TTL.FIVE_MINUTES)
+    }
+
+    return NextResponse.json(responseData)
   } catch (error) {
     console.error('Dashboard stats error:', error)
     
