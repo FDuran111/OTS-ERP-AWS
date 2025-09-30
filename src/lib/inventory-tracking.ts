@@ -1,8 +1,4 @@
-import { Pool } from 'pg'
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-})
+import { pool } from './db'
 
 export interface InventoryLevel {
   id?: string

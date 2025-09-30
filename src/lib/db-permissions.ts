@@ -1,19 +1,4 @@
-import { Pool } from 'pg'
-
-// Database connection pool (reuse existing connection)
-let pool: Pool | null = null
-
-function getPool(): Pool {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    })
-  }
-  return pool
-}
+import { pool } from './db'
 
 /**
  * Set the acting user in the database session for audit logging
@@ -21,7 +6,6 @@ function getPool(): Pool {
  */
 export async function setActingUser(userId: string): Promise<void> {
   try {
-    const pool = getPool()
     await pool.query('SELECT set_acting_user($1)', [userId])
   } catch (error) {
     console.error('Failed to set acting user for audit logging:', error)
@@ -38,7 +22,6 @@ export async function userHasPermission(
   userId: string,
   permissionId: string
 ): Promise<boolean> {
-  const pool = getPool()
   const result = await pool.query(
     'SELECT user_has_permission($1, $2) as has_permission',
     [userId, permissionId]
@@ -52,7 +35,6 @@ export async function userHasPermission(
  * THROWS on database errors (allows fallback in calling code)
  */
 export async function getUserPermissions(userId: string): Promise<string[]> {
-  const pool = getPool()
   const result = await pool.query(
     'SELECT get_user_permissions($1) as permissions',
     [userId]
@@ -65,7 +47,6 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
  * THROWS on database errors (allows fallback in calling code)
  */
 export async function getUserRole(userId: string): Promise<string | null> {
-  const pool = getPool()
   const result = await pool.query(
     'SELECT role FROM "User" WHERE id = $1',
     [userId]
@@ -176,12 +157,3 @@ export async function canAccessResourceDB(
   return userHasPermission(userId, permissionId)
 }
 
-/**
- * Close the database pool (for cleanup)
- */
-export async function closeDatabasePool(): Promise<void> {
-  if (pool) {
-    await pool.end()
-    pool = null
-  }
-}

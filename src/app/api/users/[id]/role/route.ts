@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Pool } from 'pg'
+import { pool } from '@/lib/db'
 import { withRBAC } from '@/lib/rbac-middleware'
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 export const PUT = withRBAC({ 
   requiredPermissions: 'rbac.manage' 

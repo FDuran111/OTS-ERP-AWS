@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Pool } from 'pg'
+import { pool } from '@/lib/db'
 import { z } from 'zod'
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-})
 
 const endBreakSchema = z.object({
   latitude: z.number().optional(),
