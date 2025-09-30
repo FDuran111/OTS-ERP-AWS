@@ -167,91 +167,84 @@ export const POST = withRBAC({
     const data = createJournalEntrySchema.parse(body)
     const userId = request.user.id
 
-    // Check for duplicate entry if sourceModule and sourceId provided
-    if (data.sourceModule && data.sourceId) {
-      const existingEntry = await query(
-        'SELECT id FROM "JournalEntry" WHERE "sourceModule" = $1 AND "sourceId" = $2',
-        [data.sourceModule, data.sourceId]
-      )
-
-      if (existingEntry.rows.length > 0) {
-        return NextResponse.json(
-          { error: 'Journal entry already exists for this source' },
-          { status: 409 }
-        )
-      }
-    }
-
-    // Validate period exists and is open
-    const periodResult = await query(
-      'SELECT * FROM "AccountingPeriod" WHERE id = $1',
-      [data.periodId]
-    )
-
-    if (periodResult.rows.length === 0) {
-      return NextResponse.json(
-        { error: 'Period not found' },
-        { status: 400 }
-      )
-    }
-
-    if (periodResult.rows[0].status !== 'OPEN') {
-      return NextResponse.json(
-        { error: 'Period is not open for new entries' },
-        { status: 400 }
-      )
-    }
-
-    // Validate all accounts exist and are posting accounts
-    const accountIds = data.lines.map(line => line.accountId)
-    const accountsResult = await query(
-      `SELECT id, "isPosting", "isActive" FROM "Account" WHERE id = ANY($1::uuid[])`,
-      [accountIds]
-    )
-
-    if (accountsResult.rows.length !== accountIds.length) {
-      return NextResponse.json(
-        { error: 'One or more accounts not found' },
-        { status: 400 }
-      )
-    }
-
-    const invalidAccounts = accountsResult.rows.filter((acc: any) => !acc.isPosting || !acc.isActive)
-    if (invalidAccounts.length > 0) {
-      return NextResponse.json(
-        { error: 'One or more accounts are not active posting accounts' },
-        { status: 400 }
-      )
-    }
-
-    // Validate debits equal credits
-    const totalDebits = data.lines.reduce((sum, line) => sum + line.debit, 0)
-    const totalCredits = data.lines.reduce((sum, line) => sum + line.credit, 0)
-
-    if (Math.abs(totalDebits - totalCredits) > 0.01) {
-      return NextResponse.json(
-        { error: `Journal entry is not balanced. Debits: ${totalDebits}, Credits: ${totalCredits}` },
-        { status: 400 }
-      )
-    }
-
-    // Validate each line has either debit or credit (not both)
-    const invalidLines = data.lines.filter(line => (line.debit > 0 && line.credit > 0) || (line.debit === 0 && line.credit === 0))
-    if (invalidLines.length > 0) {
-      return NextResponse.json(
-        { error: 'Each line must have either a debit or credit (not both, not neither)' },
-        { status: 400 }
-      )
-    }
-
     await query('BEGIN')
 
     try {
-      // Create journal entry
+      // Lock the period row and validate it's open
+      const periodResult = await query(
+        'SELECT * FROM "AccountingPeriod" WHERE id = $1 FOR UPDATE',
+        [data.periodId]
+      )
+
+      if (periodResult.rows.length === 0) {
+        await query('ROLLBACK')
+        return NextResponse.json(
+          { error: 'Period not found' },
+          { status: 400 }
+        )
+      }
+
+      if (periodResult.rows[0].status !== 'OPEN') {
+        await query('ROLLBACK')
+        return NextResponse.json(
+          { error: 'Period is not open for new entries' },
+          { status: 400 }
+        )
+      }
+
+      // Validate all accounts exist and are posting accounts
+      const accountIds = data.lines.map(line => line.accountId)
+      const accountsResult = await query(
+        `SELECT id, "isPosting", "isActive" FROM "Account" WHERE id = ANY($1::uuid[])`,
+        [accountIds]
+      )
+
+      if (accountsResult.rows.length !== accountIds.length) {
+        await query('ROLLBACK')
+        return NextResponse.json(
+          { error: 'One or more accounts not found' },
+          { status: 400 }
+        )
+      }
+
+      const invalidAccounts = accountsResult.rows.filter((acc: any) => !acc.isPosting || !acc.isActive)
+      if (invalidAccounts.length > 0) {
+        await query('ROLLBACK')
+        return NextResponse.json(
+          { error: 'One or more accounts are not active posting accounts' },
+          { status: 400 }
+        )
+      }
+
+      // Validate debits equal credits
+      const totalDebits = data.lines.reduce((sum, line) => sum + line.debit, 0)
+      const totalCredits = data.lines.reduce((sum, line) => sum + line.credit, 0)
+
+      if (Math.abs(totalDebits - totalCredits) > 0.01) {
+        await query('ROLLBACK')
+        return NextResponse.json(
+          { error: `Journal entry is not balanced. Debits: ${totalDebits}, Credits: ${totalCredits}` },
+          { status: 400 }
+        )
+      }
+
+      // Validate each line has either debit or credit (not both)
+      const invalidLines = data.lines.filter(line => (line.debit > 0 && line.credit > 0) || (line.debit === 0 && line.credit === 0))
+      if (invalidLines.length > 0) {
+        await query('ROLLBACK')
+        return NextResponse.json(
+          { error: 'Each line must have either a debit or credit (not both, not neither)' },
+          { status: 400 }
+        )
+      }
+
+      // Create journal entry - use ON CONFLICT for idempotency
       const entryResult = await query(
         `INSERT INTO "JournalEntry" (
           "entryDate", "periodId", description, "createdBy", status, "sourceModule", "sourceId"
         ) VALUES ($1, $2, $3, $4, 'DRAFT', $5, $6)
+        ON CONFLICT ON CONSTRAINT "JournalEntry_sourceModule_sourceId_key"
+        DO NOTHING
         RETURNING *`,
         [
           data.entryDate, 
@@ -262,6 +255,15 @@ export const POST = withRBAC({
           data.sourceId || null
         ]
       )
+
+      // Check if entry was actually created (not a duplicate)
+      if (entryResult.rows.length === 0) {
+        await query('ROLLBACK')
+        return NextResponse.json(
+          { error: 'Journal entry already exists for this source' },
+          { status: 409 }
+        )
+      }
 
       const entry = entryResult.rows[0]
 
@@ -344,8 +346,17 @@ export const POST = withRBAC({
         },
         { status: 201 }
       )
-    } catch (error) {
+    } catch (error: any) {
       await query('ROLLBACK')
+      
+      // Handle unique constraint violation more gracefully
+      if (error.code === '23505' && error.constraint === 'JournalEntry_sourceModule_sourceId_key') {
+        return NextResponse.json(
+          { error: 'Journal entry already exists for this source' },
+          { status: 409 }
+        )
+      }
+      
       throw error
     }
   } catch (error) {

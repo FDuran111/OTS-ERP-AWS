@@ -12,6 +12,25 @@ export const GET = withRBAC({
     const accountType = searchParams.get('accountType')
     const includeZeroBalances = searchParams.get('includeZeroBalances') === 'true'
 
+    let datePredicate = 'TRUE'
+    const params: any[] = []
+    let paramIndex = 1
+
+    // Build date predicate for CASE statements
+    if (startDate && endDate) {
+      datePredicate = `je."entryDate" BETWEEN $${paramIndex} AND $${paramIndex + 1}`
+      params.push(startDate, endDate)
+      paramIndex += 2
+    } else if (startDate) {
+      datePredicate = `je."entryDate" >= $${paramIndex}`
+      params.push(startDate)
+      paramIndex++
+    } else if (endDate) {
+      datePredicate = `je."entryDate" <= $${paramIndex}`
+      params.push(endDate)
+      paramIndex++
+    }
+
     let sql = `
       SELECT 
         a.id as "accountId",
@@ -21,33 +40,39 @@ export const GET = withRBAC({
         a."accountSubType",
         a."balanceType",
         a."parentAccountId",
-        COALESCE(SUM(jel.debit), 0) as "totalDebits",
-        COALESCE(SUM(jel.credit), 0) as "totalCredits",
+        COALESCE(SUM(
+          CASE 
+            WHEN je.status = 'POSTED' AND ${datePredicate} THEN jel.debit 
+            ELSE 0 
+          END
+        ), 0) as "totalDebits",
+        COALESCE(SUM(
+          CASE 
+            WHEN je.status = 'POSTED' AND ${datePredicate} THEN jel.credit 
+            ELSE 0 
+          END
+        ), 0) as "totalCredits",
         CASE 
-          WHEN a."balanceType" = 'DEBIT' THEN COALESCE(SUM(jel.debit - jel.credit), 0)
-          ELSE COALESCE(SUM(jel.credit - jel.debit), 0)
+          WHEN a."balanceType" = 'DEBIT' THEN COALESCE(SUM(
+            CASE 
+              WHEN je.status = 'POSTED' AND ${datePredicate} THEN jel.debit - jel.credit 
+              ELSE 0 
+            END
+          ), 0)
+          ELSE COALESCE(SUM(
+            CASE 
+              WHEN je.status = 'POSTED' AND ${datePredicate} THEN jel.credit - jel.debit 
+              ELSE 0 
+            END
+          ), 0)
         END as balance
       FROM "Account" a
       LEFT JOIN "JournalEntryLine" jel ON a.id = jel."accountId"
-      LEFT JOIN "JournalEntry" je ON jel."entryId" = je.id AND je.status = 'POSTED'
+      LEFT JOIN "JournalEntry" je ON jel."entryId" = je.id
       WHERE a."isActive" = true AND a."isPosting" = true
     `
 
-    const params: any[] = []
-    let paramIndex = 1
-
-    if (startDate) {
-      sql += ` AND je."entryDate" >= $${paramIndex}`
-      params.push(startDate)
-      paramIndex++
-    }
-
-    if (endDate) {
-      sql += ` AND je."entryDate" <= $${paramIndex}`
-      params.push(endDate)
-      paramIndex++
-    }
-
+    // Add account type filter if provided
     if (accountType) {
       sql += ` AND a."accountType" = $${paramIndex}`
       params.push(accountType)
@@ -61,7 +86,18 @@ export const GET = withRBAC({
     // Only filter out zero balances if explicitly requested
     if (!includeZeroBalances) {
       sql += `
-        HAVING COALESCE(SUM(jel.debit), 0) != 0 OR COALESCE(SUM(jel.credit), 0) != 0
+        HAVING COALESCE(SUM(
+          CASE 
+            WHEN je.status = 'POSTED' AND ${datePredicate} THEN jel.debit 
+            ELSE 0 
+          END
+        ), 0) != 0 
+        OR COALESCE(SUM(
+          CASE 
+            WHEN je.status = 'POSTED' AND ${datePredicate} THEN jel.credit 
+            ELSE 0 
+          END
+        ), 0) != 0
       `
     }
 
