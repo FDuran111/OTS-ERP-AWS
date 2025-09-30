@@ -119,10 +119,17 @@ export default function JournalEntriesPage() {
   const fetchData = async () => {
     try {
       setLoading(true)
+      
+      const headers: HeadersInit = {}
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      
       const [entriesRes, accountsRes, periodsRes] = await Promise.all([
-        fetch('/api/accounting/journal-entries'),
-        fetch('/api/accounting/accounts'),
-        fetch('/api/accounting/periods'),
+        fetch('/api/accounting/journal-entries', { credentials: 'include', headers }),
+        fetch('/api/accounting/accounts', { credentials: 'include', headers }),
+        fetch('/api/accounting/periods', { credentials: 'include', headers }),
       ])
 
       if (!entriesRes.ok) throw new Error('Failed to fetch journal entries')
@@ -174,9 +181,16 @@ export default function JournalEntriesPage() {
         throw new Error('Journal entry must have at least 2 lines')
       }
 
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
       const response = await fetch('/api/accounting/journal-entries', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           ...formData,
           lines: validLines,
@@ -204,8 +218,17 @@ export default function JournalEntriesPage() {
 
     try {
       setActionLoading(true)
+      
+      const headers: HeadersInit = {}
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      
       const response = await fetch(`/api/accounting/journal-entries/${entryId}/post`, {
         method: 'POST',
+        credentials: 'include',
+        headers,
       })
 
       if (!response.ok) {
@@ -224,7 +247,16 @@ export default function JournalEntriesPage() {
 
   const handleViewEntry = async (entry: JournalEntry) => {
     try {
-      const response = await fetch(`/api/accounting/journal-entries/${entry.id}`)
+      const headers: HeadersInit = {}
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      
+      const response = await fetch(`/api/accounting/journal-entries/${entry.id}`, {
+        credentials: 'include',
+        headers
+      })
       if (!response.ok) throw new Error('Failed to fetch entry details')
       
       const data = await response.json()
