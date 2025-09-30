@@ -162,10 +162,15 @@ export default function QuickMaterialUsage({
     try {
       setSubmitting(true)
 
+      const token = localStorage.getItem('auth-token')
       const promises = quickItems.map(async (item) => {
         const response = await fetch('/api/stock-movements', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          credentials: 'include',
           body: JSON.stringify({
             materialId: item.materialId,
             quantity: item.quantity,

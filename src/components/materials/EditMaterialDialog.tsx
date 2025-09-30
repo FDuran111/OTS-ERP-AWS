@@ -167,7 +167,15 @@ export default function EditMaterialDialog({ open, material, onClose, onMaterial
 
   const fetchStorageLocations = async () => {
     try {
-      const response = await fetch('/api/storage-locations')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/storage-locations', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+      })
       if (response.ok) {
         const data = await response.json()
         setStorageLocations(data)

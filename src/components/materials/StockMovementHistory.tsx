@@ -103,7 +103,15 @@ export default function StockMovementHistory({
       if (filters.dateFrom) params.append('dateFrom', filters.dateFrom)
       if (filters.dateTo) params.append('dateTo', filters.dateTo)
 
-      const response = await fetch(`/api/stock-movements?${params}`)
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch(`/api/stock-movements?${params}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+      })
       if (!response.ok) {
         throw new Error(`Failed to fetch stock movements: ${response.status}`)
       }

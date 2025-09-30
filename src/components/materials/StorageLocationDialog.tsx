@@ -85,7 +85,15 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
   const fetchLocations = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/storage-locations')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/storage-locations', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+      })
       if (response.ok) {
         const data = await response.json()
         setLocations(data)
@@ -107,9 +115,14 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
       
       const method = editingLocation ? 'PATCH' : 'POST'
 
+      const token = localStorage.getItem('auth-token')
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
         body: JSON.stringify(data),
       })
 
@@ -149,8 +162,13 @@ export default function StorageLocationDialog({ open, onClose, onLocationsUpdate
     }
 
     try {
+      const token = localStorage.getItem('auth-token')
       const response = await fetch(`/api/storage-locations/${location.id}`, {
         method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       })
 
       if (!response.ok) {
