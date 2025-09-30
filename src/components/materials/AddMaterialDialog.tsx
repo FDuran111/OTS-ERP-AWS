@@ -139,7 +139,15 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
 
   const fetchVendors = async () => {
     try {
-      const response = await fetch('/api/vendors')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/vendors', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+      })
       if (response.ok) {
         const data = await response.json()
         setVendors(data)
@@ -180,9 +188,14 @@ export default function AddMaterialDialog({ open, onClose, onMaterialCreated }: 
         minStock: data.minStock ?? 0,
       }
 
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/materials', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
         body: JSON.stringify(submitData),
       })
 

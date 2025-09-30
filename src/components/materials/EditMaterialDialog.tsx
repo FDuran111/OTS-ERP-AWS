@@ -155,7 +155,15 @@ export default function EditMaterialDialog({ open, material, onClose, onMaterial
 
   const fetchVendors = async () => {
     try {
-      const response = await fetch('/api/vendors')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/vendors', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+      })
       if (response.ok) {
         const data = await response.json()
         setVendors(data)
@@ -191,9 +199,14 @@ export default function EditMaterialDialog({ open, material, onClose, onMaterial
     try {
       setSubmitting(true)
 
+      const token = localStorage.getItem('auth-token')
       const response = await fetch(`/api/materials/${material.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
         body: JSON.stringify(data),
       })
 
