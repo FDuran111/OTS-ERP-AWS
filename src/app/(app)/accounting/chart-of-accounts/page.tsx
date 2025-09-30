@@ -97,7 +97,7 @@ export default function ChartOfAccountsPage() {
       setLoading(true)
       
       const headers: HeadersInit = {}
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
@@ -128,7 +128,7 @@ export default function ChartOfAccountsPage() {
       }
 
       const headers: HeadersInit = { 'Content-Type': 'application/json' }
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
@@ -165,7 +165,7 @@ export default function ChartOfAccountsPage() {
       }
 
       const headers: HeadersInit = { 'Content-Type': 'application/json' }
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
@@ -196,7 +196,7 @@ export default function ChartOfAccountsPage() {
 
     try {
       const headers: HeadersInit = {}
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
