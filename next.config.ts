@@ -9,12 +9,31 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   
+  // Externalize server-only packages
+  serverExternalPackages: ['pg', 'pg-pool', 'pg-connection-string'],
+  
   // Experimental settings
   experimental: {
     staleTimes: {
       dynamic: 0,
       static: 0,
     },
+  },
+  
+  // Webpack configuration for server-only modules
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Don't bundle server-only packages in client bundles
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+        'pg-native': false,
+      }
+    }
+    return config
   },
   
   // Force no caching on all routes

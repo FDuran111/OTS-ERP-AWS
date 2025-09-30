@@ -6,12 +6,14 @@ import {
   hasPermission, 
   canAccessResource, 
   UserRole, 
-  UserPayload,
+  UserPayload
+} from './auth'
+import {
   initializeAuditLogging,
   hasPermissionDB,
   hasAllPermissionsDB,
   canAccessResourceDB_Wrapper
-} from './auth'
+} from './auth-server'
 
 export interface RBACConfig {
   requiredRoles?: UserRole | UserRole[]
