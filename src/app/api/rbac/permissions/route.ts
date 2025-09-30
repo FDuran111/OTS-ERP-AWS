@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { pool } from '@/lib/db'
 import { withRBAC } from '@/lib/rbac-middleware'
+import { z } from 'zod'
+
+const createPermissionSchema = z.object({
+  id: z.string().min(1, 'Permission ID is required').max(100, 'ID too long').regex(/^[a-z_]+\.[a-z_]+$/, 'ID must be in format: category.action (e.g., jobs.read)'),
+  name: z.string().min(1, 'Name is required').max(200, 'Name too long'),
+  description: z.string().max(500, 'Description too long').optional(),
+  category: z.string().min(1, 'Category is required').max(50, 'Category too long')
+})
 
 export const GET = withRBAC({ 
   requiredPermissions: 'rbac.view' 
@@ -60,14 +68,23 @@ export const POST = withRBAC({
 })(async (request) => {
   try {
     const body = await request.json()
-    const { id, name, description, category } = body
-
-    if (!id || !name || !category) {
+    
+    // Validate input using Zod schema
+    const validation = createPermissionSchema.safeParse(body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'ID, name, and category are required' },
+        { 
+          error: 'Invalid input', 
+          details: validation.error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
+        },
         { status: 400 }
       )
     }
+
+    const { id, name, description, category } = validation.data
 
     const exists = await pool.query(
       'SELECT id FROM "Permission" WHERE id = $1',

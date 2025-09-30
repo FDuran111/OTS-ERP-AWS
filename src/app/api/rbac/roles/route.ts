@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { pool } from '@/lib/db'
 import { withRBAC } from '@/lib/rbac-middleware'
+import { z } from 'zod'
+
+const createRoleSchema = z.object({
+  name: z.string().min(1, 'Role name is required').max(100, 'Role name too long'),
+  description: z.string().max(500, 'Description too long').optional(),
+  level: z.number().int('Level must be an integer').min(1, 'Level must be at least 1').max(100, 'Level cannot exceed 100'),
+  permissionIds: z.array(z.string().regex(/^[a-z_]+\.[a-z_]+$/, 'Permission ID must be in format: category.action (e.g., jobs.read)')).optional().default([])
+})
 
 export const GET = withRBAC({ 
   requiredPermissions: 'rbac.view' 
@@ -55,14 +63,23 @@ export const POST = withRBAC({
 })(async (request) => {
   try {
     const body = await request.json()
-    const { name, description, level, permissionIds = [] } = body
-
-    if (!name || level === undefined) {
+    
+    // Validate input using Zod schema
+    const validation = createRoleSchema.safeParse(body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Name and level are required' },
+        { 
+          error: 'Invalid input', 
+          details: validation.error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
+        },
         { status: 400 }
       )
     }
+
+    const { name, description, level, permissionIds } = validation.data
 
     const client = await pool.connect()
     try {

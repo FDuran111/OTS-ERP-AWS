@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { pool } from '@/lib/db'
 import { withRBAC } from '@/lib/rbac-middleware'
+import { z } from 'zod'
+
+const grantPermissionSchema = z.object({
+  permissionId: z.string().min(1, 'Permission ID is required'),
+  granted: z.boolean().default(true),
+  expiresAt: z.string().datetime('Invalid expiration date format').optional(),
+  reason: z.string().max(500, 'Reason too long').optional()
+})
 
 export const GET = withRBAC({ 
   requiredPermissions: 'rbac.view' 
@@ -38,14 +46,23 @@ export const POST = withRBAC({
   try {
     const { id: userId } = await params
     const body = await request.json()
-    const { permissionId, granted = true, expiresAt, reason } = body
-
-    if (!permissionId) {
+    
+    // Validate input using Zod schema
+    const validation = grantPermissionSchema.safeParse(body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'permissionId is required' },
+        { 
+          error: 'Invalid input', 
+          details: validation.error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
+        },
         { status: 400 }
       )
     }
+
+    const { permissionId, granted, expiresAt, reason } = validation.data
 
     const userCheck = await pool.query(
       'SELECT id FROM "User" WHERE id = $1',
