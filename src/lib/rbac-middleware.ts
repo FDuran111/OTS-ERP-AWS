@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { verifyToken, hasRole, hasPermission, canAccessResource, UserRole, UserPayload } from './auth'
+import { 
+  verifyToken, 
+  hasRole, 
+  hasPermission, 
+  canAccessResource, 
+  UserRole, 
+  UserPayload,
+  initializeAuditLogging,
+  hasPermissionDB,
+  hasAllPermissionsDB,
+  canAccessResourceDB_Wrapper
+} from './auth'
 
 export interface RBACConfig {
   requiredRoles?: UserRole | UserRole[]
@@ -52,6 +63,18 @@ export function withRBAC(config: RBACConfig = {}) {
           )
         }
 
+        // Initialize audit logging - CRITICAL for tracking who does what
+        await initializeAuditLogging(user.id)
+
+        // Owner/Admin bypass (enabled by default) - CHECK FIRST
+        const allowOwner = config.allowOwner !== false
+        if (allowOwner && user.role === 'OWNER_ADMIN') {
+          // Owner/Admin can access everything, skip other checks
+          const authenticatedRequest = request as AuthenticatedRequest
+          authenticatedRequest.user = user
+          return await handler(authenticatedRequest, context)
+        }
+
         // Check role requirements
         if (config.requiredRoles) {
           if (!hasRole(user.role, config.requiredRoles)) {
@@ -62,15 +85,14 @@ export function withRBAC(config: RBACConfig = {}) {
           }
         }
 
-        // Check permission requirements
+        // Check permission requirements - USE DATABASE-BACKED CHECKS
         if (config.requiredPermissions) {
           const permissions = Array.isArray(config.requiredPermissions) 
             ? config.requiredPermissions 
             : [config.requiredPermissions]
           
-          const hasAllPermissions = permissions.every(permission => 
-            hasPermission(user.role, permission)
-          )
+          // Try database-backed permission check first
+          const hasAllPermissions = await hasAllPermissionsDB(user.id, user.role, permissions)
 
           if (!hasAllPermissions) {
             return NextResponse.json(
@@ -80,9 +102,16 @@ export function withRBAC(config: RBACConfig = {}) {
           }
         }
 
-        // Check resource access
+        // Check resource access - USE DATABASE-BACKED CHECKS
         if (config.resource && config.action) {
-          if (!canAccessResource(user.role, config.resource, config.action)) {
+          const canAccess = await canAccessResourceDB_Wrapper(
+            user.id, 
+            user.role, 
+            config.resource, 
+            config.action
+          )
+          
+          if (!canAccess) {
             return NextResponse.json(
               { error: 'Access denied for this resource' },
               { status: 403 }
@@ -96,12 +125,6 @@ export function withRBAC(config: RBACConfig = {}) {
             { error: 'Access denied' },
             { status: 403 }
           )
-        }
-
-        // Owner/Admin bypass (enabled by default)
-        const allowOwner = config.allowOwner !== false
-        if (allowOwner && user.role === 'OWNER_ADMIN') {
-          // Owner/Admin can access everything, skip other checks
         }
 
         // Add user to request and call handler
@@ -160,6 +183,7 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<UserPa
 }
 
 // Helper for client-side role checking (to be used in API routes)
+// DEPRECATED: Use checkUserAccessDB for database-backed permission checks
 export function checkUserAccess(
   token: string | undefined,
   config: RBACConfig
@@ -176,7 +200,7 @@ export function checkUserAccess(
       return { authorized: false, user, error: 'Insufficient role permissions' }
     }
 
-    // Check permission requirements
+    // Check permission requirements (hardcoded fallback)
     if (config.requiredPermissions) {
       const permissions = Array.isArray(config.requiredPermissions) 
         ? config.requiredPermissions 
@@ -191,9 +215,68 @@ export function checkUserAccess(
       }
     }
 
-    // Check resource access
+    // Check resource access (hardcoded fallback)
     if (config.resource && config.action) {
       if (!canAccessResource(user.role, config.resource, config.action)) {
+        return { authorized: false, user, error: 'Access denied for this resource' }
+      }
+    }
+
+    return { authorized: true, user }
+  } catch (error) {
+    return { authorized: false, error: 'Invalid or expired token' }
+  }
+}
+
+// NEW: Database-backed user access check (use this instead of checkUserAccess)
+export async function checkUserAccessDB(
+  token: string | undefined,
+  config: RBACConfig
+): Promise<{ authorized: boolean; user?: UserPayload; error?: string }> {
+  if (!token) {
+    return { authorized: false, error: 'Authentication required' }
+  }
+
+  try {
+    const user = verifyToken(token)
+    
+    // Initialize audit logging
+    await initializeAuditLogging(user.id)
+    
+    // Owner/Admin bypass (enabled by default) - CHECK FIRST
+    const allowOwner = config.allowOwner !== false
+    if (allowOwner && user.role === 'OWNER_ADMIN') {
+      return { authorized: true, user }
+    }
+    
+    // Check role requirements
+    if (config.requiredRoles && !hasRole(user.role, config.requiredRoles)) {
+      return { authorized: false, user, error: 'Insufficient role permissions' }
+    }
+
+    // Check permission requirements - DATABASE BACKED
+    if (config.requiredPermissions) {
+      const permissions = Array.isArray(config.requiredPermissions) 
+        ? config.requiredPermissions 
+        : [config.requiredPermissions]
+      
+      const hasAllPermissions = await hasAllPermissionsDB(user.id, user.role, permissions)
+
+      if (!hasAllPermissions) {
+        return { authorized: false, user, error: 'Insufficient permissions' }
+      }
+    }
+
+    // Check resource access - DATABASE BACKED
+    if (config.resource && config.action) {
+      const canAccess = await canAccessResourceDB_Wrapper(
+        user.id, 
+        user.role, 
+        config.resource, 
+        config.action
+      )
+      
+      if (!canAccess) {
         return { authorized: false, user, error: 'Access denied for this resource' }
       }
     }
