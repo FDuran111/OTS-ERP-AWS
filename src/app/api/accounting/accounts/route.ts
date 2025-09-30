@@ -7,7 +7,7 @@ const createAccountSchema = z.object({
   code: z.string().min(1).max(20),
   name: z.string().min(1).max(100),
   accountType: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'COGS', 'EXPENSE']),
-  accountSubType: z.string().max(50).optional(),
+  accountSubType: z.string().max(50).optional().nullable(),
   parentAccountId: z.string().uuid().optional().nullable(),
   isActive: z.boolean().default(true),
   isPosting: z.boolean().default(true),
