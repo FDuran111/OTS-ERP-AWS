@@ -2,6 +2,31 @@
 
 This is the Ortmeier Technical Service Job Management Platform - a comprehensive Next.js 15 application designed for electrical subcontractors. The platform handles job scheduling, time tracking, material management, invoicing, and customer portal functionality. The project is currently in an AWS migration phase, transitioning from Supabase/Coolify infrastructure to AWS-only services.
 
+## Recent Updates (September 30, 2025)
+
+### Advanced Purchase Order & Forecasting System
+Implemented comprehensive PO creation and forecasting with ABC inventory analysis:
+
+**Purchase Order Automation:**
+- **Smart PO Creation**: Create purchase orders directly from reorder suggestions with vendor selection and delivery dates
+- **Material Selection**: Multi-select materials with ABC classification badges, on-order quantities, and stockout predictions
+- **Automated Receiving**: Comprehensive receiving dialog with location selection, quantity validation, and over-receipt prevention
+- **Receipt Tracking**: Unique receipt numbers with idempotent operations and concurrent receipt handling via row-level locking
+- **Database Integrity**: PostgreSQL triggers auto-update stock levels, sequences ensure unique PO/receipt numbers
+
+**Inventory Forecasting & Analytics:**
+- **ABC Classification**: Automatic classification based on cumulative value contribution (A=80%, B=15%, C=5%)
+- **Stockout Predictions**: Calculate stockout probability and estimated dates based on usage patterns and lead times
+- **Economic Order Quantity**: EOQ calculation with optimal reorder points considering usage trends and holding costs
+- **Usage Trend Analysis**: Detect increasing/decreasing demand with trend factors and confidence scores
+- **Low-Stock Notifications**: Real-time alerts with urgency levels (CRITICAL/URGENT/MEDIUM) and bell icon in navigation
+
+**Technical Implementation:**
+- Dedicated API endpoints: `/api/purchase-orders/from-reorder`, `/api/purchase-orders/[id]/receive`, `/api/materials/forecast`, `/api/materials/on-order`, `/api/notifications/low-stock`
+- Database migrations: Fixed ABC classification, added receipt idempotency constraints, over-receipt prevention
+- UI Components: ReorderSuggestions with PO creation dialog, PurchaseOrderReceivingDialog, NotificationBell with toast alerts
+- Performance: Efficient SQL aggregations, auto-refresh intervals, session-based toast deduplication
+
 ## Recent Updates (September 29, 2025)
 
 ### Mobile-Responsive UI Implementation
