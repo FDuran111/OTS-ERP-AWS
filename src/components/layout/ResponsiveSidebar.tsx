@@ -121,6 +121,19 @@ const navigationItems: NavItem[] = [
     roles: ['OWNER_ADMIN', 'FOREMAN']
   },
   {
+    title: 'Accounting',
+    icon: <QuickBooksIcon />,
+    path: '/accounting/chart-of-accounts',
+    roles: ['OWNER_ADMIN'],
+    children: [
+      { title: 'Chart of Accounts', icon: <QuickBooksIcon />, path: '/accounting/chart-of-accounts', roles: ['OWNER_ADMIN'] },
+      { title: 'Journal Entries', icon: <InvoicingIcon />, path: '/accounting/journal-entries', roles: ['OWNER_ADMIN'] },
+      { title: 'Trial Balance', icon: <ReportsIcon />, path: '/accounting/trial-balance', roles: ['OWNER_ADMIN'] },
+      { title: 'Periods', icon: <ScheduleIcon />, path: '/accounting/periods', roles: ['OWNER_ADMIN'] },
+      { title: 'Settings', icon: <SettingsIcon />, path: '/accounting/settings', roles: ['OWNER_ADMIN'] }
+    ]
+  },
+  {
     title: 'Reports',
     icon: <ReportsIcon />,
     path: '/reports',
