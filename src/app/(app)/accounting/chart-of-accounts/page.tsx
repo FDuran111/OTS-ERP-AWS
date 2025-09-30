@@ -95,8 +95,16 @@ export default function ChartOfAccountsPage() {
   const fetchAccounts = async () => {
     try {
       setLoading(true)
+      
+      const headers: HeadersInit = {}
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      
       const response = await fetch('/api/accounting/accounts', {
-        credentials: 'include'
+        credentials: 'include',
+        headers
       })
       if (!response.ok) throw new Error('Failed to fetch accounts')
       const data = await response.json()
@@ -119,9 +127,15 @@ export default function ChartOfAccountsPage() {
         description: formData.description || null,
       }
 
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
       const response = await fetch('/api/accounting/accounts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify(payload),
       })
@@ -150,9 +164,15 @@ export default function ChartOfAccountsPage() {
         description: formData.description || null,
       }
 
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
       const response = await fetch(`/api/accounting/accounts/${selectedAccount.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify(payload),
       })
@@ -175,9 +195,16 @@ export default function ChartOfAccountsPage() {
     if (!confirm('Are you sure you want to delete this account?')) return
 
     try {
+      const headers: HeadersInit = {}
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
       const response = await fetch(`/api/accounting/accounts/${accountId}`, {
         method: 'DELETE',
         credentials: 'include',
+        headers,
       })
 
       if (!response.ok) {
