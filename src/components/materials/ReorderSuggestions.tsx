@@ -87,7 +87,15 @@ export default function ReorderSuggestions() {
     try {
       setLoading(true)
       const params = new URLSearchParams({ period, minConfidence })
-      const response = await fetch(`/api/materials/reorder-suggestions?${params}`)
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch(`/api/materials/reorder-suggestions?${params}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+      })
       
       if (!response.ok) throw new Error('Failed to fetch reorder suggestions')
       

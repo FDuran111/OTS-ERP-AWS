@@ -126,7 +126,15 @@ export default function StockAnalyticsDashboard() {
       const params = new URLSearchParams({ period })
       if (categoryFilter) params.append('category', categoryFilter)
       
-      const response = await fetch(`/api/analytics/stock?${params}`)
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch(`/api/analytics/stock?${params}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+      })
       if (!response.ok) throw new Error('Failed to fetch analytics')
       
       const data = await response.json()
@@ -140,7 +148,15 @@ export default function StockAnalyticsDashboard() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/materials')
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/materials', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+      })
       if (response.ok) {
         const materials = await response.json()
         const categories = [...new Set(materials.map((m: any) => m.category).filter(Boolean))] as string[]

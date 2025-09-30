@@ -123,10 +123,20 @@ export default function MaterialReservationDialog({
       setLoading(true)
       setError(null)
 
+      const token = localStorage.getItem('auth-token')
+      const authHeaders = {
+        cache: 'no-store' as RequestCache,
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include' as RequestCredentials
+      }
+
       const [materialsRes, jobsRes, usersRes] = await Promise.all([
-        fetch('/api/materials?available=true'),
-        fetch('/api/jobs?status=estimate,scheduled,dispatched'),
-        fetch('/api/users?role=field_crew,admin,office')
+        fetch('/api/materials?available=true', authHeaders),
+        fetch('/api/jobs?status=estimate,scheduled,dispatched', authHeaders),
+        fetch('/api/users?role=field_crew,admin,office', authHeaders)
       ])
 
       if (materialsRes.ok) {
@@ -206,9 +216,14 @@ export default function MaterialReservationDialog({
         status: 'ACTIVE'
       }
 
+      const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/materials/reservations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
         body: JSON.stringify(reservationData)
       })
 
