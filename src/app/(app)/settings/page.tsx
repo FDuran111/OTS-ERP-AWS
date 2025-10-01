@@ -27,9 +27,9 @@ import {
   Notifications,
   Security,
   Save,
-  Group as GroupIcon,
+  AdminPanelSettings as RoleIcon,
 } from '@mui/icons-material'
-import UserManagement from '@/components/settings/UserManagement'
+import RolePermissions from '@/components/settings/RolePermissions'
 import { useAuth } from '@/hooks/useAuth'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 
@@ -93,14 +93,15 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   // Calculate tab indices based on user role
-  const getTabIndex = (tabName: 'company' | 'notifications' | 'security' | 'appearance' | 'users') => {
+  const getTabIndex = (tabName: 'company' | 'notifications' | 'security' | 'appearance' | 'roles') => {
     const isEmployee = authUser?.role === 'EMPLOYEE'
-    
+    const isAdmin = authUser?.role === 'OWNER_ADMIN'
+
     if (tabName === 'company' && isEmployee) return -1 // Hidden for employees
     if (tabName === 'notifications') return isEmployee ? 0 : 1
     if (tabName === 'security') return isEmployee ? 1 : 2
-    if (tabName === 'users') return authUser?.role === 'OWNER_ADMIN' ? 3 : -1
-    
+    if (tabName === 'roles') return isAdmin ? 3 : -1
+
     return 0
   }
 
@@ -321,7 +322,7 @@ export default function SettingsPage() {
                 <Tab icon={<Notifications />} label="Notifications" />
                 <Tab icon={<Security />} label="Security" />
                 {authUser?.role === 'OWNER_ADMIN' && (
-                  <Tab icon={<GroupIcon />} label="User Management" />
+                  <Tab icon={<RoleIcon />} label="Users & Permissions" />
                 )}
               </Tabs>
 
@@ -668,10 +669,10 @@ export default function SettingsPage() {
                 </form>
               </TabPanel>
 
-              {/* User Management - Only for OWNER_ADMIN */}
+              {/* Users & Permissions - Only for OWNER_ADMIN */}
               {authUser?.role === 'OWNER_ADMIN' && (
-                <TabPanel value={tabValue} index={getTabIndex('users')}>
-                  <UserManagement />
+                <TabPanel value={tabValue} index={getTabIndex('roles')}>
+                  <RolePermissions />
                 </TabPanel>
               )}
             </CardContent>

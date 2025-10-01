@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -14,6 +14,12 @@ import {
   IconButton,
   InputAdornment,
   Typography,
+  CircularProgress,
+  FormControl,
+  FormLabel,
+  FormGroup,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material'
 import {
   Close as CloseIcon,
@@ -24,6 +30,16 @@ import {
   Phone as PhoneIcon,
   Badge as BadgeIcon,
 } from '@mui/icons-material'
+
+interface Role {
+  id: string
+  name: string
+  display_name?: string
+  description: string
+  permissions: string[]
+  isSystem: boolean
+  active?: boolean
+}
 
 interface CreateUserDialogProps {
   open: boolean
@@ -40,10 +56,36 @@ export default function CreateUserDialog({ open, onClose, onUserCreated }: Creat
     role: 'EMPLOYEE' as 'OWNER_ADMIN' | 'FOREMAN' | 'EMPLOYEE',
     phone: '',
   })
+  const [roles, setRoles] = useState<Role[]>([])
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([])
+  const [loadingRoles, setLoadingRoles] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      fetchRoles()
+    }
+  }, [open])
+
+  const fetchRoles = async () => {
+    try {
+      setLoadingRoles(true)
+      const response = await fetch('/api/roles', {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setRoles(data.filter((r: Role) => r.active !== false))
+      }
+    } catch (err) {
+      console.error('Error fetching roles:', err)
+    } finally {
+      setLoadingRoles(false)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -55,7 +97,7 @@ export default function CreateUserDialog({ open, onClose, onUserCreated }: Creat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
@@ -72,6 +114,7 @@ export default function CreateUserDialog({ open, onClose, onUserCreated }: Creat
     setError(null)
 
     try {
+      // Create user first (with legacy role)
       const response = await fetch('/api/users/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -90,6 +133,19 @@ export default function CreateUserDialog({ open, onClose, onUserCreated }: Creat
         throw new Error(data.error || 'Failed to create user')
       }
 
+      // Assign new RBAC roles if selected
+      if (selectedRoleIds.length > 0) {
+        await fetch('/api/roles/assignments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            user_id: data.user.id,
+            role_ids: selectedRoleIds,
+          }),
+        })
+      }
+
       // Reset form
       setFormData({
         email: '',
@@ -99,7 +155,8 @@ export default function CreateUserDialog({ open, onClose, onUserCreated }: Creat
         role: 'EMPLOYEE',
         phone: '',
       })
-      
+      setSelectedRoleIds([])
+
       onUserCreated()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user')
@@ -260,9 +317,52 @@ export default function CreateUserDialog({ open, onClose, onUserCreated }: Creat
             }}
           />
 
+          <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <FormControl component="fieldset">
+              <FormLabel component="legend">
+                <Typography variant="body2" fontWeight="medium">
+                  Additional RBAC Roles (New System)
+                </Typography>
+              </FormLabel>
+              {loadingRoles ? (
+                <CircularProgress size={20} sx={{ my: 1 }} />
+              ) : (
+                <FormGroup>
+                  {roles.map((role) => (
+                    <FormControlLabel
+                      key={role.id}
+                      control={
+                        <Checkbox
+                          checked={selectedRoleIds.includes(role.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedRoleIds([...selectedRoleIds, role.id])
+                            } else {
+                              setSelectedRoleIds(selectedRoleIds.filter(id => id !== role.id))
+                            }
+                          }}
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">
+                            {role.display_name || role.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {role.description}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  ))}
+                </FormGroup>
+              )}
+            </FormControl>
+          </Box>
+
           <Alert severity="info" sx={{ mt: 2 }}>
             <Typography variant="body2">
-              <strong>Role Permissions:</strong>
+              <strong>Legacy Role Permissions:</strong>
             </Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
               • <strong>Employee:</strong> View assigned work, log time, add notes
