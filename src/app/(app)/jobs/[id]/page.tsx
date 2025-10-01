@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { permissions } from '@/lib/permissions'
 import {
   Box,
   Typography,
@@ -257,8 +258,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
             {/* Metrics Grid */}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 3 }}>
-              {/* Financial Section - Admin Only */}
-              {user?.role === 'OWNER_ADMIN' && (
+              {/* Financial Section - Admin & Foreman */}
+              {user && permissions.canViewJobCosts(user.role) && (
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main' }}>
                     💰 FINANCIALS
@@ -440,11 +441,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               label="Material Usage"
               iconPosition="start"
             />
-            <Tab
-              icon={<MoneyIcon />}
-              label="Billing"
-              iconPosition="start"
-            />
+            {user && permissions.canViewLaborRates(user.role) && (
+              <Tab
+                icon={<MoneyIcon />}
+                label="Billing"
+                iconPosition="start"
+              />
+            )}
             <Tab
               icon={<PhotoIcon />}
               label="Photos & Files"
@@ -467,11 +470,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           />
         </TabPanel>
 
-        <TabPanel value={activeTab} index={2}>
-          <JobLaborRateOverrides jobId={job.id} />
-        </TabPanel>
+        {user && permissions.canViewLaborRates(user.role) && (
+          <TabPanel value={activeTab} index={2}>
+            <JobLaborRateOverrides jobId={job.id} />
+          </TabPanel>
+        )}
 
-        <TabPanel value={activeTab} index={3}>
+        <TabPanel value={activeTab} index={user && permissions.canViewLaborRates(user.role) ? 3 : 2}>
           <PhotoUploader
             jobId={job.id}
             onUploadComplete={() => {

@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic'
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { permissions } from '@/lib/permissions'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import {
@@ -871,7 +872,9 @@ export default function MaterialsPage() {
                     <TableCell align="center" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Reserved</TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Available</TableCell>
                     <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Location</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Cost</TableCell>
+                    {user && permissions.canViewMaterialCosts(user.role) && (
+                      <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Cost</TableCell>
+                    )}
                     <TableCell align="center" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Status</TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Actions</TableCell>
                   </TableRow>
@@ -964,11 +967,13 @@ export default function MaterialsPage() {
                               {material.location || '-'}
                             </Typography>
                           </TableCell>
-                          <TableCell align="right">
-                            <Typography variant="body2">
-                              ${material.cost.toFixed(2)}
-                            </Typography>
-                          </TableCell>
+                          {user && permissions.canViewMaterialCosts(user.role) && (
+                            <TableCell align="right">
+                              <Typography variant="body2">
+                                ${material.cost.toFixed(2)}
+                              </Typography>
+                            </TableCell>
+                          )}
                           <TableCell align="center">
                             <Chip
                               label={material.status}
