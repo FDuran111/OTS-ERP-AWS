@@ -1,8 +1,0 @@
-FROM node:20-alpine
-
-RUN apk add --no-cache postgresql-client curl
-
-COPY test-proxy-tls.sh /test-proxy-tls.sh
-RUN chmod +x /test-proxy-tls.sh
-
-CMD ["/test-proxy-tls.sh"]
