@@ -1,10 +1,9 @@
 /**
  * Pluggable Storage Driver System
- * Supports both Supabase and AWS S3 backends
+ * Uses AWS S3 for storage
  */
 
 import { S3Storage } from "./storage-s3";
-import { SupabaseStorage } from "./storage-supabase";
 
 /**
  * Storage Driver Interface
@@ -42,15 +41,8 @@ export interface StorageDriver {
 
 /**
  * Factory function to get the appropriate storage driver
- * Based on STORAGE_DRIVER environment variable
+ * Uses AWS S3 storage
  */
 export function getStorage(): StorageDriver {
-  const driver = (process.env.STORAGE_DRIVER || "SUPABASE").toUpperCase();
-  
-  if (driver === "S3") {
-    return S3Storage;
-  }
-  
-  // Default to Supabase for backward compatibility
-  return SupabaseStorage;
+  return S3Storage;
 }
