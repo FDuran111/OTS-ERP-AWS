@@ -80,8 +80,6 @@ export async function createAudit(
   entry: AuditEntry,
   client?: any
 ): Promise<void> {
-  const queryFn = client?.query || dbQuery
-
   const changes = entry.changes || {}
   
   const oldHours = changes.hours?.from || null
@@ -101,51 +99,56 @@ export async function createAudit(
   const oldDescription = changes.description?.from || null
   const newDescription = changes.description?.to || null
 
+  const queryText = `INSERT INTO "TimeEntryAudit" (
+    id, entry_id, user_id, action,
+    old_hours, new_hours,
+    old_regular, new_regular,
+    old_overtime, new_overtime,
+    old_doubletime, new_doubletime,
+    old_pay, new_pay,
+    old_job_id, new_job_id,
+    old_date, new_date,
+    old_description, new_description,
+    changed_by, changed_at,
+    changes, notes, change_reason,
+    correlation_id, job_labor_cost_id,
+    ip_address, user_agent
+  ) VALUES (
+    gen_random_uuid(), $1, $2, $3,
+    $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+    $14, $15, $16, $17, $18, $19,
+    $20, NOW(),
+    $21, $22, $23, $24, $25, $26, $27
+  )`
+
+  const params = [
+    entry.entryId,
+    entry.userId,
+    entry.action,
+    oldHours, newHours,
+    oldRegular, newRegular,
+    oldOvertime, newOvertime,
+    oldDoubletime, newDoubletime,
+    oldPay, newPay,
+    oldJobId, newJobId,
+    oldDate, newDate,
+    oldDescription, newDescription,
+    entry.changedBy,
+    entry.changes ? JSON.stringify(entry.changes) : null,
+    entry.notes,
+    entry.changeReason,
+    entry.correlationId,
+    entry.jobLaborCostId,
+    entry.ipAddress,
+    entry.userAgent
+  ]
+
   try {
-    await queryFn(
-      `INSERT INTO "TimeEntryAudit" (
-        id, entry_id, user_id, action,
-        old_hours, new_hours,
-        old_regular, new_regular,
-        old_overtime, new_overtime,
-        old_doubletime, new_doubletime,
-        old_pay, new_pay,
-        old_job_id, new_job_id,
-        old_date, new_date,
-        old_description, new_description,
-        changed_by, changed_at,
-        changes, notes, change_reason,
-        correlation_id, job_labor_cost_id,
-        ip_address, user_agent
-      ) VALUES (
-        gen_random_uuid(), $1, $2, $3,
-        $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        $14, $15, $16, $17, $18, $19,
-        $20, NOW(),
-        $21, $22, $23, $24, $25, $26, $27
-      )`,
-      [
-        entry.entryId,
-        entry.userId,
-        entry.action,
-        oldHours, newHours,
-        oldRegular, newRegular,
-        oldOvertime, newOvertime,
-        oldDoubletime, newDoubletime,
-        oldPay, newPay,
-        oldJobId, newJobId,
-        oldDate, newDate,
-        oldDescription, newDescription,
-        entry.changedBy,
-        entry.changes ? JSON.stringify(entry.changes) : null,
-        entry.notes,
-        entry.changeReason,
-        entry.correlationId,
-        entry.jobLaborCostId,
-        entry.ipAddress,
-        entry.userAgent
-      ]
-    )
+    if (client) {
+      await client.query(queryText, params)
+    } else {
+      await dbQuery(queryText, params)
+    }
     console.log(`[AUDIT] Successfully logged ${entry.action} for entry ${entry.entryId}`)
   } catch (error) {
     console.error(`[AUDIT] Failed to log ${entry.action}:`, error)
