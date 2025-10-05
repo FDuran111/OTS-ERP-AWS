@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { verifyToken } from '@/lib/auth'
+import { timeTrackingNotifications } from '@/lib/time-tracking-notifications'
 
 // POST - Approve a time entry
 export async function POST(
@@ -10,13 +12,28 @@ export async function POST(
     const resolvedParams = await params
     const entryId = resolvedParams.id
 
-    // Get the approver from the request body
-    const body = await request.json().catch(() => ({}))
-    const approvedBy = body.approvedBy
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    // Check if the time entry exists
+    const userPayload = verifyToken(token)
+    const userId = userPayload.id
+    const userRole = userPayload.role
+
+    if (!['ADMIN', 'MANAGER', 'HR_MANAGER', 'OWNER_ADMIN'].includes(userRole)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
+      )
+    }
+
     const checkResult = await query(
-      'SELECT id, "userId", date, hours, status, "approvedAt" FROM "TimeEntry" WHERE id = $1',
+      `SELECT te.*, u."firstName", u."lastName", u.email, j."jobNumber", j.title as "jobTitle"
+       FROM "TimeEntry" te
+       LEFT JOIN "User" u ON te."userId" = u.id
+       LEFT JOIN "Job" j ON te."jobId" = j.id
+       WHERE te.id = $1`,
       [entryId]
     )
 
@@ -29,68 +46,54 @@ export async function POST(
 
     const entry = checkResult.rows[0]
 
-    // Check if already approved
-    if (entry.approvedAt || entry.status === 'approved') {
+    if (entry.status === 'APPROVED') {
       return NextResponse.json(
         { error: 'This entry has already been approved' },
         { status: 400 }
       )
     }
 
-    // Update the time entry to mark it as approved
     const updateResult = await query(
       `UPDATE "TimeEntry"
        SET
-         status = 'approved',
+         status = 'APPROVED',
          "approvedAt" = NOW(),
          "approvedBy" = $2,
          "updatedAt" = NOW()
        WHERE id = $1
        RETURNING *`,
-      [entryId, approvedBy || 'system']
+      [entryId, userId]
     )
 
-    // Log the approval in audit trail (only for valid UUID entry IDs)
     try {
-      // Check if entryId is a valid UUID format
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      if (uuidRegex.test(entryId)) {
-        await query(`
-          INSERT INTO "TimeEntryAudit" (
-            id, entry_id, user_id, action,
-            old_hours, new_hours,
-            old_regular, new_regular,
-            old_overtime, new_overtime,
-            old_doubletime, new_doubletime,
-            old_pay, new_pay,
-            changed_by, changed_at,
-            change_reason
-          ) VALUES (
-            gen_random_uuid(), $1, $2, 'APPROVE',
-            $3, $3,
-            0, 0,
-            0, 0,
-            0, 0,
-            0, 0,
-            $4, NOW(),
-            'Entry approved'
-          )
-        `, [
+      await query(
+        `INSERT INTO "TimeEntryAudit" (entry_id, user_id, action, changes, notes, created_at)
+         VALUES ($1, $2, 'APPROVE', $3, $4, NOW())`,
+        [
           entryId,
-          entry.userId,
-          entry.hours,
-          approvedBy || 'system'
-        ])
-      } else {
-        console.log('[AUDIT] Skipping audit log for non-UUID entry:', entryId)
-      }
+          userId,
+          JSON.stringify({ status: { from: entry.status, to: 'APPROVED' } }),
+          'Entry approved',
+        ]
+      )
     } catch (auditError) {
       console.log('[AUDIT] Failed to log approval:', auditError)
     }
 
+    await timeTrackingNotifications.sendTimeEntryApprovedNotification({
+      timeEntryId: entryId,
+      employeeId: entry.userId,
+      employeeName: `${entry.firstName} ${entry.lastName}`,
+      employeeEmail: entry.email,
+      date: new Date(entry.clockInTime).toLocaleDateString(),
+      hours: parseFloat(entry.totalHours || 0),
+      jobNumber: entry.jobNumber,
+      jobTitle: entry.jobTitle,
+    })
+
     return NextResponse.json({
       success: true,
-      message: 'Time entry approved',
+      message: 'Time entry approved with notification sent',
       entry: updateResult.rows[0]
     })
 
