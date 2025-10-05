@@ -210,6 +210,11 @@ Preferred communication style: Simple, everyday language.
    - Already fixed with correct schema references
    - Uses `te.date, te.hours, u.name, j.description`
 
+6. `/api/time-entries/company-week/route.ts`
+   - Fixed SQL alias quoting: Added quotes to `"userName"` and `"jobTitle"` aliases
+   - Fixed customer name fallback logic to prevent "null null" output
+   - Improved null handling: checks for trimmed/non-empty values before fallback
+
 **Testing Results**:
 - ✅ All API endpoints now query correct columns
 - ✅ No more null name/title errors in notifications
