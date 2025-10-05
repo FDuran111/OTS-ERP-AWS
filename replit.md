@@ -108,3 +108,69 @@ Preferred communication style: Simple, everyday language.
 - Environment-specific builds (development/staging/production)
 - Database migrations run via Lambda functions
 - Health checks and uptime monitoring
+
+## Recent Changes
+
+### Time Tracking Enhancements (October 2025)
+
+**New Features Implemented**:
+
+1. **Notification System**
+   - Time entry approval/rejection notifications
+   - In-app notifications with email support (Resend/SendGrid/SMTP)
+   - Helper service at `/src/lib/time-tracking-notifications.ts`
+   - Notification templates for approve, reject, submit, reminder events
+
+2. **Rejection Workflow with Threading**
+   - `TimeEntryRejectionNote` table for conversation history
+   - Admin rejection reasons with employee response capability
+   - API endpoints: `/api/time-entries/[id]/reject` and `/api/time-entries/[id]/rejection-notes`
+   - Bidirectional commenting between admin and employee
+
+3. **Photo Attachments**
+   - `TimeEntryPhoto` table for job site documentation
+   - Upload/view/delete API: `/api/time-entries/[id]/photos`
+   - File storage in `/public/uploads/time-entries/`
+   - Support for JPEG, PNG, WebP (10MB limit per photo)
+
+4. **Pre-Submission Validation**
+   - Validation utilities at `/src/lib/time-entry-validation.ts`
+   - Warnings for overtime, long shifts (>12 hours), missing breaks
+   - Confirmation dialogs with override capability
+   - Component: `/src/components/time/TimeEntryValidationDialog.tsx`
+
+5. **Weekly Summary Dashboard**
+   - Daily hours breakdown (regular/overtime/double-time)
+   - Status indicators (Active/Submitted/Approved/Rejected/Paid)
+   - Total pay estimate calculations
+   - API: `/api/time-entries/weekly-summary`
+   - Component: `/src/components/time/WeeklySummary.tsx`
+
+6. **Unified Time Entry Interface**
+   - Tab-based interface consolidating 3 entry methods
+   - Quick Clock, Manual Entry, Multi-Job tabs
+   - Entry method guidance and best practices
+   - Component: `/src/components/time/UnifiedTimeEntry.tsx`
+
+7. **Overtime Forecast**
+   - Real-time calculation showing hours toward 40-hour threshold
+   - Visual progress indicator with color zones (green/yellow/red)
+   - Week-to-date tracking with daily breakdown
+   - Hook: `/src/hooks/useOvertimeForecast.ts`
+   - Component: `/src/components/time/OvertimeForecast.tsx`
+
+8. **Bulk Approval System**
+   - Approve by employee, job, or date range
+   - Batch notifications to all affected employees
+   - Audit logging for compliance tracking
+   - API: `/api/time-entries/bulk-approve`
+
+**Database Tables Added**:
+- `TimeEntryRejectionNote`: Rejection conversation threading
+- `TimeEntryPhoto`: Photo attachments for time entries
+- `TimeEntryAudit`: Enhanced audit trail with JSON change tracking
+
+**API Enhancements**:
+- Enhanced `/api/time-entries/[id]/approve` with auth, notifications, and audit logging
+- Enhanced `/api/time-entries/[id]/reject` with rejection notes and notifications
+- Added notification triggers to all time entry state changes
