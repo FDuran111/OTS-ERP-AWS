@@ -371,39 +371,42 @@ export async function PATCH(
 
     // Log the change for audit trail
     try {
-      await query(`
-        INSERT INTO "TimeEntryAudit" (
-          id, entry_id, user_id, action,
-          old_hours, new_hours,
-          old_regular, new_regular,
-          old_overtime, new_overtime,
-          old_doubletime, new_doubletime,
-          changed_by, changed_at
-        ) VALUES (
-          gen_random_uuid(), $1, $2, $3,
-          $4, $5,
-          $6, $7,
-          $8, $9,
-          $10, $11,
-          $12, NOW()
-        )
-      `, [
-        resolvedParams.id,
-        currentEntry.userId,
-        'UPDATE',
-        currentEntry.hours,
-        calculatedHours || currentEntry.hours,
-        currentEntry.regularHours,
-        recalculatedValues?.regularHours || currentEntry.regularHours,
-        currentEntry.overtimeHours,
-        recalculatedValues?.overtimeHours || currentEntry.overtimeHours,
-        currentEntry.doubleTimeHours,
-        recalculatedValues?.doubleTimeHours || currentEntry.doubleTimeHours,
-        body.updatedBy || currentEntry.userId // Should pass current user from auth
-      ])
+      const { createAudit, captureChanges } = await import('@/lib/audit-helper')
+      
+      const oldSnapshot = {
+        hours: currentEntry.hours,
+        regularHours: currentEntry.regularHours,
+        overtimeHours: currentEntry.overtimeHours,
+        doubletimeHours: currentEntry.doubleTimeHours,
+        totalPay: currentEntry.estimatedPay,
+        jobId: currentEntry.jobId,
+        date: currentEntry.date,
+        description: currentEntry.description
+      }
+      
+      const newSnapshot = {
+        hours: calculatedHours || currentEntry.hours,
+        regularHours: recalculatedValues?.regularHours || currentEntry.regularHours,
+        overtimeHours: recalculatedValues?.overtimeHours || currentEntry.overtimeHours,
+        doubletimeHours: recalculatedValues?.doubleTimeHours || currentEntry.doubleTimeHours,
+        totalPay: recalculatedValues?.estimatedPay || currentEntry.estimatedPay,
+        jobId: data.jobId || currentEntry.jobId,
+        date: data.date || currentEntry.date,
+        description: data.description || currentEntry.description
+      }
+      
+      const changes = captureChanges(oldSnapshot, newSnapshot)
+      
+      await createAudit({
+        entryId: resolvedParams.id,
+        userId: currentEntry.userId,
+        action: 'UPDATE',
+        changedBy: body.updatedBy || currentEntry.userId,
+        changes,
+        notes: 'Time entry updated'
+      })
     } catch (auditError) {
-      // Log but don't fail if audit table doesn't exist yet
-      console.log('Audit log skipped:', auditError)
+      console.error('Audit log failed:', auditError)
     }
 
     // Get the updated entry with related data

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { query } from '@/lib/db'
 import { timeTrackingNotifications } from '@/lib/time-tracking-notifications'
+import { createAudit, captureChanges, generateCorrelationId } from '@/lib/audit-helper'
+import { Pool } from 'pg'
 
 export async function POST(request: NextRequest) {
   try {
@@ -110,12 +112,18 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    const correlationId = generateCorrelationId()
     const approvedEntries: any[] = []
     const failedEntries: any[] = []
 
     for (const entry of timeEntries) {
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+      const client = await pool.connect()
+
       try {
-        await query(
+        await client.query('BEGIN')
+
+        await client.query(
           `UPDATE "TimeEntry"
            SET status = 'approved',
                "approvedBy" = $1,
@@ -124,16 +132,35 @@ export async function POST(request: NextRequest) {
           [adminId, entry.id]
         )
 
-        await query(
-          `INSERT INTO "TimeEntryAudit" (entry_id, user_id, action, changed_by, change_reason, changed_at)
-           VALUES ($1, $2, 'APPROVE', $3, $4, NOW())`,
-          [
-            entry.id,
-            entry.userId,
-            adminId,
-            notes || 'Bulk approved',
-          ]
+        await new Promise(resolve => setTimeout(resolve, 100))
+
+        const laborCostResult = await client.query(
+          `SELECT id FROM "JobLaborCost" 
+           WHERE "timeEntryId" = $1 
+           ORDER BY "createdAt" DESC 
+           LIMIT 1`,
+          [entry.id]
         )
+
+        const jobLaborCostId = laborCostResult.rows[0]?.id || null
+
+        const changes = captureChanges(
+          { status: entry.status },
+          { status: 'approved' }
+        )
+
+        await createAudit({
+          entryId: entry.id,
+          userId: entry.userId,
+          action: 'BULK_APPROVE',
+          changedBy: adminId,
+          changes,
+          notes: notes || 'Bulk approved',
+          correlationId,
+          jobLaborCostId
+        }, client)
+
+        await client.query('COMMIT')
 
         await timeTrackingNotifications.sendTimeEntryApprovedNotification({
           timeEntryId: entry.id,
@@ -148,8 +175,12 @@ export async function POST(request: NextRequest) {
 
         approvedEntries.push(entry.id)
       } catch (error) {
+        await client.query('ROLLBACK')
         console.error(`Failed to approve entry ${entry.id}:`, error)
         failedEntries.push({ id: entry.id, error: String(error) })
+      } finally {
+        client.release()
+        await pool.end()
       }
     }
 
@@ -159,6 +190,7 @@ export async function POST(request: NextRequest) {
       failed: failedEntries.length,
       approvedIds: approvedEntries,
       failedIds: failedEntries,
+      correlationId,
     })
   } catch (error) {
     console.error('Bulk approve error:', error)
