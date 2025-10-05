@@ -174,3 +174,54 @@ Preferred communication style: Simple, everyday language.
 - Enhanced `/api/time-entries/[id]/approve` with auth, notifications, and audit logging
 - Enhanced `/api/time-entries/[id]/reject` with rejection notes and notifications
 - Added notification triggers to all time entry state changes
+
+### Critical Schema Fixes (October 5, 2025)
+
+**Issue**: All time tracking APIs had schema mismatches causing null values and runtime errors:
+- APIs queried `User.firstName`/`User.lastName` (non-existent) instead of `User.name`
+- APIs queried `Job.title` (non-existent) instead of `Job.description`
+- APIs queried `TimeEntry.clockInTime`/`totalHours` (non-existent) instead of `date`/`hours`
+
+**Resolution**: Updated all time tracking API routes to match actual database schema:
+
+**Files Fixed**:
+1. `/api/time-entries/bulk-approve/route.ts`
+   - Changed SELECT queries from `u."firstName", u."lastName"` → `u.name as "userName"`
+   - Changed `j.title` → `j.description as "jobTitle"`
+   - Changed `te."clockInTime", te."totalHours"` → `te.date, te.hours`
+   - Fixed notification helper calls to use correct field names
+
+2. `/api/time-entries/[id]/approve/route.ts`
+   - Changed entry fetch query to use `te.date, te.hours`
+   - Changed user/job joins to use `u.name, j.description`
+   - Fixed notification calls with correct schema
+
+3. `/api/time-entries/[id]/reject/route.ts`
+   - Changed entry fetch to use `te.date, te.hours`
+   - Changed admin lookup to use `u.name`
+   - Fixed notification message construction
+
+4. `/api/time-entries/[id]/rejection-notes/route.ts`
+   - Fixed GET endpoint: Added missing `u.name as "userName"` join
+   - Fixed POST endpoint: Changed `u."firstName", u."lastName"` → `u.name`
+   - Ensured NotificationLog uses correct user name field
+
+5. `/api/time-entries/weekly-summary/route.ts`
+   - Already fixed with correct schema references
+   - Uses `te.date, te.hours, u.name, j.description`
+
+**Testing Results**:
+- ✅ All API endpoints now query correct columns
+- ✅ No more null name/title errors in notifications
+- ✅ Bulk approve/reject workflows function correctly
+- ✅ Weekly summary displays accurate data
+- ✅ Architect review confirmed all fixes correct
+
+**Database Schema Reference** (for future development):
+```
+User table: id, email, name, role (NOT firstName/lastName)
+Job table: id, jobNumber, description (NOT title)
+TimeEntry table: id, userId, jobId, date, hours (NOT clockInTime/totalHours)
+TimeEntry.id: TEXT type (not UUID)
+TimeEntry.status: ACTIVE, COMPLETED, SUBMITTED, APPROVED, REJECTED, PAID
+```
