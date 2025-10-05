@@ -65,11 +65,10 @@ export async function GET(
         SELECT 
           j.id,
           j."jobNumber",
-          j.title,
           j.description,
           j.status,
           j."billedAmount",
-          j."estimatedValue",
+          j."estimatedCost",
           COALESCE(c."companyName", CONCAT(c."firstName", ' ', c."lastName")) as "customerName"
         FROM "Job" j
         LEFT JOIN "Customer" c ON j."customerId" = c.id
@@ -171,12 +170,11 @@ export async function GET(
       job: {
         id: jobDetails.id,
         jobNumber: jobDetails.jobNumber,
-        title: jobDetails.title,
         description: jobDetails.description,
         status: jobDetails.status,
         customerName: jobDetails.customerName,
         billedAmount: parseFloat(jobDetails.billedAmount || 0),
-        estimatedValue: parseFloat(jobDetails.estimatedValue || 0)
+        estimatedCost: parseFloat(jobDetails.estimatedCost || 0)
       },
       costs: costSummary,
       laborCosts,
