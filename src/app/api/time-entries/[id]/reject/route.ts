@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { verifyToken } from '@/lib/auth'
+import { timeTrackingNotifications } from '@/lib/time-tracking-notifications'
 
 // POST - Reject a time entry
 export async function POST(
@@ -10,9 +12,24 @@ export async function POST(
     const resolvedParams = await params
     const entryId = resolvedParams.id
 
-    // Get the rejection details from the request body
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const userPayload = verifyToken(token)
+    const userId = userPayload.id
+    const userRole = userPayload.role
+
+    if (!['ADMIN', 'MANAGER', 'HR_MANAGER', 'OWNER_ADMIN'].includes(userRole)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json().catch(() => ({}))
-    const { rejectedBy, rejectionReason } = body
+    const { rejectionReason } = body
 
     if (!rejectionReason) {
       return NextResponse.json(
@@ -21,9 +38,12 @@ export async function POST(
       )
     }
 
-    // Check if the time entry exists
     const checkResult = await query(
-      'SELECT id, "userId", date, hours, status FROM "TimeEntry" WHERE id = $1',
+      `SELECT te.*, u."firstName", u."lastName", u.email, j."jobNumber", j.title as "jobTitle"
+       FROM "TimeEntry" te
+       LEFT JOIN "User" u ON te."userId" = u.id
+       LEFT JOIN "Job" j ON te."jobId" = j.id
+       WHERE te.id = $1`,
       [entryId]
     )
 
@@ -36,62 +56,63 @@ export async function POST(
 
     const entry = checkResult.rows[0]
 
-    // Update the time entry to mark it as rejected
     const updateResult = await query(
       `UPDATE "TimeEntry"
        SET
-         status = 'rejected',
-         "rejectedAt" = NOW(),
-         "rejectedBy" = $2,
-         "rejectionReason" = $3,
+         status = 'REJECTED',
+         "hasRejectionNotes" = true,
          "updatedAt" = NOW()
        WHERE id = $1
        RETURNING *`,
-      [entryId, rejectedBy || 'system', rejectionReason]
+      [entryId]
     )
 
-    // Log the rejection in audit trail (only for valid UUID entry IDs)
+    await query(
+      `INSERT INTO "TimeEntryRejectionNote" 
+       ("timeEntryId", "userId", "userRole", note, "isAdminNote", "createdAt")
+       VALUES ($1, $2, $3, $4, true, NOW())`,
+      [entryId, userId, userRole, rejectionReason]
+    )
+
     try {
-      // Check if entryId is a valid UUID format
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      if (uuidRegex.test(entryId)) {
-        await query(`
-          INSERT INTO "TimeEntryAudit" (
-            id, entry_id, user_id, action,
-            old_hours, new_hours,
-            old_regular, new_regular,
-            old_overtime, new_overtime,
-            old_doubletime, new_doubletime,
-            old_pay, new_pay,
-            changed_by, changed_at,
-            change_reason
-          ) VALUES (
-            gen_random_uuid(), $1, $2, 'REJECT',
-            $3, $3,
-            0, 0,
-            0, 0,
-            0, 0,
-            0, 0,
-            $4, NOW(),
-            $5
-          )
-        `, [
+      await query(
+        `INSERT INTO "TimeEntryAudit" (entry_id, user_id, action, changes, notes, created_at)
+         VALUES ($1, $2, 'REJECT', $3, $4, NOW())`,
+        [
           entryId,
-          entry.userId,
-          entry.hours,
-          rejectedBy || 'system',
-          `Rejected: ${rejectionReason}`
-        ])
-      } else {
-        console.log('[AUDIT] Skipping audit log for non-UUID entry:', entryId)
-      }
+          userId,
+          JSON.stringify({ status: { from: entry.status, to: 'REJECTED' } }),
+          rejectionReason,
+        ]
+      )
     } catch (auditError) {
       console.log('[AUDIT] Failed to log rejection:', auditError)
     }
 
+    const adminResult = await query(
+      `SELECT "firstName", "lastName" FROM "User" WHERE id = $1`,
+      [userId]
+    )
+    const adminName = adminResult.rows[0] 
+      ? `${adminResult.rows[0].firstName} ${adminResult.rows[0].lastName}`
+      : 'Admin'
+
+    await timeTrackingNotifications.sendTimeEntryRejectedNotification({
+      timeEntryId: entryId,
+      employeeId: entry.userId,
+      employeeName: `${entry.firstName} ${entry.lastName}`,
+      employeeEmail: entry.email,
+      date: new Date(entry.clockInTime).toLocaleDateString(),
+      hours: parseFloat(entry.totalHours || 0),
+      jobNumber: entry.jobNumber,
+      jobTitle: entry.jobTitle,
+      reason: rejectionReason,
+      adminName,
+    })
+
     return NextResponse.json({
       success: true,
-      message: 'Time entry rejected',
+      message: 'Time entry rejected with notification sent',
       entry: updateResult.rows[0]
     })
 
