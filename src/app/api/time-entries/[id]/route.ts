@@ -567,9 +567,17 @@ export async function DELETE(
 ) {
   const resolvedParams = await params
   try {
-    // Get entry details before deletion for potential recalculation
+    const body = await request.json().catch(() => ({}))
+    const deletedBy = body.deletedBy || 'unknown'
+    const deleteReason = body.reason || 'Entry deleted'
+
+    // Get entry details before deletion for audit and recalculation
     const entryResult = await query(
-      `SELECT "userId", "weekNumber", date FROM "TimeEntry" WHERE id = $1`,
+      `SELECT te.*, u.name as "userName", j."jobNumber", j.description as "jobTitle"
+       FROM "TimeEntry" te
+       LEFT JOIN "User" u ON te."userId" = u.id
+       LEFT JOIN "Job" j ON te."jobId" = j.id
+       WHERE te.id = $1`,
       [resolvedParams.id]
     )
 
@@ -581,6 +589,26 @@ export async function DELETE(
     }
 
     const entry = entryResult.rows[0]
+
+    // Log deletion in audit trail before actually deleting
+    try {
+      const { createAudit } = await import('@/lib/audit-helper')
+      
+      await createAudit({
+        entryId: resolvedParams.id,
+        userId: entry.userId,
+        action: 'DELETE',
+        changedBy: deletedBy,
+        changes: {
+          status: { from: entry.status, to: 'DELETED' },
+          hours: { from: entry.hours, to: 0 }
+        },
+        notes: deleteReason,
+        changeReason: deleteReason
+      })
+    } catch (auditError) {
+      console.error('Audit log failed:', auditError)
+    }
 
     // Delete the entry
     const result = await query(
@@ -598,7 +626,10 @@ export async function DELETE(
       entry.weekNumber
     )
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true,
+      message: `Time entry deleted: ${entry.hours} hours on ${entry.date} for ${entry.jobNumber || 'Unknown Job'}`
+    })
   } catch (error) {
     console.error('Error deleting time entry:', error)
     return NextResponse.json(
