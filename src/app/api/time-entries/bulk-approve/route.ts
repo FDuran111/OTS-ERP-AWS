@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
          LEFT JOIN "User" u ON te."userId" = u.id
          LEFT JOIN "Job" j ON te."jobId" = j.id
          WHERE te.id = ANY($1::text[])
-           AND te.status = 'SUBMITTED'`,
+           AND te.status = 'submitted'`,
         [entryIds]
       )
       timeEntries = result.rows
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
                       LEFT JOIN "User" u ON te."userId" = u.id
                       LEFT JOIN "Job" j ON te."jobId" = j.id
                       WHERE te."userId" = $1
-                        AND te.status = 'SUBMITTED'`
+                        AND te.status = 'submitted'`
       const params: any[] = [employeeId]
       
       if (startDate) {
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
                       LEFT JOIN "User" u ON te."userId" = u.id
                       LEFT JOIN "Job" j ON te."jobId" = j.id
                       WHERE te."jobId" = $1
-                        AND te.status = 'SUBMITTED'`
+                        AND te.status = 'submitted'`
       const params: any[] = [jobId]
       
       if (startDate) {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
          LEFT JOIN "Job" j ON te."jobId" = j.id
          WHERE te.date >= $1
            AND te.date <= $2
-           AND te.status = 'SUBMITTED'`,
+           AND te.status = 'submitted'`,
         [startDate, endDate]
       )
       timeEntries = result.rows
@@ -117,21 +117,20 @@ export async function POST(request: NextRequest) {
       try {
         await query(
           `UPDATE "TimeEntry"
-           SET status = 'APPROVED',
+           SET status = 'approved',
                "approvedBy" = $1,
-               "approvedAt" = NOW(),
-               "approvalNotes" = $2
-           WHERE id = $3`,
-          [adminId, notes || 'Bulk approved', entry.id]
+               "approvedAt" = NOW()
+           WHERE id = $2`,
+          [adminId, entry.id]
         )
 
         await query(
-          `INSERT INTO "TimeEntryAudit" (entry_id, user_id, action, changes, notes, created_at)
+          `INSERT INTO "TimeEntryAudit" (entry_id, user_id, action, changed_by, change_reason, changed_at)
            VALUES ($1, $2, 'APPROVE', $3, $4, NOW())`,
           [
             entry.id,
+            entry.userId,
             adminId,
-            JSON.stringify({ status: { from: 'SUBMITTED', to: 'APPROVED' } }),
             notes || 'Bulk approved',
           ]
         )

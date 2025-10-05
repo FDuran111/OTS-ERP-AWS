@@ -46,7 +46,7 @@ export async function POST(
 
     const entry = checkResult.rows[0]
 
-    if (entry.status === 'APPROVED') {
+    if (entry.status === 'approved') {
       return NextResponse.json(
         { error: 'This entry has already been approved' },
         { status: 400 }
@@ -56,7 +56,7 @@ export async function POST(
     const updateResult = await query(
       `UPDATE "TimeEntry"
        SET
-         status = 'APPROVED',
+         status = 'approved',
          "approvedAt" = NOW(),
          "approvedBy" = $2,
          "updatedAt" = NOW()
@@ -72,7 +72,7 @@ export async function POST(
         [
           entryId,
           userId,
-          JSON.stringify({ status: { from: entry.status, to: 'APPROVED' } }),
+          JSON.stringify({ status: { from: entry.status, to: 'approved' } }),
           'Entry approved',
         ]
       )
