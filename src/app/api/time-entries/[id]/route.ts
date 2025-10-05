@@ -397,13 +397,20 @@ export async function PATCH(
       
       const changes = captureChanges(oldSnapshot, newSnapshot)
       
+      const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                        request.headers.get('x-real-ip') || 
+                        'unknown'
+      const userAgent = request.headers.get('user-agent') || 'unknown'
+
       await createAudit({
         entryId: resolvedParams.id,
         userId: currentEntry.userId,
         action: 'UPDATE',
         changedBy: body.updatedBy || currentEntry.userId,
         changes,
-        notes: 'Time entry updated'
+        notes: 'Time entry updated',
+        ipAddress,
+        userAgent
       })
     } catch (auditError) {
       console.error('Audit log failed:', auditError)
@@ -594,6 +601,11 @@ export async function DELETE(
     try {
       const { createAudit } = await import('@/lib/audit-helper')
       
+      const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                        request.headers.get('x-real-ip') || 
+                        'unknown'
+      const userAgent = request.headers.get('user-agent') || 'unknown'
+
       await createAudit({
         entryId: resolvedParams.id,
         userId: entry.userId,
@@ -604,7 +616,9 @@ export async function DELETE(
           hours: { from: entry.hours, to: 0 }
         },
         notes: deleteReason,
-        changeReason: deleteReason
+        changeReason: deleteReason,
+        ipAddress,
+        userAgent
       })
     } catch (auditError) {
       console.error('Audit log failed:', auditError)

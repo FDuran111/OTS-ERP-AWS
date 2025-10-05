@@ -91,9 +91,22 @@ export async function POST(
 
     const jobLaborCostId = laborCostResult.rows[0]?.id || null
 
+    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                      request.headers.get('x-real-ip') || 
+                      'unknown'
+    const userAgent = request.headers.get('user-agent') || 'unknown'
+
     const changes = captureChanges(
-      { status: entry.status },
-      { status: 'approved' }
+      { 
+        status: entry.status,
+        approvedBy: entry.approvedBy,
+        approvedAt: entry.approvedAt
+      },
+      { 
+        status: 'approved',
+        approvedBy: userId,
+        approvedAt: new Date().toISOString()
+      }
     )
 
     await createAudit({
@@ -103,7 +116,9 @@ export async function POST(
       changedBy: userId,
       changes,
       notes: 'Entry approved',
-      jobLaborCostId
+      jobLaborCostId,
+      ipAddress,
+      userAgent
     }, client)
 
     await client.query('COMMIT')

@@ -85,9 +85,24 @@ export async function POST(
       [entryId, userId, userRole, rejectionReason]
     )
 
+    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                      request.headers.get('x-real-ip') || 
+                      'unknown'
+    const userAgent = request.headers.get('user-agent') || 'unknown'
+
     const changes = captureChanges(
-      { status: entry.status },
-      { status: 'REJECTED' }
+      { 
+        status: entry.status,
+        rejectedBy: entry.rejectedBy,
+        rejectedAt: entry.rejectedAt,
+        rejectionReason: entry.rejectionReason
+      },
+      { 
+        status: 'REJECTED',
+        rejectedBy: userId,
+        rejectedAt: new Date().toISOString(),
+        rejectionReason
+      }
     )
 
     await createAudit({
@@ -97,7 +112,9 @@ export async function POST(
       changedBy: userId,
       changes,
       notes: rejectionReason,
-      changeReason: rejectionReason
+      changeReason: rejectionReason,
+      ipAddress,
+      userAgent
     }, client)
 
     await client.query('COMMIT')

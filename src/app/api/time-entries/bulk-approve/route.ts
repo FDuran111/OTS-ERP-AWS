@@ -116,6 +116,11 @@ export async function POST(request: NextRequest) {
     const approvedEntries: any[] = []
     const failedEntries: any[] = []
 
+    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                      request.headers.get('x-real-ip') || 
+                      'unknown'
+    const userAgent = request.headers.get('user-agent') || 'unknown'
+
     for (const entry of timeEntries) {
       const pool = new Pool({ connectionString: process.env.DATABASE_URL })
       const client = await pool.connect()
@@ -145,8 +150,16 @@ export async function POST(request: NextRequest) {
         const jobLaborCostId = laborCostResult.rows[0]?.id || null
 
         const changes = captureChanges(
-          { status: entry.status },
-          { status: 'approved' }
+          { 
+            status: entry.status,
+            approvedBy: entry.approvedBy,
+            approvedAt: entry.approvedAt
+          },
+          { 
+            status: 'approved',
+            approvedBy: adminId,
+            approvedAt: new Date().toISOString()
+          }
         )
 
         await createAudit({
@@ -157,7 +170,9 @@ export async function POST(request: NextRequest) {
           changes,
           notes: notes || 'Bulk approved',
           correlationId,
-          jobLaborCostId
+          jobLaborCostId,
+          ipAddress,
+          userAgent
         }, client)
 
         await client.query('COMMIT')
