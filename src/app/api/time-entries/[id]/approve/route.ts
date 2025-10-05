@@ -85,8 +85,8 @@ export async function POST(
       employeeId: entry.userId,
       employeeName: `${entry.firstName} ${entry.lastName}`,
       employeeEmail: entry.email,
-      date: new Date(entry.clockInTime).toLocaleDateString(),
-      hours: parseFloat(entry.totalHours || 0),
+      date: new Date(entry.date).toLocaleDateString(),
+      hours: parseFloat(entry.hours || 0),
       jobNumber: entry.jobNumber,
       jobTitle: entry.jobTitle,
     })

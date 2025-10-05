@@ -31,29 +31,30 @@ export async function GET(request: NextRequest) {
     const result = await query(
       `SELECT 
         te.id,
-        te."clockInTime",
-        te."clockOutTime",
-        te."totalHours",
+        te.date,
+        te."startTime",
+        te."endTime",
+        te.hours as "totalHours",
         te."regularHours",
         te."overtimeHours",
         te."doubleTimeHours",
-        te."totalPay",
+        te."estimatedPay" as "totalPay",
         te.status,
         te."jobId",
-        te."workDescription",
+        te.description as "workDescription",
         te."photoCount",
         te."hasRejectionNotes",
         j."jobNumber",
-        j.title as "jobTitle",
-        DATE(te."clockInTime") as "workDate"
+        j.description as "jobTitle",
+        te.date as "workDate"
       FROM "TimeEntry" te
       LEFT JOIN "Job" j ON te."jobId" = j.id
       WHERE te."userId" = $1
-        AND te."clockInTime" >= $2
-        AND te."clockInTime" <= $3
+        AND te.date >= $2
+        AND te.date <= $3
         AND te.status != 'DELETED'
-      ORDER BY te."clockInTime" ASC`,
-      [employeeId, weekStart.toISOString(), weekEnd.toISOString()]
+      ORDER BY te.date ASC, te."startTime" ASC`,
+      [employeeId, format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd')]
     )
 
     const entries = result.rows
