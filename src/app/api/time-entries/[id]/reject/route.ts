@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 import { timeTrackingNotifications } from '@/lib/time-tracking-notifications'
+import { createAudit, captureChanges } from '@/lib/audit-helper'
+import { Pool } from 'pg'
 
 // POST - Reject a time entry
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  })
+
+  const client = await pool.connect()
+
   try {
     const resolvedParams = await params
     const entryId = resolvedParams.id
@@ -38,7 +46,9 @@ export async function POST(
       )
     }
 
-    const checkResult = await query(
+    await client.query('BEGIN')
+
+    const checkResult = await client.query(
       `SELECT te.*, u.name as "userName", u.email, j."jobNumber", j.description as "jobTitle"
        FROM "TimeEntry" te
        LEFT JOIN "User" u ON te."userId" = u.id
@@ -48,6 +58,7 @@ export async function POST(
     )
 
     if (checkResult.rows.length === 0) {
+      await client.query('ROLLBACK')
       return NextResponse.json(
         { error: 'Time entry not found' },
         { status: 404 }
@@ -56,7 +67,7 @@ export async function POST(
 
     const entry = checkResult.rows[0]
 
-    const updateResult = await query(
+    const updateResult = await client.query(
       `UPDATE "TimeEntry"
        SET
          status = 'REJECTED',
@@ -67,27 +78,29 @@ export async function POST(
       [entryId]
     )
 
-    await query(
+    await client.query(
       `INSERT INTO "TimeEntryRejectionNote" 
        ("timeEntryId", "userId", "userRole", note, "isAdminNote", "createdAt")
        VALUES ($1, $2, $3, $4, true, NOW())`,
       [entryId, userId, userRole, rejectionReason]
     )
 
-    try {
-      await query(
-        `INSERT INTO "TimeEntryAudit" (entry_id, user_id, action, changes, notes, created_at)
-         VALUES ($1, $2, 'REJECT', $3, $4, NOW())`,
-        [
-          entryId,
-          userId,
-          JSON.stringify({ status: { from: entry.status, to: 'REJECTED' } }),
-          rejectionReason,
-        ]
-      )
-    } catch (auditError) {
-      console.log('[AUDIT] Failed to log rejection:', auditError)
-    }
+    const changes = captureChanges(
+      { status: entry.status },
+      { status: 'REJECTED' }
+    )
+
+    await createAudit({
+      entryId,
+      userId: entry.userId,
+      action: 'REJECT',
+      changedBy: userId,
+      changes,
+      notes: rejectionReason,
+      changeReason: rejectionReason
+    }, client)
+
+    await client.query('COMMIT')
 
     const adminResult = await query(
       `SELECT name FROM "User" WHERE id = $1`,
@@ -115,10 +128,14 @@ export async function POST(
     })
 
   } catch (error: any) {
+    await client.query('ROLLBACK')
     console.error('Error rejecting time entry:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to reject time entry' },
       { status: 500 }
     )
+  } finally {
+    client.release()
+    await pool.end()
   }
 }

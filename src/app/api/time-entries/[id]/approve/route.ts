@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 import { timeTrackingNotifications } from '@/lib/time-tracking-notifications'
+import { createAudit, captureChanges } from '@/lib/audit-helper'
+import { Pool } from 'pg'
 
 // POST - Approve a time entry
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  })
+
+  const client = await pool.connect()
+
   try {
     const resolvedParams = await params
     const entryId = resolvedParams.id
@@ -28,7 +36,9 @@ export async function POST(
       )
     }
 
-    const checkResult = await query(
+    await client.query('BEGIN')
+
+    const checkResult = await client.query(
       `SELECT te.*, u.name as "userName", u.email, j."jobNumber", j.description as "jobTitle"
        FROM "TimeEntry" te
        LEFT JOIN "User" u ON te."userId" = u.id
@@ -38,6 +48,7 @@ export async function POST(
     )
 
     if (checkResult.rows.length === 0) {
+      await client.query('ROLLBACK')
       return NextResponse.json(
         { error: 'Time entry not found' },
         { status: 404 }
@@ -47,13 +58,14 @@ export async function POST(
     const entry = checkResult.rows[0]
 
     if (entry.status === 'approved') {
+      await client.query('ROLLBACK')
       return NextResponse.json(
         { error: 'This entry has already been approved' },
         { status: 400 }
       )
     }
 
-    const updateResult = await query(
+    const updateResult = await client.query(
       `UPDATE "TimeEntry"
        SET
          status = 'approved',
@@ -65,20 +77,36 @@ export async function POST(
       [entryId, userId]
     )
 
-    try {
-      await query(
-        `INSERT INTO "TimeEntryAudit" (entry_id, user_id, action, changes, notes, created_at)
-         VALUES ($1, $2, 'APPROVE', $3, $4, NOW())`,
-        [
-          entryId,
-          userId,
-          JSON.stringify({ status: { from: entry.status, to: 'approved' } }),
-          'Entry approved',
-        ]
-      )
-    } catch (auditError) {
-      console.log('[AUDIT] Failed to log approval:', auditError)
-    }
+    const approvedEntry = updateResult.rows[0]
+
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    const laborCostResult = await client.query(
+      `SELECT id FROM "JobLaborCost" 
+       WHERE "timeEntryId" = $1 
+       ORDER BY "createdAt" DESC 
+       LIMIT 1`,
+      [entryId]
+    )
+
+    const jobLaborCostId = laborCostResult.rows[0]?.id || null
+
+    const changes = captureChanges(
+      { status: entry.status },
+      { status: 'approved' }
+    )
+
+    await createAudit({
+      entryId,
+      userId: entry.userId,
+      action: 'APPROVE',
+      changedBy: userId,
+      changes,
+      notes: 'Entry approved',
+      jobLaborCostId
+    }, client)
+
+    await client.query('COMMIT')
 
     await timeTrackingNotifications.sendTimeEntryApprovedNotification({
       timeEntryId: entryId,
@@ -94,14 +122,19 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: 'Time entry approved with notification sent',
-      entry: updateResult.rows[0]
+      entry: approvedEntry,
+      laborCostId: jobLaborCostId
     })
 
   } catch (error: any) {
+    await client.query('ROLLBACK')
     console.error('Error approving time entry:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to approve time entry' },
       { status: 500 }
     )
+  } finally {
+    client.release()
+    await pool.end()
   }
 }
