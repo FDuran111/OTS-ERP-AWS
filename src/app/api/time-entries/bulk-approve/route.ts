@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (entryIds && entryIds.length > 0) {
       const result = await query(
-        `SELECT te.*, u."firstName", u."lastName", u.email, j."jobNumber", j.title as "jobTitle"
+        `SELECT te.*, u.name as "userName", u.email, j."jobNumber", j.description as "jobTitle"
          FROM "TimeEntry" te
          LEFT JOIN "User" u ON te."userId" = u.id
          LEFT JOIN "Job" j ON te."jobId" = j.id
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       )
       timeEntries = result.rows
     } else if (employeeId) {
-      let queryStr = `SELECT te.*, u."firstName", u."lastName", u.email, j."jobNumber", j.title as "jobTitle"
+      let queryStr = `SELECT te.*, u.name as "userName", u.email, j."jobNumber", j.description as "jobTitle"
                       FROM "TimeEntry" te
                       LEFT JOIN "User" u ON te."userId" = u.id
                       LEFT JOIN "Job" j ON te."jobId" = j.id
@@ -55,17 +55,17 @@ export async function POST(request: NextRequest) {
       
       if (startDate) {
         params.push(startDate)
-        queryStr += ` AND te."clockInTime" >= $${params.length}`
+        queryStr += ` AND te.date >= $${params.length}`
       }
       if (endDate) {
         params.push(endDate)
-        queryStr += ` AND te."clockInTime" <= $${params.length}`
+        queryStr += ` AND te.date <= $${params.length}`
       }
       
       const result = await query(queryStr, params)
       timeEntries = result.rows
     } else if (jobId) {
-      let queryStr = `SELECT te.*, u."firstName", u."lastName", u.email, j."jobNumber", j.title as "jobTitle"
+      let queryStr = `SELECT te.*, u.name as "userName", u.email, j."jobNumber", j.description as "jobTitle"
                       FROM "TimeEntry" te
                       LEFT JOIN "User" u ON te."userId" = u.id
                       LEFT JOIN "Job" j ON te."jobId" = j.id
@@ -75,23 +75,23 @@ export async function POST(request: NextRequest) {
       
       if (startDate) {
         params.push(startDate)
-        queryStr += ` AND te."clockInTime" >= $${params.length}`
+        queryStr += ` AND te.date >= $${params.length}`
       }
       if (endDate) {
         params.push(endDate)
-        queryStr += ` AND te."clockInTime" <= $${params.length}`
+        queryStr += ` AND te.date <= $${params.length}`
       }
       
       const result = await query(queryStr, params)
       timeEntries = result.rows
     } else if (startDate && endDate) {
       const result = await query(
-        `SELECT te.*, u."firstName", u."lastName", u.email, j."jobNumber", j.title as "jobTitle"
+        `SELECT te.*, u.name as "userName", u.email, j."jobNumber", j.description as "jobTitle"
          FROM "TimeEntry" te
          LEFT JOIN "User" u ON te."userId" = u.id
          LEFT JOIN "Job" j ON te."jobId" = j.id
-         WHERE te."clockInTime" >= $1
-           AND te."clockInTime" <= $2
+         WHERE te.date >= $1
+           AND te.date <= $2
            AND te.status = 'SUBMITTED'`,
         [startDate, endDate]
       )
@@ -139,10 +139,10 @@ export async function POST(request: NextRequest) {
         await timeTrackingNotifications.sendTimeEntryApprovedNotification({
           timeEntryId: entry.id,
           employeeId: entry.userId,
-          employeeName: `${entry.firstName} ${entry.lastName}`,
+          employeeName: entry.userName,
           employeeEmail: entry.email,
-          date: new Date(entry.clockInTime).toLocaleDateString(),
-          hours: parseFloat(entry.totalHours || 0),
+          date: new Date(entry.date).toLocaleDateString(),
+          hours: parseFloat(entry.hours || 0),
           jobNumber: entry.jobNumber,
           jobTitle: entry.jobTitle,
         })

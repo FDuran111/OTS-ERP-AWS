@@ -29,7 +29,7 @@ export async function POST(
     }
 
     const checkResult = await query(
-      `SELECT te.*, u."firstName", u."lastName", u.email, j."jobNumber", j.title as "jobTitle"
+      `SELECT te.*, u.name as "userName", u.email, j."jobNumber", j.description as "jobTitle"
        FROM "TimeEntry" te
        LEFT JOIN "User" u ON te."userId" = u.id
        LEFT JOIN "Job" j ON te."jobId" = j.id
@@ -83,7 +83,7 @@ export async function POST(
     await timeTrackingNotifications.sendTimeEntryApprovedNotification({
       timeEntryId: entryId,
       employeeId: entry.userId,
-      employeeName: `${entry.firstName} ${entry.lastName}`,
+      employeeName: entry.userName,
       employeeEmail: entry.email,
       date: new Date(entry.date).toLocaleDateString(),
       hours: parseFloat(entry.hours || 0),

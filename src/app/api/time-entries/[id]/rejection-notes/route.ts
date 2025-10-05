@@ -19,8 +19,7 @@ export async function GET(
     const result = await query(
       `SELECT 
         rn.*,
-        u."firstName",
-        u."lastName"
+        u.name as "userName"
        FROM "TimeEntryRejectionNote" rn
        LEFT JOIN "User" u ON rn."userId" = u.id
        WHERE rn."timeEntryId" = $1
@@ -31,7 +30,7 @@ export async function GET(
     const notes = result.rows.map(row => ({
       id: row.id,
       userId: row.userId,
-      userName: `${row.firstName} ${row.lastName}`,
+      userName: row.userName,
       userRole: row.userRole,
       note: row.note,
       isAdminNote: row.isAdminNote,
@@ -85,7 +84,7 @@ export async function POST(
     )
 
     const entryResult = await query(
-      `SELECT te."userId", u.email, u."firstName", u."lastName"
+      `SELECT te."userId", u.email, u.name
        FROM "TimeEntry" te
        LEFT JOIN "User" u ON te."userId" = u.id
        WHERE te.id = $1`,
