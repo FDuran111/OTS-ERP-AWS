@@ -1,3 +1,0 @@
-id,weeklyRegularHours,dailyRegularHours,overtimeMultiplier,doubleTimeMultiplier,weekStartDay,overtimeMode,payPeriodType,autoCalculateOvertime,createdAt,updatedAt,roundingInterval,companyId,roundingType,useWeeklyOT,weeklyDTThreshold,breakRules,otMultiplier,dailyOTThreshold,weeklyOTThreshold,dailyDTThreshold,seventhDayOT,dtMultiplier,seventhDayDT,useDailyOT
-default,40.00,8.00,1.50,2.00,1,weekly,weekly,t,2025-09-29 03:19:23.553204,2025-09-29 03:19:23.553204,15,,NEAREST,t,60.00,,1.50,8.00,40.00,12.00,f,2.00,f,f
-8e93c394-48e0-404e-92ef-a29be268cd9c,40.00,8.00,1.50,2.00,1,weekly,weekly,t,2025-09-29 15:41:35.754085,2025-09-29 15:41:35.754085,5,00000000-0000-0000-0000-000000000001,nearest,f,60.00,"{""rules"": [], ""autoDeduct"": false}",1.50,8.00,40.00,12.00,t,2.00,t,t

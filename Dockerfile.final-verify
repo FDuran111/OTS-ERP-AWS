@@ -1,5 +1,0 @@
-FROM node:20-alpine
-RUN apk add --no-cache postgresql-client
-COPY final-verify.sh /final-verify.sh
-RUN chmod +x /final-verify.sh
-CMD ["/final-verify.sh"]
