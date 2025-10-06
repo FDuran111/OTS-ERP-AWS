@@ -118,10 +118,10 @@ export async function GET(request: NextRequest) {
          LIMIT 5`
       ),
 
-      // Pending Purchase Orders
+      // Pending Purchase Orders (awaiting approval)
       query(
         `SELECT COUNT(*) as count FROM "PurchaseOrder"
-         WHERE status = 'PENDING' OR status = 'DRAFT'`
+         WHERE status = 'PENDING_APPROVAL' OR status = 'DRAFT'`
       ),
 
       // Jobs pending admin review
@@ -173,6 +173,8 @@ export async function GET(request: NextRequest) {
         change: 'Awaiting approval',
         icon: 'shopping_cart',
         color: 'warning' as const,
+        clickable: true,
+        link: '/purchase-orders'
       },
       {
         title: 'Revenue This Month',

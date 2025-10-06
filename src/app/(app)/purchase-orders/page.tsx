@@ -259,8 +259,8 @@ export default function PurchaseOrdersPage() {
       if (!response.ok) {
         throw new Error('Failed to fetch purchase orders')
       }
-      const data = await response.json()
-      setPurchaseOrders(data)
+      const result = await response.json()
+      setPurchaseOrders(result.data || [])
       setError(null)
     } catch (err) {
       setError('Failed to load purchase orders')
@@ -274,8 +274,14 @@ export default function PurchaseOrdersPage() {
     try {
       const response = await fetch('/api/purchase-orders/stats')
       if (response.ok) {
-        const data = await response.json()
-        setStats(data)
+        const result = await response.json()
+        setStats(result.stats || {
+          pendingApproval: 0,
+          draft: 0,
+          approved: 0,
+          totalThisMonth: 0,
+          avgProcessingTime: 0
+        })
       }
     } catch (error) {
       console.error('Error fetching stats:', error)

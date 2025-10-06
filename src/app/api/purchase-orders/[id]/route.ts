@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { 
-  getPurchaseOrderById, 
+import { verifyToken } from '@/lib/auth'
+import {
+  getPurchaseOrderById,
   updatePurchaseOrder,
   approvePurchaseOrder,
   rejectPurchaseOrder
@@ -39,14 +40,29 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verify authentication
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const userPayload = verifyToken(token)
+    const userId = userPayload.id
+    const userRole = userPayload.role
+
     const resolvedParams = await params
     const po = await getPurchaseOrderById(resolvedParams.id)
-    
+
     if (!po) {
       return NextResponse.json(
         { success: false, error: 'Purchase order not found' },
         { status: 404 }
       )
+    }
+
+    // Employees can only view their own POs
+    if (userRole === 'EMPLOYEE' && po.createdBy !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     
     return NextResponse.json({
@@ -69,11 +85,26 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verify authentication
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const userPayload = verifyToken(token)
+    const userId = userPayload.id
+    const userRole = userPayload.role
+
     const resolvedParams = await params
     const body = await request.json()
-    
+
     // Check if this is an approval action
     if (body.action && ['APPROVE', 'REJECT'].includes(body.action)) {
+      // Only admins can approve/reject
+      if (!['OWNER_ADMIN', 'FOREMAN', 'ADMIN', 'MANAGER'].includes(userRole)) {
+        return NextResponse.json({ error: 'Forbidden - Only admins can approve/reject POs' }, { status: 403 })
+      }
+
       const approvalData = approvalSchema.parse(body)
       
       let updatedPO
@@ -104,10 +135,28 @@ export async function PUT(
         message: `Purchase order ${approvalData.action.toLowerCase()}d successfully`
       })
     }
-    
-    // Regular update
+
+    // Regular update - check ownership
+    const po = await getPurchaseOrderById(resolvedParams.id)
+    if (!po) {
+      return NextResponse.json(
+        { success: false, error: 'Purchase order not found' },
+        { status: 404 }
+      )
+    }
+
+    // Employees can only update their own DRAFT POs
+    if (userRole === 'EMPLOYEE') {
+      if (po.createdBy !== userId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      if (po.status !== 'DRAFT') {
+        return NextResponse.json({ error: 'Can only edit DRAFT purchase orders' }, { status: 403 })
+      }
+    }
+
     const data = updatePOSchema.parse(body)
-    
+
     // Convert date strings to Date objects
     const updates = {
       ...data,

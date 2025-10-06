@@ -23,10 +23,11 @@ import {
   Brightness7 as LightModeIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from '@mui/material/styles'
 import { UserRole } from '@/lib/auth'
+import NotificationCenter from '@/components/notifications/NotificationCenter'
 
 interface User {
   id: string
@@ -45,34 +46,9 @@ export default function ResponsiveAppBar({
   user
 }: ResponsiveAppBarProps) {
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null)
-  const [notificationCount, setNotificationCount] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const router = useRouter()
   const theme = useTheme()
-
-  useEffect(() => {
-    // Fetch notification count
-    const fetchNotificationCount = async () => {
-      try {
-        const token = localStorage.getItem('auth-token')
-        const response = await fetch('/api/notifications', {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-          credentials: 'include'
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setNotificationCount(data.unreadCount || 0)
-        }
-      } catch (error) {
-        console.error('Failed to fetch notifications:', error)
-      }
-    }
-
-    fetchNotificationCount()
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchNotificationCount, 30000)
-    return () => clearInterval(interval)
-  }, [])
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setProfileMenuAnchor(event.currentTarget)
@@ -168,25 +144,9 @@ export default function ResponsiveAppBar({
           </IconButton>
 
           {/* Notifications */}
-          <IconButton
-            color="inherit"
-            onClick={() => router.push('/notifications')}
-            className="mr-2 text-gray-700 dark:text-gray-300"
-          >
-            <Badge
-              badgeContent={notificationCount}
-              color="error"
-              sx={{
-                '& .MuiBadge-badge': {
-                  fontSize: '0.75rem',
-                  minWidth: '18px',
-                  height: '18px'
-                }
-              }}
-            >
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
+          <Box sx={{ mr: 1 }}>
+            <NotificationCenter />
+          </Box>
 
           {/* Profile Menu */}
           <IconButton

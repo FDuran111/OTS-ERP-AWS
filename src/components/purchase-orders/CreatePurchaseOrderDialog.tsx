@@ -360,7 +360,7 @@ const CreatePurchaseOrderDialog: React.FC<CreatePurchaseOrderDialogProps> = ({
       onClose={handleClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{ sx: { height: '90vh' } }}
+      slotProps={{ paper: { sx: { height: '90vh' } } }}
     >
       <DialogTitle>
         <Typography variant="h6">Create Purchase Order</Typography>
@@ -463,7 +463,7 @@ const CreatePurchaseOrderDialog: React.FC<CreatePurchaseOrderDialogProps> = ({
 
           {/* Add New Item */}
           <Grid xs={12}>
-            <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+            <Paper sx={{ p: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Add New Item
               </Typography>
@@ -558,7 +558,7 @@ const CreatePurchaseOrderDialog: React.FC<CreatePurchaseOrderDialogProps> = ({
                     size="small"
                     label="Price *"
                     type="number"
-                    inputProps={{ step: "0.01" }}
+                    slotProps={{ htmlInput: { step: "0.01" } }}
                     value={newItem.unitPrice}
                     onChange={(e) => setNewItem({ ...newItem, unitPrice: parseFloat(e.target.value) || 0 })}
                     required
@@ -634,7 +634,7 @@ const CreatePurchaseOrderDialog: React.FC<CreatePurchaseOrderDialogProps> = ({
               </TableContainer>
 
               {/* Totals */}
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              <Box sx={{ mt: 2, p: 2, borderRadius: 1, border: 1, borderColor: 'divider' }}>
                 <Grid container spacing={2} justifyContent="flex-end">
                   <Grid size={6}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

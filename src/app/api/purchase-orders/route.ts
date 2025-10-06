@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { 
-  createSimplePurchaseOrder, 
+import { verifyToken } from '@/lib/auth'
+import {
+  createSimplePurchaseOrder,
   getSimplePurchaseOrders,
   getSimplePendingApprovals
 } from '@/lib/purchase-orders-simple'
@@ -37,8 +38,21 @@ const createPOSchema = z.object({
 // GET - List purchase orders with filters
 export async function GET(request: NextRequest) {
   try {
+    // Verify authentication
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const userPayload = verifyToken(token)
+    const userId = userPayload.id
+    const userRole = userPayload.role
+
+    // All authenticated users can view POs
+    // Employees see only their own, Admins see all
+
     const { searchParams } = new URL(request.url)
-    
+
     const filters = {
       vendorId: searchParams.get('vendorId') || undefined,
       jobId: searchParams.get('jobId') || undefined,
@@ -47,6 +61,11 @@ export async function GET(request: NextRequest) {
       endDate: searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : undefined,
       limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50,
       offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
+    }
+
+    // Employees can only see their own POs
+    if (userRole === 'EMPLOYEE') {
+      filters.createdBy = userId
     }
     
     // Check if we want pending approvals specifically
@@ -80,16 +99,39 @@ export async function GET(request: NextRequest) {
 // POST - Create new purchase order
 export async function POST(request: NextRequest) {
   try {
+    // Verify authentication
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const userPayload = verifyToken(token)
+    const userId = userPayload.id
+    const userRole = userPayload.role
+
+    // All authenticated users can create POs
+    // Employees create DRAFT, Admins can create any status
+
     const body = await request.json()
     const data = createPOSchema.parse(body)
     
+    // Ensure createdBy matches authenticated user
+    const createdBy = userId
+
+    // Employees can only create DRAFT status
+    let status = 'DRAFT'
+    if (['OWNER_ADMIN', 'FOREMAN', 'ADMIN', 'MANAGER'].includes(userRole)) {
+      // Admins can specify status or default to PENDING_APPROVAL
+      status = body.status || 'PENDING_APPROVAL'
+    }
+
     // Create the PO using simple version
     const po = await createSimplePurchaseOrder({
       vendorId: data.vendorId,
       jobId: data.jobId,
-      createdBy: data.createdBy,
+      createdBy,
       totalAmount: data.subtotal || 0,
-      status: 'DRAFT'
+      status
     })
     
     // Create line items if provided

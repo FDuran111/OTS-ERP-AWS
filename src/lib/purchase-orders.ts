@@ -212,11 +212,11 @@ export async function getPurchaseOrders(filters?: {
 // Get single Purchase Order
 export async function getPurchaseOrderById(id: string): Promise<PurchaseOrder | null> {
   const result = await query(
-    `SELECT 
+    `SELECT
       po.*,
       v.name as "vendorName",
       j."jobNumber",
-      j.title as "jobTitle",
+      j.description as "jobTitle",
       u.name as "createdByName",
       approver.name as "approvedByName"
     FROM "PurchaseOrder" po

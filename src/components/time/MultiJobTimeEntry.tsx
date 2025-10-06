@@ -28,6 +28,7 @@ import { DatePicker } from '@mui/x-date-pickers'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { format } from 'date-fns'
+import RejectionNotesThread from './RejectionNotesThread'
 
 interface Job {
   id: string
@@ -63,7 +64,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
   const [jobs, setJobs] = useState<Job[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [selectedUser, setSelectedUser] = useState<User | null>(preselectedEmployee || null)
-  const [date, setDate] = useState<Date>(preselectedJob?.date ? new Date(preselectedJob.date) : new Date())
+  const [date, setDate] = useState<Date>(preselectedJob?.date ? new Date(preselectedJob.date + 'T00:00:00') : new Date())
   const [entries, setEntries] = useState<JobEntry[]>([
     {
       id: preselectedJob?.editingEntryId || '1',
@@ -85,6 +86,8 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
   const [success, setSuccess] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [entryStatus, setEntryStatus] = useState<string | null>(null)
+  const [hasRejectionNotes, setHasRejectionNotes] = useState(false)
 
   useEffect(() => {
     // Get current user from localStorage
@@ -121,10 +124,33 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
           hours: preselectedJob.hours?.toString() || '',
           description: preselectedJob.description || ''
         }])
-        setDate(preselectedJob.date ? new Date(preselectedJob.date) : new Date())
+        setDate(preselectedJob.date ? new Date(preselectedJob.date + 'T00:00:00') : new Date())
+      }
+
+      // Fetch entry status if editing
+      if (preselectedJob.editingEntryId) {
+        fetchEntryStatus(preselectedJob.editingEntryId)
       }
     }
   }, [preselectedJob, jobs])
+
+  const fetchEntryStatus = async (entryId: string) => {
+    try {
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch(`/api/time-entries/${entryId}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        const entry = await response.json()
+        setEntryStatus(entry.status)
+        setHasRejectionNotes(entry.hasRejectionNotes || false)
+      }
+    } catch (error) {
+      console.error('Error fetching entry status:', error)
+    }
+  }
 
   const fetchData = async () => {
     try {
@@ -505,16 +531,40 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
               </Paper>
             ))}
 
-            {/* Add Entry Button */}
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={addEntry}
-              sx={{ alignSelf: 'flex-start' }}
-            >
-              Add Another Job
-            </Button>
+            {/* Add Entry Button - only show if not editing */}
+            {!preselectedJob?.editingEntryId && (
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={addEntry}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                Add Another Job
+              </Button>
+            )}
           </Stack>
+
+          {/* Rejection Notes Thread - show if entry has rejection notes or is rejected */}
+          {preselectedJob?.editingEntryId && (entryStatus === 'rejected' || hasRejectionNotes) && (
+            <>
+              <Divider sx={{ my: 3 }} />
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  💬 Rejection Discussion
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
+                  This time entry was rejected. Review the conversation below and respond if needed.
+                </Typography>
+                <RejectionNotesThread
+                  timeEntryId={preselectedJob.editingEntryId}
+                  onNewNote={() => {
+                    // Refresh entry status after adding a note
+                    fetchEntryStatus(preselectedJob.editingEntryId)
+                  }}
+                />
+              </Box>
+            </>
+          )}
 
           <Divider sx={{ my: 3 }} />
 

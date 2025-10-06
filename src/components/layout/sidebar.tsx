@@ -14,6 +14,7 @@ import {
   LogOut,
   Clock,
   DollarSign,
+  ShoppingCart,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { UserRole } from '@/lib/auth'
@@ -74,6 +75,12 @@ export function Sidebar({ userRole }: SidebarProps) {
       href: '/materials',
       icon: Package,
       roles: ['OWNER_ADMIN', 'FOREMAN'],
+    },
+    {
+      name: 'Purchase Orders',
+      href: '/purchase-orders',
+      icon: ShoppingCart,
+      roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'],
     },
     {
       name: 'Invoicing',

@@ -219,7 +219,7 @@ export default function WeeklySummary({ userId, weekDate = new Date(), onRefresh
             >
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                 <Typography variant="body2" fontWeight="medium">
-                  {format(new Date(day.date), 'EEEE, MMM d')}
+                  {format(new Date(day.date + 'T00:00:00'), 'EEEE, MMM d')}
                 </Typography>
                 <Box display="flex" gap={1} alignItems="center">
                   <Typography variant="body2" color="text.secondary">

@@ -288,12 +288,12 @@ export default function PurchaseOrderReceivingDialog({
   const totals = calculateTotals()
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={handleClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{ sx: { height: '90vh' } }}
+      slotProps={{ paper: { sx: { height: '90vh' } } }}
     >
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -435,10 +435,12 @@ export default function PurchaseOrderReceivingDialog({
                               type="number"
                               value={item.quantityToReceive || ''}
                               onChange={(e) => handleQuantityChange(item.poItemId, e.target.value)}
-                              inputProps={{ 
-                                min: 0, 
-                                max: item.remainingQty,
-                                step: 0.01
+                              slotProps={{
+                                htmlInput: {
+                                  min: 0,
+                                  max: item.remainingQty,
+                                  step: 0.01
+                                }
                               }}
                               disabled={item.remainingQty === 0}
                               sx={{ width: 100 }}

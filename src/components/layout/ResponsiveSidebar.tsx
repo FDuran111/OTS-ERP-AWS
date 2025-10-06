@@ -36,11 +36,13 @@ import {
   AccountBalance as QuickBooksIcon,
   Logout as LogoutIcon,
   Map as MapIcon,
+  ShoppingCart as PurchaseOrderIcon,
 } from '@mui/icons-material'
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/lib/auth'
+import NotificationCenter from '@/components/notifications/NotificationCenter'
 
 interface User {
   id: string
@@ -112,6 +114,12 @@ const navigationItems: NavItem[] = [
     title: 'Materials',
     icon: <MaterialsIcon />,
     path: '/materials',
+    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
+  },
+  {
+    title: 'Purchase Orders',
+    icon: <PurchaseOrderIcon />,
+    path: '/purchase-orders',
     roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
   },
   {
@@ -331,9 +339,14 @@ export default function ResponsiveSidebar({
           background: 'linear-gradient(135deg, #E53E3E 0%, #C53030 100%)',
         }}
       >
-        <Typography variant="h6" className="font-bold text-white">
-          Ortmeier Technical Service
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+          <Typography variant="h6" className="font-bold text-white">
+            Ortmeier Technical Service
+          </Typography>
+          <Box sx={{ '& .MuiIconButton-root': { color: 'white' } }}>
+            <NotificationCenter />
+          </Box>
+        </Box>
         <Typography variant="caption" className="text-blue-100 opacity-90">
           Job Management System
         </Typography>

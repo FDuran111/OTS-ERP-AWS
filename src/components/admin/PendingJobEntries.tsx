@@ -170,7 +170,7 @@ export default function PendingJobEntries() {
                   </TableCell>
                   <TableCell>{entry.customer}</TableCell>
                   <TableCell>
-                    {format(new Date(entry.date), 'MMM d, yyyy')}
+                    {format(new Date(entry.date + 'T00:00:00'), 'MMM d, yyyy')}
                   </TableCell>
                   <TableCell>{entry.hours}</TableCell>
                   <TableCell>
@@ -228,7 +228,7 @@ export default function PendingJobEntries() {
                 <strong>Customer:</strong> {approvalDialog.entry.customer}
               </Typography>
               <Typography variant="body2" gutterBottom>
-                <strong>Date:</strong> {format(new Date(approvalDialog.entry.date), 'MMM d, yyyy')}
+                <strong>Date:</strong> {format(new Date(approvalDialog.entry.date + 'T00:00:00'), 'MMM d, yyyy')}
               </Typography>
               <Typography variant="body2" gutterBottom>
                 <strong>Hours:</strong> {approvalDialog.entry.hours}

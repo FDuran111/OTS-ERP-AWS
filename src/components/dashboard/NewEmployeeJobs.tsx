@@ -229,7 +229,7 @@ export default function NewEmployeeJobs() {
                       <Box sx={{ display: 'flex', gap: 2 }}>
                         <Typography variant="caption" color="text.secondary">
                           <TimeIcon sx={{ fontSize: 12, mr: 0.5, verticalAlign: 'middle' }} />
-                          {entry.hours}h on {format(new Date(entry.date), 'MMM d')}
+                          {entry.hours}h on {format(new Date(entry.date + 'T00:00:00'), 'MMM d')}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           Submitted {format(new Date(entry.createdAt), 'MMM d h:mm a')}
@@ -300,7 +300,7 @@ export default function NewEmployeeJobs() {
                   </Typography>
                 )}
                 <Typography variant="body2">
-                  Hours: {selectedEntry.hours}h on {format(new Date(selectedEntry.date), 'MMM d, yyyy')}
+                  Hours: {selectedEntry.hours}h on {format(new Date(selectedEntry.date + 'T00:00:00'), 'MMM d, yyyy')}
                 </Typography>
               </Box>
 

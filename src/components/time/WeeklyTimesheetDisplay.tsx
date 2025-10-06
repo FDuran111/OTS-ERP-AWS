@@ -302,16 +302,14 @@ export default function WeeklyTimesheetDisplay({
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={() => {
-                    // Get the first day of the week as default date
-                    const defaultDate = format(weekDates[0], 'yyyy-MM-dd')
-                    // Create a new entry without a specific job (user will select in dialog)
+                    // Create a new entry without a specific job or date (will default to today)
                     const newEntry = {
                       id: '', // Empty ID indicates new entry
                       jobId: '', // Empty job ID - user will select
                       jobNumber: '',
                       jobTitle: '',
                       customer: '',
-                      date: defaultDate,
+                      date: '', // Empty date - will default to today in the form
                       hours: 0,
                       description: ''
                     } as TimesheetEntry
@@ -373,16 +371,14 @@ export default function WeeklyTimesheetDisplay({
                         variant="contained"
                         startIcon={<AddIcon />}
                         onClick={() => {
-                          // Get the first day of the week as default date
-                          const defaultDate = format(weekDates[0], 'yyyy-MM-dd')
-                          // Create a new entry without a specific job (user will select in dialog)
+                          // Create a new entry without a specific job or date (will default to today)
                           const newEntry = {
                             id: '', // Empty ID indicates new entry
                             jobId: '', // Empty job ID - user will select
                             jobNumber: '',
                             jobTitle: '',
                             customer: '',
-                            date: defaultDate,
+                            date: '', // Empty date - will default to today in the form
                             hours: 0,
                             description: ''
                           } as TimesheetEntry
