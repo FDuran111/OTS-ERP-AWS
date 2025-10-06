@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import MultiJobTimeEntry from '@/components/time/MultiJobTimeEntry'
@@ -86,6 +86,7 @@ const iconMap = {
 
 export default function TimePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   const [stats, setStats] = useState<TimeStat[]>([])
   const [loading, setLoading] = useState(true)
@@ -115,6 +116,48 @@ export default function TimePage() {
       fetchAllUsers()
     }
   }, [router])
+
+  // Check for URL parameters to auto-open entry edit dialog
+  useEffect(() => {
+    const entryId = searchParams.get('entryId')
+    const action = searchParams.get('action')
+
+    if (entryId && action === 'edit' && user) {
+      // Fetch the time entry details
+      fetchAndOpenEntry(entryId)
+    }
+  }, [searchParams, user])
+
+  const fetchAndOpenEntry = async (entryId: string) => {
+    try {
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch(`/api/time-entries/${entryId}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        const entry = await response.json()
+        // Open the edit dialog with this entry
+        setPreselectedJob({
+          jobId: entry.jobId,
+          jobNumber: entry.jobNumber,
+          jobTitle: entry.jobTitle || entry.job?.title,
+          date: entry.date,
+          hours: entry.hours,
+          description: entry.description,
+          editingEntryId: entry.id,
+          userId: entry.userId
+        })
+        setManualEntryOpen(true)
+
+        // Clear URL parameters to prevent re-opening on refresh
+        router.replace('/time', { scroll: false })
+      }
+    } catch (error) {
+      console.error('Error fetching time entry:', error)
+    }
+  }
 
   const fetchAllUsers = async () => {
     try {
@@ -216,7 +259,10 @@ export default function TimePage() {
       <Button
         variant="contained"
         startIcon={<AddIcon />}
-        onClick={() => setManualEntryOpen(true)}
+        onClick={() => {
+          setPreselectedJob(null) // Clear any previous job selection so date defaults to today
+          setManualEntryOpen(true)
+        }}
         sx={{
           backgroundColor: '#00bf9a',
           '&:hover': {
@@ -445,7 +491,7 @@ export default function TimePage() {
                             jobId: entry.jobId,
                             jobNumber: entry.jobNumber,
                             jobTitle: entry.jobTitle,
-                            date: entry.date,
+                            date: entry.date || undefined, // Don't set date if empty string
                             hours: entry.hours,
                             description: entry.description,
                             editingEntryId: entry.id || undefined,
@@ -484,7 +530,7 @@ export default function TimePage() {
                   jobId: entry.jobId,
                   jobNumber: entry.jobNumber,
                   jobTitle: entry.jobTitle,
-                  date: entry.date,
+                  date: entry.date || undefined, // Don't set date if empty string
                   hours: entry.hours,
                   description: entry.description,
                   editingEntryId: entry.id || undefined

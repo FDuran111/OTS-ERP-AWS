@@ -62,6 +62,7 @@ export class TimeTrackingNotificationService {
       subject,
       message,
       metadata: {
+        type: 'TIME_ENTRY_REJECTED', // Add type to metadata for dialog detection
         timeEntryId: data.timeEntryId,
         date: data.date,
         hours: data.hours,
