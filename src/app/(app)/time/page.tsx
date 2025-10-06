@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
@@ -84,7 +84,7 @@ const iconMap = {
   group: Group,
 }
 
-export default function TimePage() {
+function TimePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
@@ -600,5 +600,13 @@ export default function TimePage() {
       </Dialog>
 
     </ResponsiveLayout>
+  )
+}
+
+export default function TimePage() {
+  return (
+    <Suspense fallback={<CircularProgress />}>
+      <TimePageContent />
+    </Suspense>
   )
 }
