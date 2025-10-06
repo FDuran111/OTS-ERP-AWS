@@ -226,7 +226,7 @@ export class TimeTrackingNotificationService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Ortmeier Tree Service</h1>
+              <h1>{{COMPANY_NAME}}</h1>
               <h2>Time Tracking ${params.urgent ? 'Alert' : 'Notification'}</h2>
             </div>
             
@@ -242,7 +242,7 @@ export class TimeTrackingNotificationService {
             </div>
             
             <div class="footer">
-              <p>This is an automated message from Ortmeier Tree Service</p>
+              <p>This is an automated message from {{COMPANY_NAME}}</p>
               <p>Please do not reply to this email</p>
             </div>
           </div>

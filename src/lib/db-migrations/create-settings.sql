@@ -4,13 +4,13 @@
 -- Company Settings Table
 CREATE TABLE IF NOT EXISTS "CompanySettings" (
   id SERIAL PRIMARY KEY,
-  company_name VARCHAR(255) NOT NULL DEFAULT 'Ortmeier Technicians',
+  company_name VARCHAR(255) NOT NULL DEFAULT 'My Company',
   business_address TEXT,
   phone_number VARCHAR(50),
   email VARCHAR(255),
   license_number VARCHAR(100),
   tax_id VARCHAR(50),
-  default_hourly_rate DECIMAL(10,2) DEFAULT 125.00,
+  default_hourly_rate DECIMAL(10,2) DEFAULT 100.00,
   invoice_terms VARCHAR(100) DEFAULT 'Net 30',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -60,23 +60,23 @@ CREATE TABLE IF NOT EXISTS "UserAppearanceSettings" (
 
 -- Insert default company settings if none exist
 INSERT INTO "CompanySettings" (
-  company_name, 
-  business_address, 
-  phone_number, 
-  email, 
-  license_number, 
-  tax_id, 
-  default_hourly_rate, 
+  company_name,
+  business_address,
+  phone_number,
+  email,
+  license_number,
+  tax_id,
+  default_hourly_rate,
   invoice_terms
-) 
-SELECT 
-  'Ortmeier Technicians',
-  '123 Electric Ave, Anytown, ST 12345',
+)
+SELECT
+  'My Company',
+  '123 Main Street, City, ST 12345',
   '(555) 123-4567',
-  'info@ortmeiertech.com',
-  'EC-123456',
-  '12-3456789',
-  125.00,
+  'info@mycompany.com',
+  'LIC-000000',
+  '00-0000000',
+  100.00,
   'Net 30'
 WHERE NOT EXISTS (SELECT 1 FROM "CompanySettings");
 

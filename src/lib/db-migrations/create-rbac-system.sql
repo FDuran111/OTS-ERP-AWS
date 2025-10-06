@@ -455,11 +455,11 @@ BEGIN
     -- Only insert if no users exist or if we're in development
     IF NOT EXISTS (SELECT 1 FROM "User" WHERE role = 'OWNER' LIMIT 1) THEN
         INSERT INTO "User" (id, email, name, password, role, active, "createdAt", "updatedAt") VALUES
-            ('owner-test-1', 'owner@test.ortmeier.com', 'Test Owner', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Oc96qeYGC6E4U6D0K', 'OWNER', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-            ('admin-test-1', 'admin@test.ortmeier.com', 'Test Admin', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Oc96qeYGC6E4U6D0K', 'ADMIN', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-            ('office-test-1', 'office@test.ortmeier.com', 'Test Office', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Oc96qeYGC6E4U6D0K', 'OFFICE', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-            ('tech-test-1', 'tech@test.ortmeier.com', 'Test Technician', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Oc96qeYGC6E4U6D0K', 'TECHNICIAN', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-            ('viewer-test-1', 'viewer@test.ortmeier.com', 'Test Viewer', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Oc96qeYGC6E4U6D0K', 'VIEWER', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ('owner-test-1', 'owner@example.com', 'Test Owner', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Oc96qeYGC6E4U6D0K', 'OWNER', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('admin-test-1', 'admin@example.com', 'Test Admin', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Oc96qeYGC6E4U6D0K', 'ADMIN', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('office-test-1', 'office@example.com', 'Test Office', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Oc96qeYGC6E4U6D0K', 'OFFICE', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('tech-test-1', 'tech@example.com', 'Test Technician', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Oc96qeYGC6E4U6D0K', 'TECHNICIAN', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('viewer-test-1', 'viewer@example.com', 'Test Viewer', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Oc96qeYGC6E4U6D0K', 'VIEWER', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         ON CONFLICT (email) DO NOTHING;
     END IF;
 END $$;
