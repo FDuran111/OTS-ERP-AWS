@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Enable standalone output for Docker
+  output: 'standalone',
+
   // Skip linting and type checking during builds
   eslint: {
     ignoreDuringBuilds: true,
@@ -8,7 +11,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  
+
   // Externalize server-only packages
   serverExternalPackages: ['pg', 'pg-pool', 'pg-connection-string'],
   
