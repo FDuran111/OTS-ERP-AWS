@@ -54,6 +54,7 @@ import LowStockNotification from '@/components/notifications/LowStockNotificatio
 import EmployeeJobQuickAccess from '@/components/dashboard/EmployeeJobQuickAccess'
 import NewEmployeeJobs from '@/components/dashboard/NewEmployeeJobs'
 import CreateJobDialog from '@/components/jobs/CreateJobDialog'
+import RejectedEntriesCard from '@/components/dashboard/RejectedEntriesCard'
 import { useAuthCheck } from '@/hooks/useAuthCheck'
 
 
@@ -447,7 +448,7 @@ export default function DashboardPage() {
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
               <Grid key={index} size={{ xs: 12, sm: 6, md: 3 }}>
-                <Card sx={{ 
+                <Card sx={{
                   height: '100%',
                   transition: 'all 0.2s ease-in-out',
                   '&:hover': {
@@ -462,100 +463,109 @@ export default function DashboardPage() {
               </Grid>
             ))
           ) : (
-            stats.filter(stat => visibleCards[stat.title] !== false).map((stat) => (
-              <Grid key={stat.title} size={{ xs: 12, sm: 6, md: 3 }}>
-                <Card
-                  onClick={() => stat.clickable && stat.link && router.push(stat.link)}
-                  sx={{
-                    height: '100%',
-                    transition: 'all 0.2s ease-in-out',
-                    cursor: stat.clickable ? 'pointer' : 'default',
-                    '&:hover': {
-                      boxShadow: 3,
-                      transform: 'translateY(-2px)',
-                    },
-                  }}>
-                  <CardContent sx={{ p: 2.5 }}>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexDirection: { xs: 'row', sm: 'column', md: 'row' },
-                      alignItems: { xs: 'center', sm: 'flex-start', md: 'center' },
-                      mb: 2 
+            <>
+              {stats.filter(stat => visibleCards[stat.title] !== false).map((stat) => (
+                <Grid key={stat.title} size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Card
+                    onClick={() => stat.clickable && stat.link && router.push(stat.link)}
+                    sx={{
+                      height: '100%',
+                      transition: 'all 0.2s ease-in-out',
+                      cursor: stat.clickable ? 'pointer' : 'default',
+                      '&:hover': {
+                        boxShadow: 3,
+                        transform: 'translateY(-2px)',
+                      },
                     }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: { xs: 40, sm: 48 },
-                          height: { xs: 40, sm: 48 },
-                          borderRadius: '12px',
-                          backgroundColor: `${stat.color}20`,
-                          mr: { xs: 2, sm: 0, md: 2 },
-                          mb: { xs: 0, sm: 2, md: 0 },
-                          flexShrink: 0,
-                        }}
-                      >
-                        {React.createElement(stat.icon, { 
-                          sx: { 
-                            color: stat.color,
-                            fontSize: { xs: '1.25rem', sm: '1.5rem' }
-                          } 
-                        })}
+                    <CardContent sx={{ p: 2.5 }}>
+                      <Box sx={{
+                        display: 'flex',
+                        flexDirection: { xs: 'row', sm: 'column', md: 'row' },
+                        alignItems: { xs: 'center', sm: 'flex-start', md: 'center' },
+                        mb: 2
+                      }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: { xs: 40, sm: 48 },
+                            height: { xs: 40, sm: 48 },
+                            borderRadius: '12px',
+                            backgroundColor: `${stat.color}20`,
+                            mr: { xs: 2, sm: 0, md: 2 },
+                            mb: { xs: 0, sm: 2, md: 0 },
+                            flexShrink: 0,
+                          }}
+                        >
+                          {React.createElement(stat.icon, {
+                            sx: {
+                              color: stat.color,
+                              fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                            }
+                          })}
+                        </Box>
+                        <Box sx={{ flexGrow: 1, textAlign: { xs: 'left', sm: 'center', md: 'left' } }}>
+                          <Typography
+                            color="text.secondary"
+                            variant="caption"
+                            sx={{
+                              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                              display: 'block',
+                              mb: 0.5
+                            }}
+                          >
+                            {stat.title}
+                          </Typography>
+                          <Typography
+                            variant="h5"
+                            sx={{
+                              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.875rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.2
+                            }}
+                          >
+                            {stat.value}
+                          </Typography>
+                        </Box>
                       </Box>
-                      <Box sx={{ flexGrow: 1, textAlign: { xs: 'left', sm: 'center', md: 'left' } }}>
-                        <Typography 
-                          color="text.secondary" 
+                      {stat.change && (
+                        <Typography
                           variant="caption"
-                          sx={{ 
-                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          color="success.main"
+                          sx={{
+                            fontSize: { xs: '0.7rem', sm: '0.75rem' },
                             display: 'block',
-                            mb: 0.5
+                            mb: stat.subtitle ? 0.5 : 0
                           }}
                         >
-                          {stat.title}
+                          {stat.change}
                         </Typography>
-                        <Typography 
-                          variant="h5" 
-                          sx={{ 
-                            fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.875rem' },
-                            fontWeight: 600,
-                            lineHeight: 1.2
+                      )}
+                      {stat.subtitle && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{
+                            fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                            display: 'block'
                           }}
                         >
-                          {stat.value}
+                          {stat.subtitle}
                         </Typography>
-                      </Box>
-                    </Box>
-                    {stat.change && (
-                      <Typography 
-                        variant="caption" 
-                        color="success.main"
-                        sx={{ 
-                          fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                          display: 'block',
-                          mb: stat.subtitle ? 0.5 : 0
-                        }}
-                      >
-                        {stat.change}
-                      </Typography>
-                    )}
-                    {stat.subtitle && (
-                      <Typography 
-                        variant="caption" 
-                        color="text.secondary"
-                        sx={{ 
-                          fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                          display: 'block'
-                        }}
-                      >
-                        {stat.subtitle}
-                      </Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+
+              {/* Rejected Entries Card - Only for employees */}
+              {user.role === 'EMPLOYEE' && (
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <RejectedEntriesCard />
+                </Grid>
+              )}
+            </>
           )}
         </Grid>
 

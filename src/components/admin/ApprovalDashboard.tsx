@@ -37,6 +37,7 @@ import {
   Comment as CommentIcon,
 } from '@mui/icons-material'
 import { format } from 'date-fns'
+import RejectionFixDialog from '@/components/time/RejectionFixDialog'
 
 interface PendingEntry {
   id: string
@@ -92,6 +93,8 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
   const [rejectionReason, setRejectionReason] = useState('')
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [successMessage, setSuccessMessage] = useState('')
+  const [threadDialogOpen, setThreadDialogOpen] = useState(false)
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -280,7 +283,7 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
                         </Stack>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(entry.date), 'MMM dd, yyyy')}
+                        {format(new Date(entry.date + 'T00:00:00'), 'MMM dd, yyyy')}
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
@@ -321,9 +324,30 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => {
-                              setSelectedEntry(entry)
-                              setRejectDialogOpen(true)
+                            onClick={async () => {
+                              // Check if entry already has rejection notes
+                              try {
+                                const response = await fetch(`/api/time-entries/${entry.id}/rejection-notes`, {
+                                  credentials: 'include'
+                                })
+                                if (response.ok) {
+                                  const data = await response.json()
+                                  if (data.notes && data.notes.length > 0) {
+                                    // Has existing thread - open thread dialog
+                                    setSelectedEntryId(entry.id)
+                                    setThreadDialogOpen(true)
+                                  } else {
+                                    // No thread yet - open rejection dialog
+                                    setSelectedEntry(entry)
+                                    setRejectDialogOpen(true)
+                                  }
+                                }
+                              } catch (error) {
+                                console.error('Error checking rejection notes:', error)
+                                // Fallback to rejection dialog
+                                setSelectedEntry(entry)
+                                setRejectDialogOpen(true)
+                              }
                             }}
                           >
                             <RejectIcon fontSize="small" />
@@ -384,7 +408,7 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
                         <TableBody>
                           {group.entries.map((entry: PendingEntry) => (
                             <TableRow key={entry.id}>
-                              <TableCell>{format(new Date(entry.date), 'MMM dd')}</TableCell>
+                              <TableCell>{format(new Date(entry.date + 'T00:00:00'), 'MMM dd')}</TableCell>
                               <TableCell>{entry.jobNumber}</TableCell>
                               <TableCell align="right">{entry.hours.toFixed(2)}h</TableCell>
                               <TableCell align="right">${entry.estimatedPay.toFixed(2)}</TableCell>
@@ -406,7 +430,7 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
           <DialogContent>
             <Typography variant="body2" sx={{ mb: 2 }}>
               Rejecting entry for {selectedEntry?.userName} - {selectedEntry?.hours} hours on{' '}
-              {selectedEntry && format(new Date(selectedEntry.date), 'MMM dd, yyyy')}
+              {selectedEntry && format(new Date(selectedEntry.date + 'T00:00:00'), 'MMM dd, yyyy')}
             </Typography>
             <TextField
               fullWidth
@@ -431,6 +455,17 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Rejection Thread Dialog */}
+        <RejectionFixDialog
+          open={threadDialogOpen}
+          onClose={() => {
+            setThreadDialogOpen(false)
+            setSelectedEntryId(null)
+            fetchPendingEntries()
+          }}
+          timeEntryId={selectedEntryId}
+        />
       </CardContent>
     </Card>
   )

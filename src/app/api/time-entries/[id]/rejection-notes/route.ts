@@ -92,10 +92,11 @@ export async function POST(
     )
 
     if (isAdmin && entryResult.rows.length > 0) {
+      // Admin responded to employee - notify employee
       const employee = entryResult.rows[0]
-      
+
       await query(
-        `INSERT INTO "NotificationLog" 
+        `INSERT INTO "NotificationLog"
         ("userId", type, subject, message, metadata, status, channel, "createdAt")
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
         [
@@ -103,11 +104,48 @@ export async function POST(
           'TIME_ENTRY_NOTE',
           'Response to Time Entry Rejection',
           `Admin responded to your rejected time entry: ${note}`,
-          JSON.stringify({ timeEntryId: entryId, link: '/time' }),
+          JSON.stringify({
+            type: 'TIME_ENTRY_REJECTED',
+            timeEntryId: entryId,
+            link: '/time'
+          }),
           'PENDING',
           'IN_APP',
         ]
       )
+    } else if (!isAdmin) {
+      // Employee responded to admin - notify all admins
+      const adminsResult = await query(
+        `SELECT id, email, name
+         FROM "User"
+         WHERE role IN ('OWNER_ADMIN', 'FOREMAN')
+         AND active = true`
+      )
+
+      const employeeInfo = entryResult.rows.length > 0 ? entryResult.rows[0] : null
+
+      for (const admin of adminsResult.rows) {
+        await query(
+          `INSERT INTO "NotificationLog"
+          ("userId", type, subject, message, metadata, status, channel, "createdAt")
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+          [
+            admin.id,
+            'TIME_ENTRY_NOTE',
+            'Employee Response to Rejection',
+            `${employeeInfo?.name || 'An employee'} responded to a rejected time entry: ${note}`,
+            JSON.stringify({
+              type: 'TIME_ENTRY_REJECTED',
+              timeEntryId: entryId,
+              employeeId: employeeInfo?.userId,
+              employeeName: employeeInfo?.name,
+              link: '/time'
+            }),
+            'PENDING',
+            'IN_APP',
+          ]
+        )
+      }
     }
 
     return NextResponse.json({

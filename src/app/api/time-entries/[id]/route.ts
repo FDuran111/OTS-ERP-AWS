@@ -34,7 +34,10 @@ export async function GET(
         te.*,
         u.name as user_name,
         j."jobNumber",
-        j.description as job_description
+        j.description as job_description,
+        te."rejectionReason",
+        te.status,
+        te."hasRejectionNotes"
       FROM "TimeEntry" te
       LEFT JOIN "User" u ON te."userId" = u.id
       LEFT JOIN "Job" j ON te."jobId" = j.id
@@ -63,6 +66,16 @@ export async function GET(
       estimatedPay: parseFloat(timeEntry.estimatedPay || 0),
       description: timeEntry.description,
       date: timeEntry.date,
+      jobId: timeEntry.jobId,
+      userId: timeEntry.userId,
+      status: timeEntry.status,
+      rejectionReason: timeEntry.rejectionReason,
+      hasRejectionNotes: timeEntry.hasRejectionNotes,
+      // Flat fields for compatibility
+      jobNumber: timeEntry.jobNumber,
+      job_description: timeEntry.job_description,
+      user_name: timeEntry.user_name,
+      // Nested structures
       user: {
         id: timeEntry.userId,
         name: timeEntry.user_name || 'Unknown User'
@@ -533,8 +546,12 @@ export async function PUT(
            "overtimeHours" = $7,
            "doubleTimeHours" = $8,
            "estimatedPay" = $9,
+           status = $10,
+           "submittedAt" = $11,
+           "rejectionReason" = $12,
+           "hasRejectionNotes" = $13,
            "updatedAt" = NOW()
-       WHERE id = $10
+       WHERE id = $14
        RETURNING *`,
       [
         body.jobId,
@@ -546,6 +563,10 @@ export async function PUT(
         recalculatedValues?.overtimeHours || currentEntry.overtimeHours,
         recalculatedValues?.doubleTimeHours || currentEntry.doubleTimeHours,
         recalculatedValues?.estimatedPay || currentEntry.estimatedPay,
+        body.status || currentEntry.status,
+        body.status === 'submitted' ? new Date() : currentEntry.submittedAt,
+        body.status === 'submitted' ? null : currentEntry.rejectionReason,
+        currentEntry.hasRejectionNotes, // Keep rejection notes even after resubmit
         resolvedParams.id
       ]
     )
@@ -555,6 +576,70 @@ export async function PUT(
         { error: 'Time entry not found' },
         { status: 404 }
       )
+    }
+
+    // If status changed from rejected to submitted, notify admins
+    if (currentEntry.status === 'rejected' && body.status === 'submitted') {
+      try {
+        // Get employee and job info
+        const entryInfoResult = await query(
+          `SELECT
+            te.id,
+            te.date,
+            te.hours,
+            u.id as "userId",
+            u.name as "userName",
+            u.email as "userEmail",
+            j."jobNumber",
+            j.description as "jobTitle"
+          FROM "TimeEntry" te
+          LEFT JOIN "User" u ON te."userId" = u.id
+          LEFT JOIN "Job" j ON te."jobId" = j.id
+          WHERE te.id = $1`,
+          [resolvedParams.id]
+        )
+
+        if (entryInfoResult.rows.length > 0) {
+          const entryInfo = entryInfoResult.rows[0]
+
+          // Get all admins
+          const adminsResult = await query(
+            `SELECT id, email, name
+             FROM "User"
+             WHERE role IN ('OWNER_ADMIN', 'FOREMAN')
+             AND active = true`
+          )
+
+          // Create notifications for all admins
+          for (const admin of adminsResult.rows) {
+            await query(
+              `INSERT INTO "NotificationLog"
+              ("userId", type, subject, message, metadata, status, channel, "createdAt")
+              VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+              [
+                admin.id,
+                'TIME_ENTRY_RESUBMITTED',
+                'Time Entry Resubmitted',
+                `${entryInfo.userName} resubmitted a time entry for ${entryInfo.date} (${entryInfo.hours} hours${entryInfo.jobNumber ? ` on job ${entryInfo.jobNumber}` : ''}) for approval.`,
+                JSON.stringify({
+                  timeEntryId: entryInfo.id,
+                  employeeId: entryInfo.userId,
+                  employeeName: entryInfo.userName,
+                  date: entryInfo.date,
+                  hours: entryInfo.hours,
+                  jobNumber: entryInfo.jobNumber,
+                  resubmitted: true,
+                }),
+                'PENDING',
+                'IN_APP',
+              ]
+            )
+          }
+        }
+      } catch (notifError) {
+        console.error('Error creating resubmit notifications:', notifError)
+        // Don't fail the request if notification fails
+      }
     }
 
     return NextResponse.json(updateResult.rows[0])

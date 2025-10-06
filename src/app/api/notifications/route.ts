@@ -62,6 +62,13 @@ export async function GET(request: NextRequest) {
       let actionUrl = null
       if (notif.type === 'JOB_PENDING_REVIEW' && metadata.jobId) {
         actionUrl = '/jobs/pending-review'
+      } else if (notif.type === 'TIME_ENTRY_REJECTED') {
+        // Rejected entries should open the fix dialog (handled by NotificationCenter)
+        // Just navigate to /time, the NotificationCenter will open the rejection dialog
+        actionUrl = metadata.link || '/time'
+      } else if (notif.type === 'TIME_ENTRY_APPROVED') {
+        // Approved entries - just navigate to time page, no dialog
+        actionUrl = metadata.link || '/time'
       } else if (metadata.jobId) {
         actionUrl = `/jobs/${metadata.jobId}`
       }

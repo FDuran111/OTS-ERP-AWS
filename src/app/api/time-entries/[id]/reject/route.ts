@@ -8,8 +8,11 @@ import { Pool } from 'pg'
 // POST - Reject a time entry
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
+  const entryId = resolvedParams.id
+
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
   })
@@ -17,8 +20,6 @@ export async function POST(
   const client = await pool.connect()
 
   try {
-    const resolvedParams = await params
-    const entryId = resolvedParams.id
 
     const token = request.cookies.get('auth-token')?.value
     if (!token) {
@@ -70,7 +71,7 @@ export async function POST(
     const updateResult = await client.query(
       `UPDATE "TimeEntry"
        SET
-         status = 'REJECTED',
+         status = 'rejected',
          "hasRejectionNotes" = true,
          "updatedAt" = NOW()
        WHERE id = $1
