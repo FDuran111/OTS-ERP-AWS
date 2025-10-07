@@ -39,6 +39,7 @@ interface TimesheetEntry {
   overtimeHours?: number
   doubleTimeHours?: number
   estimatedPay?: number
+  categoryHours?: any // JSONB field with category breakdown
   description?: string
   status?: 'draft' | 'submitted' | 'approved' | 'rejected'
   submittedAt?: string

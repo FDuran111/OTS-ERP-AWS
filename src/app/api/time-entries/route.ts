@@ -126,6 +126,7 @@ export const GET = withRBAC({
         regularHours: parseFloat(entry.regularHours || 0),
         overtimeHours: parseFloat(entry.overtimeHours || 0),
         doubleTimeHours: parseFloat(entry.doubleTimeHours || 0),
+        categoryHours: entry.categoryHours || null,
         estimatedPay: estimatedPay,
         calculatedHours: duration,
         description: entry.description,
