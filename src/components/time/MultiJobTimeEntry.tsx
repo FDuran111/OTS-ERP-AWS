@@ -140,6 +140,14 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
           jobId: fullJob.id,
           job: fullJob,
           hours: preselectedJob.hours?.toString() || '',
+          categoryHours: {
+            straightTime: '',
+            straightTimeTravel: '',
+            overtime: '',
+            overtimeTravel: '',
+            doubleTime: '',
+            doubleTimeTravel: ''
+          },
           description: preselectedJob.description || ''
         }])
         setDate(preselectedJob.date ? new Date(preselectedJob.date + 'T00:00:00') : new Date())
@@ -253,7 +261,16 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
   const updateCategoryHours = (entryId: string, category: keyof CategoryHours, value: string) => {
     setEntries(entries.map(entry => {
       if (entry.id === entryId) {
-        const updatedCategories = { ...entry.categoryHours, [category]: value }
+        // Initialize categoryHours if it doesn't exist
+        const currentCategories = entry.categoryHours || {
+          straightTime: '',
+          straightTimeTravel: '',
+          overtime: '',
+          overtimeTravel: '',
+          doubleTime: '',
+          doubleTimeTravel: ''
+        }
+        const updatedCategories = { ...currentCategories, [category]: value }
         const totalHours = calculateTotalFromCategories(updatedCategories)
         return {
           ...entry,
@@ -594,7 +611,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                         <TextField
                           size="small"
                           type="number"
-                          value={entry.categoryHours.straightTime}
+                          value={entry.categoryHours?.straightTime || ''}
                           onChange={(e) => updateCategoryHours(entry.id, 'straightTime', e.target.value)}
                           placeholder="0"
                           inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
@@ -609,7 +626,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                         <TextField
                           size="small"
                           type="number"
-                          value={entry.categoryHours.straightTimeTravel}
+                          value={entry.categoryHours?.straightTimeTravel || ''}
                           onChange={(e) => updateCategoryHours(entry.id, 'straightTimeTravel', e.target.value)}
                           placeholder="0"
                           inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
@@ -624,7 +641,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                         <TextField
                           size="small"
                           type="number"
-                          value={entry.categoryHours.overtime}
+                          value={entry.categoryHours?.overtime || ''}
                           onChange={(e) => updateCategoryHours(entry.id, 'overtime', e.target.value)}
                           placeholder="0"
                           inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
@@ -639,7 +656,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                         <TextField
                           size="small"
                           type="number"
-                          value={entry.categoryHours.overtimeTravel}
+                          value={entry.categoryHours?.overtimeTravel || ''}
                           onChange={(e) => updateCategoryHours(entry.id, 'overtimeTravel', e.target.value)}
                           placeholder="0"
                           inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
@@ -654,7 +671,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                         <TextField
                           size="small"
                           type="number"
-                          value={entry.categoryHours.doubleTime}
+                          value={entry.categoryHours?.doubleTime || ''}
                           onChange={(e) => updateCategoryHours(entry.id, 'doubleTime', e.target.value)}
                           placeholder="0"
                           inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
@@ -669,7 +686,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                         <TextField
                           size="small"
                           type="number"
-                          value={entry.categoryHours.doubleTimeTravel}
+                          value={entry.categoryHours?.doubleTimeTravel || ''}
                           onChange={(e) => updateCategoryHours(entry.id, 'doubleTimeTravel', e.target.value)}
                           placeholder="0"
                           inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
