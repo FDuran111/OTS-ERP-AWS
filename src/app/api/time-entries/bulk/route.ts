@@ -203,9 +203,9 @@ export async function POST(request: NextRequest) {
         `INSERT INTO "TimeEntry" (
           id, "jobId", "userId", date, "startTime", "endTime", hours,
           "regularHours", "overtimeHours", "doubleTimeHours",
-          "estimatedPay", "categoryHours", description, "createdAt", "updatedAt"
+          "estimatedPay", "categoryHours", location, "jobDescription", "workDescription", description, "createdAt", "updatedAt"
         ) VALUES (
-          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
         ) RETURNING *`,
         [
           entry.jobId,
@@ -219,6 +219,9 @@ export async function POST(request: NextRequest) {
           entry.doubleTimeHours,
           estimatedPay,
           entry.categoryHours ? JSON.stringify(entry.categoryHours) : '{}',
+          entry.location || null,
+          entry.jobDescription || null,
+          entry.workDescription || null,
           entry.description || null,
           new Date(),
           new Date()

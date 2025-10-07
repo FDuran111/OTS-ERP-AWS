@@ -61,7 +61,10 @@ interface JobEntry {
   job: Job | null
   hours: string // Total hours (calculated from categories)
   categoryHours: CategoryHours
-  description: string
+  location: string // NEW - Where work was performed
+  jobDescription: string // NEW - Specific job/area
+  workDescription: string // NEW - Detailed work description
+  description: string // Keep for backward compatibility
 }
 
 interface MultiJobTimeEntryProps {
@@ -95,7 +98,10 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
         doubleTime: '',
         doubleTimeTravel: ''
       },
-      description: preselectedJob?.description || ''
+      location: preselectedJob?.location || '',
+      jobDescription: preselectedJob?.jobDescription || '',
+      workDescription: preselectedJob?.workDescription || '',
+      description: preselectedJob?.description || '' // Keep for backward compat
     }
   ])
 
@@ -151,6 +157,9 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
           job: fullJob,
           hours: preselectedJob.hours?.toString() || '',
           categoryHours,
+          location: preselectedJob.location || '',
+          jobDescription: preselectedJob.jobDescription || '',
+          workDescription: preselectedJob.workDescription || '',
           description: preselectedJob.description || ''
         }])
         setDate(preselectedJob.date ? new Date(preselectedJob.date + 'T00:00:00') : new Date())
@@ -235,6 +244,9 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
         doubleTime: '',
         doubleTimeTravel: ''
       },
+      location: '',
+      jobDescription: '',
+      workDescription: '',
       description: ''
     }
     setEntries([...entries, newEntry])
@@ -327,6 +339,19 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
         setError(`Entry ${i + 1}: Please enter hours in at least one category`)
         return false
       }
+      // Validate new required fields
+      if (!entry.location?.trim()) {
+        setError(`Entry ${i + 1}: Location is required`)
+        return false
+      }
+      if (!entry.jobDescription?.trim()) {
+        setError(`Entry ${i + 1}: Job is required`)
+        return false
+      }
+      if (!entry.workDescription?.trim()) {
+        setError(`Entry ${i + 1}: Work description is required`)
+        return false
+      }
     }
 
     // Check for duplicate jobs
@@ -374,7 +399,10 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
             jobId: entry.jobId!,
             date: format(date, 'yyyy-MM-dd'),
             hours: parseFloat(entry.hours),
-            description: entry.description || `Work performed on ${entry.job!.jobNumber}`,
+            location: entry.location,
+            jobDescription: entry.jobDescription,
+            workDescription: entry.workDescription,
+            description: entry.description || `Work performed on ${entry.job!.jobNumber}`, // Keep for backward compat
           }),
         })
 
@@ -399,7 +427,10 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
             DOUBLE_TIME: parseFloat(entry.categoryHours.doubleTime) || 0,
             DOUBLE_TIME_TRAVEL: parseFloat(entry.categoryHours.doubleTimeTravel) || 0,
           },
-          description: entry.description || `Work performed on ${entry.job!.jobNumber}`,
+          location: entry.location,
+          jobDescription: entry.jobDescription,
+          workDescription: entry.workDescription,
+          description: entry.description || `Work performed on ${entry.job!.jobNumber}`, // Keep for backward compat
         }))
 
         const response = await fetch('/api/time-entries/bulk', {
@@ -437,6 +468,9 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
           doubleTime: '',
           doubleTimeTravel: ''
         },
+        location: '',
+        jobDescription: '',
+        workDescription: '',
         description: ''
       }])
       setDate(new Date())
@@ -703,14 +737,39 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                     </Typography>
                   </Box>
 
-                  {/* Description */}
-                  <Box sx={{ flex: 1, minWidth: 150 }}>
+                  {/* New Description Fields */}
+                  <Box sx={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <TextField
                       fullWidth
-                      label="Description (Optional)"
-                      value={entry.description}
-                      onChange={(e) => updateEntry(entry.id, 'description', e.target.value)}
-                      placeholder="Work performed..."
+                      required
+                      label="Location"
+                      value={entry.location}
+                      onChange={(e) => updateEntry(entry.id, 'location', e.target.value)}
+                      placeholder="e.g., Pawnee City, Lincoln, etc."
+                      error={!entry.location}
+                      helperText={!entry.location ? "Location is required" : ""}
+                    />
+                    <TextField
+                      fullWidth
+                      required
+                      label="Job"
+                      value={entry.jobDescription}
+                      onChange={(e) => updateEntry(entry.id, 'jobDescription', e.target.value)}
+                      placeholder="e.g., Bin 21, North Field, etc."
+                      error={!entry.jobDescription}
+                      helperText={!entry.jobDescription ? "Job is required" : ""}
+                    />
+                    <TextField
+                      fullWidth
+                      required
+                      multiline
+                      rows={3}
+                      label="Work Description"
+                      value={entry.workDescription}
+                      onChange={(e) => updateEntry(entry.id, 'workDescription', e.target.value)}
+                      placeholder="Describe the work performed in detail..."
+                      error={!entry.workDescription}
+                      helperText={!entry.workDescription ? "Work description is required" : ""}
                     />
                   </Box>
                 </Box>

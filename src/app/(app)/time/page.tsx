@@ -510,6 +510,9 @@ function TimePageContent() {
                             date: entry.date || undefined, // Don't set date if empty string
                             hours: entry.hours,
                             description: entry.description,
+                            location: entry.location,
+                            jobDescription: entry.jobDescription,
+                            workDescription: entry.workDescription,
                             editingEntryId: entry.id || undefined,
                             userId: selectedViewUser.id,
                             categoryHours
@@ -566,6 +569,9 @@ function TimePageContent() {
                   date: entry.date || undefined, // Don't set date if empty string
                   hours: entry.hours,
                   description: entry.description,
+                  location: entry.location,
+                  jobDescription: entry.jobDescription,
+                  workDescription: entry.workDescription,
                   editingEntryId: entry.id || undefined,
                   categoryHours
                 })
