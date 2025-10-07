@@ -36,6 +36,8 @@ interface Job {
   title: string
   customer: string
   type: string
+  city?: string // Location
+  address?: string
   estimatedHours?: number
 }
 
@@ -339,15 +341,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
         setError(`Entry ${i + 1}: Please enter hours in at least one category`)
         return false
       }
-      // Validate new required fields
-      if (!entry.location?.trim()) {
-        setError(`Entry ${i + 1}: Location is required`)
-        return false
-      }
-      if (!entry.jobDescription?.trim()) {
-        setError(`Entry ${i + 1}: Job is required`)
-        return false
-      }
+      // Validate work description field
       if (!entry.workDescription?.trim()) {
         setError(`Entry ${i + 1}: Work description is required`)
         return false
@@ -399,8 +393,8 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
             jobId: entry.jobId!,
             date: format(date, 'yyyy-MM-dd'),
             hours: parseFloat(entry.hours),
-            location: entry.location,
-            jobDescription: entry.jobDescription,
+            location: entry.job?.city || entry.location || null, // Auto-populate from job
+            jobDescription: entry.job?.title || entry.jobDescription || null, // Auto-populate from job
             workDescription: entry.workDescription,
             description: entry.description || `Work performed on ${entry.job!.jobNumber}`, // Keep for backward compat
           }),
@@ -427,8 +421,8 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
             DOUBLE_TIME: parseFloat(entry.categoryHours.doubleTime) || 0,
             DOUBLE_TIME_TRAVEL: parseFloat(entry.categoryHours.doubleTimeTravel) || 0,
           },
-          location: entry.location,
-          jobDescription: entry.jobDescription,
+          location: entry.job?.city || entry.location || null, // Auto-populate from job
+          jobDescription: entry.job?.title || entry.jobDescription || null, // Auto-populate from job
           workDescription: entry.workDescription,
           description: entry.description || `Work performed on ${entry.job!.jobNumber}`, // Keep for backward compat
         }))
@@ -737,28 +731,30 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                     </Typography>
                   </Box>
 
-                  {/* New Description Fields */}
+                  {/* Job Details Display & Work Description */}
                   <Box sx={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField
-                      fullWidth
-                      required
-                      label="Location"
-                      value={entry.location}
-                      onChange={(e) => updateEntry(entry.id, 'location', e.target.value)}
-                      placeholder="e.g., Pawnee City, Lincoln, etc."
-                      error={!entry.location}
-                      helperText={!entry.location ? "Location is required" : ""}
-                    />
-                    <TextField
-                      fullWidth
-                      required
-                      label="Job"
-                      value={entry.jobDescription}
-                      onChange={(e) => updateEntry(entry.id, 'jobDescription', e.target.value)}
-                      placeholder="e.g., Bin 21, North Field, etc."
-                      error={!entry.jobDescription}
-                      helperText={!entry.jobDescription ? "Job is required" : ""}
-                    />
+                    {/* Job Details - Read Only Display */}
+                    {entry.job && (
+                      <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                          Job Details
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <Typography variant="body2">
+                            <strong>📍 Location:</strong> {entry.job.city || 'Not specified'}
+                            {entry.job.address && ` - ${entry.job.address}`}
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>👤 Customer:</strong> {entry.job.customer}
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>🏗️ Job:</strong> {entry.job.title}
+                          </Typography>
+                        </Box>
+                      </Paper>
+                    )}
+
+                    {/* Work Description - Manual Entry */}
                     <TextField
                       fullWidth
                       required
@@ -767,7 +763,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                       label="Work Description"
                       value={entry.workDescription}
                       onChange={(e) => updateEntry(entry.id, 'workDescription', e.target.value)}
-                      placeholder="Describe the work performed in detail..."
+                      placeholder="Describe the work you performed in detail..."
                       error={!entry.workDescription}
                       helperText={!entry.workDescription ? "Work description is required" : ""}
                     />
