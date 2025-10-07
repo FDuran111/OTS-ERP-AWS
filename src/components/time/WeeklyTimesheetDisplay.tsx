@@ -40,7 +40,10 @@ interface TimesheetEntry {
   doubleTimeHours?: number
   estimatedPay?: number
   categoryHours?: any // JSONB field with category breakdown
-  description?: string
+  location?: string // NEW - Where work was performed
+  jobDescription?: string // NEW - Specific job/area
+  workDescription?: string // NEW - Detailed work description
+  description?: string // Keep for backward compatibility
   status?: 'draft' | 'submitted' | 'approved' | 'rejected'
   submittedAt?: string
   submittedBy?: string
