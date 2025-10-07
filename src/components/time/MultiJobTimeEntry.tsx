@@ -46,11 +46,21 @@ interface User {
   role: string
 }
 
+interface CategoryHours {
+  straightTime: string
+  straightTimeTravel: string
+  overtime: string
+  overtimeTravel: string
+  doubleTime: string
+  doubleTimeTravel: string
+}
+
 interface JobEntry {
   id: string // Temporary ID for UI tracking
   jobId: string | null
   job: Job | null
-  hours: string
+  hours: string // Total hours (calculated from categories)
+  categoryHours: CategoryHours
   description: string
 }
 
@@ -77,6 +87,14 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
         type: ''
       } : null,
       hours: preselectedJob?.hours?.toString() || '',
+      categoryHours: {
+        straightTime: preselectedJob?.hours?.toString() || '',
+        straightTimeTravel: '',
+        overtime: '',
+        overtimeTravel: '',
+        doubleTime: '',
+        doubleTimeTravel: ''
+      },
       description: preselectedJob?.description || ''
     }
   ])
@@ -198,6 +216,14 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       jobId: null,
       job: null,
       hours: '',
+      categoryHours: {
+        straightTime: '',
+        straightTimeTravel: '',
+        overtime: '',
+        overtimeTravel: '',
+        doubleTime: '',
+        doubleTimeTravel: ''
+      },
       description: ''
     }
     setEntries([...entries, newEntry])
@@ -209,6 +235,34 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       return
     }
     setEntries(entries.filter(e => e.id !== entryId))
+  }
+
+  // Calculate total hours from category hours
+  const calculateTotalFromCategories = (categoryHours: CategoryHours): number => {
+    return (
+      (parseFloat(categoryHours.straightTime) || 0) +
+      (parseFloat(categoryHours.straightTimeTravel) || 0) +
+      (parseFloat(categoryHours.overtime) || 0) +
+      (parseFloat(categoryHours.overtimeTravel) || 0) +
+      (parseFloat(categoryHours.doubleTime) || 0) +
+      (parseFloat(categoryHours.doubleTimeTravel) || 0)
+    )
+  }
+
+  // Update a specific category hour
+  const updateCategoryHours = (entryId: string, category: keyof CategoryHours, value: string) => {
+    setEntries(entries.map(entry => {
+      if (entry.id === entryId) {
+        const updatedCategories = { ...entry.categoryHours, [category]: value }
+        const totalHours = calculateTotalFromCategories(updatedCategories)
+        return {
+          ...entry,
+          categoryHours: updatedCategories,
+          hours: totalHours.toString()
+        }
+      }
+      return entry
+    }))
   }
 
   const updateEntry = (entryId: string, field: keyof JobEntry, value: any) => {
@@ -247,8 +301,10 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
         setError(`Entry ${i + 1}: Please select a job`)
         return false
       }
-      if (!entry.hours || parseFloat(entry.hours) <= 0) {
-        setError(`Entry ${i + 1}: Please enter valid hours`)
+      // Check that at least one category has hours
+      const totalCategoryHours = calculateTotalFromCategories(entry.categoryHours)
+      if (totalCategoryHours <= 0) {
+        setError(`Entry ${i + 1}: Please enter hours in at least one category`)
         return false
       }
     }
@@ -315,6 +371,14 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
           jobId: entry.jobId!,
           date: format(date, 'yyyy-MM-dd'),
           hours: parseFloat(entry.hours),
+          categoryHours: {
+            STRAIGHT_TIME: parseFloat(entry.categoryHours.straightTime) || 0,
+            STRAIGHT_TIME_TRAVEL: parseFloat(entry.categoryHours.straightTimeTravel) || 0,
+            OVERTIME: parseFloat(entry.categoryHours.overtime) || 0,
+            OVERTIME_TRAVEL: parseFloat(entry.categoryHours.overtimeTravel) || 0,
+            DOUBLE_TIME: parseFloat(entry.categoryHours.doubleTime) || 0,
+            DOUBLE_TIME_TRAVEL: parseFloat(entry.categoryHours.doubleTimeTravel) || 0,
+          },
           description: entry.description || `Work performed on ${entry.job!.jobNumber}`,
         }))
 
@@ -340,7 +404,21 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       }
 
       // Reset form to initial state
-      setEntries([{ id: '1', jobId: null, job: null, hours: '', description: '' }])
+      setEntries([{
+        id: '1',
+        jobId: null,
+        job: null,
+        hours: '',
+        categoryHours: {
+          straightTime: '',
+          straightTimeTravel: '',
+          overtime: '',
+          overtimeTravel: '',
+          doubleTime: '',
+          doubleTimeTravel: ''
+        },
+        description: ''
+      }])
       setDate(new Date())
       if (!preselectedEmployee && !isAdmin) {
         setSelectedUser(currentUser)
@@ -504,17 +582,105 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                     />
                   </Box>
 
-                  {/* Hours Input */}
-                  <Box sx={{ minWidth: 100 }}>
-                    <TextField
-                      fullWidth
-                      label="Hours"
-                      type="number"
-                      value={entry.hours}
-                      onChange={(e) => updateEntry(entry.id, 'hours', e.target.value)}
-                      inputProps={{ min: 0, max: 24, step: 0.25 }}
-                      required
-                    />
+                  {/* Hour Categories */}
+                  <Box sx={{ flex: 3, minWidth: 300 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                      Hour Categories *
+                    </Typography>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 1 }}>
+                      {/* Straight Time */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Chip label="ST" size="small" color="success" sx={{ minWidth: 40 }} />
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={entry.categoryHours.straightTime}
+                          onChange={(e) => updateCategoryHours(entry.id, 'straightTime', e.target.value)}
+                          placeholder="0"
+                          inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
+                          sx={{ width: 60 }}
+                        />
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>hrs</Typography>
+                      </Box>
+
+                      {/* Straight Time Travel */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Chip label="STT" size="small" color="success" variant="outlined" sx={{ minWidth: 40 }} />
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={entry.categoryHours.straightTimeTravel}
+                          onChange={(e) => updateCategoryHours(entry.id, 'straightTimeTravel', e.target.value)}
+                          placeholder="0"
+                          inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
+                          sx={{ width: 60 }}
+                        />
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>hrs</Typography>
+                      </Box>
+
+                      {/* Overtime */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Chip label="OT" size="small" color="warning" sx={{ minWidth: 40 }} />
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={entry.categoryHours.overtime}
+                          onChange={(e) => updateCategoryHours(entry.id, 'overtime', e.target.value)}
+                          placeholder="0"
+                          inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
+                          sx={{ width: 60 }}
+                        />
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>hrs</Typography>
+                      </Box>
+
+                      {/* Overtime Travel */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Chip label="OTT" size="small" color="warning" variant="outlined" sx={{ minWidth: 40 }} />
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={entry.categoryHours.overtimeTravel}
+                          onChange={(e) => updateCategoryHours(entry.id, 'overtimeTravel', e.target.value)}
+                          placeholder="0"
+                          inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
+                          sx={{ width: 60 }}
+                        />
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>hrs</Typography>
+                      </Box>
+
+                      {/* Double Time */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Chip label="DT" size="small" color="error" sx={{ minWidth: 40 }} />
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={entry.categoryHours.doubleTime}
+                          onChange={(e) => updateCategoryHours(entry.id, 'doubleTime', e.target.value)}
+                          placeholder="0"
+                          inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
+                          sx={{ width: 60 }}
+                        />
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>hrs</Typography>
+                      </Box>
+
+                      {/* Double Time Travel */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Chip label="DTT" size="small" color="error" variant="outlined" sx={{ minWidth: 40 }} />
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={entry.categoryHours.doubleTimeTravel}
+                          onChange={(e) => updateCategoryHours(entry.id, 'doubleTimeTravel', e.target.value)}
+                          placeholder="0"
+                          inputProps={{ min: 0, step: 0.5, style: { textAlign: 'center' } }}
+                          sx={{ width: 60 }}
+                        />
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>hrs</Typography>
+                      </Box>
+                    </Box>
+                    <Typography variant="body2" sx={{ mt: 1, fontWeight: 600 }}>
+                      Total: {entry.hours || '0'} hours
+                    </Typography>
                   </Box>
 
                   {/* Description */}

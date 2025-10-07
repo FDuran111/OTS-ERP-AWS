@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
     // Get user's pay rates for cost calculation
     const userResult = await query(
-      'SELECT "regularRate", "overtimeRate", "doubleTimeRate" FROM "User" WHERE id = $1',
+      'SELECT "regularRate", "overtimeRate", "doubleTimeRate", "travelRate" FROM "User" WHERE id = $1',
       [userId]
     )
 
@@ -119,16 +119,36 @@ export async function POST(request: NextRequest) {
     const regularRate = parseFloat(user?.regularRate || '15')
     const overtimeRate = parseFloat(user?.overtimeRate || '22.50')
     const doubleTimeRate = parseFloat(user?.doubleTimeRate || '30')
+    const travelRate = parseFloat(user?.travelRate || regularRate) // Default to regular rate if no travel rate
 
-    // Calculate how to distribute the overtime across jobs
-    // We'll distribute proportionally based on hours
+    // Calculate hours breakdown based on category hours (if provided) or automatic OT calculation
     const regularHoursPerJob = entries.map(entry => {
-      const proportion = entry.hours / totalHours
-      return {
-        ...entry,
-        regularHours: dailyBreakdown.regularHours * proportion,
-        overtimeHours: dailyBreakdown.overtimeHours * proportion,
-        doubleTimeHours: dailyBreakdown.doubleTimeHours * proportion
+      // If categoryHours is provided, use manual category breakdown
+      if (entry.categoryHours) {
+        const straightTime = entry.categoryHours.STRAIGHT_TIME || 0
+        const straightTimeTravel = entry.categoryHours.STRAIGHT_TIME_TRAVEL || 0
+        const overtime = entry.categoryHours.OVERTIME || 0
+        const overtimeTravel = entry.categoryHours.OVERTIME_TRAVEL || 0
+        const doubleTime = entry.categoryHours.DOUBLE_TIME || 0
+        const doubleTimeTravel = entry.categoryHours.DOUBLE_TIME_TRAVEL || 0
+
+        return {
+          ...entry,
+          regularHours: straightTime + straightTimeTravel,
+          overtimeHours: overtime + overtimeTravel,
+          doubleTimeHours: doubleTime + doubleTimeTravel,
+          categoryHours: entry.categoryHours
+        }
+      } else {
+        // Use automatic OT calculation (legacy behavior)
+        const proportion = entry.hours / totalHours
+        return {
+          ...entry,
+          regularHours: dailyBreakdown.regularHours * proportion,
+          overtimeHours: dailyBreakdown.overtimeHours * proportion,
+          doubleTimeHours: dailyBreakdown.doubleTimeHours * proportion,
+          categoryHours: null
+        }
       }
     })
 
@@ -150,10 +170,24 @@ export async function POST(request: NextRequest) {
       }
 
       // Calculate estimated pay for this entry
-      const estimatedPay =
-        (entry.regularHours * regularRate) +
-        (entry.overtimeHours * overtimeRate) +
-        (entry.doubleTimeHours * doubleTimeRate)
+      let estimatedPay = 0
+
+      if (entry.categoryHours) {
+        // Calculate pay based on specific categories
+        estimatedPay =
+          (entry.categoryHours.STRAIGHT_TIME * regularRate) +
+          (entry.categoryHours.STRAIGHT_TIME_TRAVEL * travelRate) +
+          (entry.categoryHours.OVERTIME * overtimeRate) +
+          (entry.categoryHours.OVERTIME_TRAVEL * overtimeRate) + // Travel OT uses OT rate
+          (entry.categoryHours.DOUBLE_TIME * doubleTimeRate) +
+          (entry.categoryHours.DOUBLE_TIME_TRAVEL * doubleTimeRate) // Travel DT uses DT rate
+      } else {
+        // Legacy calculation - use aggregated hours
+        estimatedPay =
+          (entry.regularHours * regularRate) +
+          (entry.overtimeHours * overtimeRate) +
+          (entry.doubleTimeHours * doubleTimeRate)
+      }
 
       // Create synthetic start/end times for bulk entries
       // Parse date string as local date (YYYY-MM-DD format)
@@ -169,9 +203,9 @@ export async function POST(request: NextRequest) {
         `INSERT INTO "TimeEntry" (
           id, "jobId", "userId", date, "startTime", "endTime", hours,
           "regularHours", "overtimeHours", "doubleTimeHours",
-          "estimatedPay", description, "createdAt", "updatedAt"
+          "estimatedPay", "categoryHours", description, "createdAt", "updatedAt"
         ) VALUES (
-          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
         ) RETURNING *`,
         [
           entry.jobId,
@@ -184,6 +218,7 @@ export async function POST(request: NextRequest) {
           entry.overtimeHours,
           entry.doubleTimeHours,
           estimatedPay,
+          entry.categoryHours ? JSON.stringify(entry.categoryHours) : '{}',
           entry.description || null,
           new Date(),
           new Date()
