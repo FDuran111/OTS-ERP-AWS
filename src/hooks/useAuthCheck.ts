@@ -47,40 +47,43 @@ export function useAuthCheck() {
             return
           }
 
-          // If we get a 401 and have retries left, wait and try again
-          if (response.status === 401 && retries > 1) {
+          // If we get a 401, clear invalid data and redirect to login
+          if (response.status === 401) {
+            // Clear invalid localStorage and cookies
+            localStorage.removeItem('user')
+            // Clear auth cookie by setting it to expired
+            document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+
+            // Don't retry on 401 - token is invalid, redirect immediately
+            router.push('/login')
+            return
+          }
+
+          // For other errors, retry
+          if (retries > 1) {
             await new Promise(resolve => setTimeout(resolve, delay))
             delay *= 2 // Exponential backoff
             retries--
             continue
           }
 
-          // Final failure - check if we have stored user data
-          if (storedUser) {
-            // Use stored user data
-            setLoading(false)
-            return
-          }
-
-          // No stored user and auth failed - redirect to login
+          // Final failure after retries - redirect to login
+          localStorage.removeItem('user')
           router.push('/login')
           return
         } catch (error) {
           console.error('Auth check error:', error)
           retries--
-          
+
           if (retries > 0) {
             await new Promise(resolve => setTimeout(resolve, delay))
             delay *= 2
             continue
           }
 
-          // Final error - use stored user or redirect
-          if (storedUser) {
-            setLoading(false)
-            return
-          }
-          
+          // Final error - clear everything and redirect
+          localStorage.removeItem('user')
+          document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
           router.push('/login')
           return
         }
