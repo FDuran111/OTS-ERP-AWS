@@ -135,19 +135,22 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       // Find the full job object from the jobs list
       const fullJob = jobs.find(j => j.id === preselectedJob.jobId)
       if (fullJob) {
+        // Use categoryHours from preselectedJob if available, otherwise default to empty
+        const categoryHours = preselectedJob.categoryHours || {
+          straightTime: '',
+          straightTimeTravel: '',
+          overtime: '',
+          overtimeTravel: '',
+          doubleTime: '',
+          doubleTimeTravel: ''
+        }
+
         setEntries([{
           id: preselectedJob.editingEntryId || '1',
           jobId: fullJob.id,
           job: fullJob,
           hours: preselectedJob.hours?.toString() || '',
-          categoryHours: {
-            straightTime: '',
-            straightTimeTravel: '',
-            overtime: '',
-            overtimeTravel: '',
-            doubleTime: '',
-            doubleTimeTravel: ''
-          },
+          categoryHours,
           description: preselectedJob.description || ''
         }])
         setDate(preselectedJob.date ? new Date(preselectedJob.date + 'T00:00:00') : new Date())

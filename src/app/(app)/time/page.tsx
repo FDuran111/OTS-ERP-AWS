@@ -487,6 +487,22 @@ function TimePageContent() {
                         selectedUserId={selectedViewUser.id}
                         isAdmin={true}
                         onEditEntry={(entry) => {
+                          // Convert categoryHours from database format to UI format if present
+                          let categoryHours = undefined
+                          if (entry.categoryHours) {
+                            const dbCategories = typeof entry.categoryHours === 'string'
+                              ? JSON.parse(entry.categoryHours)
+                              : entry.categoryHours
+                            categoryHours = {
+                              straightTime: (dbCategories.STRAIGHT_TIME || 0).toString(),
+                              straightTimeTravel: (dbCategories.STRAIGHT_TIME_TRAVEL || 0).toString(),
+                              overtime: (dbCategories.OVERTIME || 0).toString(),
+                              overtimeTravel: (dbCategories.OVERTIME_TRAVEL || 0).toString(),
+                              doubleTime: (dbCategories.DOUBLE_TIME || 0).toString(),
+                              doubleTimeTravel: (dbCategories.DOUBLE_TIME_TRAVEL || 0).toString()
+                            }
+                          }
+
                           setPreselectedJob({
                             jobId: entry.jobId,
                             jobNumber: entry.jobNumber,
@@ -495,7 +511,8 @@ function TimePageContent() {
                             hours: entry.hours,
                             description: entry.description,
                             editingEntryId: entry.id || undefined,
-                            userId: selectedViewUser.id
+                            userId: selectedViewUser.id,
+                            categoryHours
                           })
                           setManualEntryOpen(true)
                         }}
@@ -526,6 +543,22 @@ function TimePageContent() {
               userId={user.id}
               isAdmin={false}
               onEditEntry={(entry) => {
+                // Convert categoryHours from database format to UI format if present
+                let categoryHours = undefined
+                if (entry.categoryHours) {
+                  const dbCategories = typeof entry.categoryHours === 'string'
+                    ? JSON.parse(entry.categoryHours)
+                    : entry.categoryHours
+                  categoryHours = {
+                    straightTime: (dbCategories.STRAIGHT_TIME || 0).toString(),
+                    straightTimeTravel: (dbCategories.STRAIGHT_TIME_TRAVEL || 0).toString(),
+                    overtime: (dbCategories.OVERTIME || 0).toString(),
+                    overtimeTravel: (dbCategories.OVERTIME_TRAVEL || 0).toString(),
+                    doubleTime: (dbCategories.DOUBLE_TIME || 0).toString(),
+                    doubleTimeTravel: (dbCategories.DOUBLE_TIME_TRAVEL || 0).toString()
+                  }
+                }
+
                 setPreselectedJob({
                   jobId: entry.jobId,
                   jobNumber: entry.jobNumber,
@@ -533,7 +566,8 @@ function TimePageContent() {
                   date: entry.date || undefined, // Don't set date if empty string
                   hours: entry.hours,
                   description: entry.description,
-                  editingEntryId: entry.id || undefined
+                  editingEntryId: entry.id || undefined,
+                  categoryHours
                 })
                 setManualEntryOpen(true)
               }}
