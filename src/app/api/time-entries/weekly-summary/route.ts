@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const weekEnd = endOfWeek(weekDate, { weekStartsOn: 0 })
 
     const result = await query(
-      `SELECT 
+      `SELECT
         te.id,
         te.date,
         te."startTime",
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         te."regularHours",
         te."overtimeHours",
         te."doubleTimeHours",
+        te."categoryHours",
         te."estimatedPay" as "totalPay",
         te.status,
         te."jobId",
@@ -68,6 +69,14 @@ export async function GET(request: NextRequest) {
       doubleTimeHours: 0,
       totalHours: 0,
       totalPay: 0,
+      categoryBreakdown: {
+        STRAIGHT_TIME: 0,
+        STRAIGHT_TIME_TRAVEL: 0,
+        OVERTIME: 0,
+        OVERTIME_TRAVEL: 0,
+        DOUBLE_TIME: 0,
+        DOUBLE_TIME_TRAVEL: 0,
+      },
       status: 'DRAFT' as 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PARTIAL',
       breakdown: [] as any[],
       hasRejections: false,
@@ -92,6 +101,17 @@ export async function GET(request: NextRequest) {
       summary.doubleTimeHours += doubleTimeHours
       summary.totalHours += totalHours
       summary.totalPay += totalPay
+
+      // Add category hours if available
+      if (entry.categoryHours && typeof entry.categoryHours === 'object') {
+        const categories = entry.categoryHours
+        summary.categoryBreakdown.STRAIGHT_TIME += parseFloat(categories.STRAIGHT_TIME || 0)
+        summary.categoryBreakdown.STRAIGHT_TIME_TRAVEL += parseFloat(categories.STRAIGHT_TIME_TRAVEL || 0)
+        summary.categoryBreakdown.OVERTIME += parseFloat(categories.OVERTIME || 0)
+        summary.categoryBreakdown.OVERTIME_TRAVEL += parseFloat(categories.OVERTIME_TRAVEL || 0)
+        summary.categoryBreakdown.DOUBLE_TIME += parseFloat(categories.DOUBLE_TIME || 0)
+        summary.categoryBreakdown.DOUBLE_TIME_TRAVEL += parseFloat(categories.DOUBLE_TIME_TRAVEL || 0)
+      }
 
       if (entry.status === 'SUBMITTED') hasSubmitted = true
       if (entry.status === 'APPROVED') hasApproved = true
@@ -158,6 +178,14 @@ export async function GET(request: NextRequest) {
     summary.doubleTimeHours = Math.round(summary.doubleTimeHours * 100) / 100
     summary.totalHours = Math.round(summary.totalHours * 100) / 100
     summary.totalPay = Math.round(summary.totalPay * 100) / 100
+
+    // Round category breakdown values
+    summary.categoryBreakdown.STRAIGHT_TIME = Math.round(summary.categoryBreakdown.STRAIGHT_TIME * 100) / 100
+    summary.categoryBreakdown.STRAIGHT_TIME_TRAVEL = Math.round(summary.categoryBreakdown.STRAIGHT_TIME_TRAVEL * 100) / 100
+    summary.categoryBreakdown.OVERTIME = Math.round(summary.categoryBreakdown.OVERTIME * 100) / 100
+    summary.categoryBreakdown.OVERTIME_TRAVEL = Math.round(summary.categoryBreakdown.OVERTIME_TRAVEL * 100) / 100
+    summary.categoryBreakdown.DOUBLE_TIME = Math.round(summary.categoryBreakdown.DOUBLE_TIME * 100) / 100
+    summary.categoryBreakdown.DOUBLE_TIME_TRAVEL = Math.round(summary.categoryBreakdown.DOUBLE_TIME_TRAVEL * 100) / 100
 
     return NextResponse.json(summary)
   } catch (error) {
