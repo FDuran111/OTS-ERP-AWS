@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
     // Get user's pay rates for cost calculation
     const userResult = await query(
-      'SELECT "regularRate", "overtimeRate", "doubleTimeRate", "travelRate" FROM "User" WHERE id = $1',
+      'SELECT "regularRate", "overtimeRate", "doubleTimeRate" FROM "User" WHERE id = $1',
       [userId]
     )
 
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     const regularRate = parseFloat(user?.regularRate || '15')
     const overtimeRate = parseFloat(user?.overtimeRate || '22.50')
     const doubleTimeRate = parseFloat(user?.doubleTimeRate || '30')
-    const travelRate = parseFloat(user?.travelRate || regularRate) // Default to regular rate if no travel rate
+    const travelRate = regularRate // Travel uses same rate as regular time
 
     // Calculate hours breakdown based on category hours (if provided) or automatic OT calculation
     const regularHoursPerJob = entries.map(entry => {

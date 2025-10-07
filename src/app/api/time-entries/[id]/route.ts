@@ -64,6 +64,7 @@ export async function GET(
       overtimeHours: parseFloat(timeEntry.overtimeHours || 0),
       doubleTimeHours: parseFloat(timeEntry.doubleTimeHours || 0),
       estimatedPay: parseFloat(timeEntry.estimatedPay || 0),
+      categoryHours: timeEntry.categoryHours || null,
       description: timeEntry.description,
       date: timeEntry.date,
       jobId: timeEntry.jobId,
