@@ -594,8 +594,9 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                 </Stack>
 
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  {/* Job Selection */}
-                  <Box sx={{ flex: 2, minWidth: 250 }}>
+                  {/* LEFT COLUMN: Job Selection & Details */}
+                  <Box sx={{ flex: 2, minWidth: 250, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {/* Job Selection */}
                     <Autocomplete
                       options={jobs}
                       getOptionLabel={(option) => `${option.jobNumber} - ${option.title}`}
@@ -628,9 +629,25 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                         />
                       )}
                     />
+
+                    {/* Job Details - Show when job selected */}
+                    {entry.job && (
+                      <Box sx={{ pl: 1 }}>
+                        <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary' }}>
+                          📍 {entry.job.city || 'Location not specified'}
+                          {entry.job.address && ` - ${entry.job.address}`}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary' }}>
+                          👤 {entry.job.customer}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          🏗️ {entry.job.title}
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
 
-                  {/* Hour Categories */}
+                  {/* RIGHT COLUMN: Hour Categories */}
                   <Box sx={{ flex: 3, minWidth: 300 }}>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                       Hour Categories *
@@ -730,44 +747,22 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                       Total: {entry.hours || '0'} hours
                     </Typography>
                   </Box>
+                </Box>
 
-                  {/* Job Details Display & Work Description */}
-                  <Box sx={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {/* Job Details - Read Only Display */}
-                    {entry.job && (
-                      <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          Job Details
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          <Typography variant="body2">
-                            <strong>📍 Location:</strong> {entry.job.city || 'Not specified'}
-                            {entry.job.address && ` - ${entry.job.address}`}
-                          </Typography>
-                          <Typography variant="body2">
-                            <strong>👤 Customer:</strong> {entry.job.customer}
-                          </Typography>
-                          <Typography variant="body2">
-                            <strong>🏗️ Job:</strong> {entry.job.title}
-                          </Typography>
-                        </Box>
-                      </Paper>
-                    )}
-
-                    {/* Work Description - Manual Entry */}
-                    <TextField
-                      fullWidth
-                      required
-                      multiline
-                      rows={3}
-                      label="Work Description"
-                      value={entry.workDescription}
-                      onChange={(e) => updateEntry(entry.id, 'workDescription', e.target.value)}
-                      placeholder="Describe the work you performed in detail..."
-                      error={!entry.workDescription}
-                      helperText={!entry.workDescription ? "Work description is required" : ""}
-                    />
-                  </Box>
+                {/* FULL WIDTH: Work Description */}
+                <Box sx={{ mt: 2 }}>
+                  <TextField
+                    fullWidth
+                    required
+                    multiline
+                    rows={3}
+                    label="Work Description"
+                    value={entry.workDescription}
+                    onChange={(e) => updateEntry(entry.id, 'workDescription', e.target.value)}
+                    placeholder="Describe the work you performed in detail..."
+                    error={!entry.workDescription}
+                    helperText={!entry.workDescription ? "Work description is required" : ""}
+                  />
                 </Box>
               </Paper>
             ))}
