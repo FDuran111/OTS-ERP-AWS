@@ -515,7 +515,8 @@ function TimePageContent() {
                             workDescription: entry.workDescription,
                             editingEntryId: entry.id || undefined,
                             userId: selectedViewUser.id,
-                            categoryHours
+                            categoryHours,
+                            materials: entry.materials || []
                           })
                           setManualEntryOpen(true)
                         }}
@@ -573,7 +574,8 @@ function TimePageContent() {
                   jobDescription: entry.jobDescription,
                   workDescription: entry.workDescription,
                   editingEntryId: entry.id || undefined,
-                  categoryHours
+                  categoryHours,
+                  materials: entry.materials || []
                 })
                 setManualEntryOpen(true)
               }}

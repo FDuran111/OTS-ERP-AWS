@@ -230,6 +230,49 @@ export async function POST(request: NextRequest) {
 
       const timeEntry = timeEntryResult.rows[0]
 
+      // Insert materials if any exist
+      if (entry.materials && Array.isArray(entry.materials) && entry.materials.length > 0) {
+        for (const material of entry.materials) {
+          // Skip materials without materialId or quantity
+          if (!material.materialId || !material.quantity) {
+            console.log('[MATERIALS] Skipping material - missing materialId or quantity')
+            continue
+          }
+
+          try {
+            // For now, we'll store packing slip file name (full S3 upload will come in Phase 3)
+            const packingSlipUrl = material.packingSlip ? material.packingSlip.name : null
+
+            console.log('[MATERIALS] Inserting material:', {
+              materialId: material.materialId,
+              quantity: material.quantity,
+              notes: material.notes,
+              offTruck: material.offTruck
+            })
+
+            await query(
+              `INSERT INTO "TimeEntryMaterial" (
+                id, "timeEntryId", "materialId", quantity, notes, "offTruck", "packingSlipUrl", "createdAt", "updatedAt"
+              ) VALUES (
+                gen_random_uuid(), $1, $2, $3, $4, $5, $6, NOW(), NOW()
+              )`,
+              [
+                timeEntry.id,
+                material.materialId,
+                parseFloat(material.quantity) || 0,
+                material.notes || null,
+                material.offTruck || false,
+                packingSlipUrl
+              ]
+            )
+            console.log('[MATERIALS] Successfully inserted material')
+          } catch (materialError) {
+            console.error('[MATERIALS] Failed to create material entry:', materialError)
+            // Don't fail the entire submission if material insert fails
+          }
+        }
+      }
+
       // Log CREATE action for audit trail
       try {
         console.log('[AUDIT] Creating bulk audit entry for time entry:', timeEntry.id)

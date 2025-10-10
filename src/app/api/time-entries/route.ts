@@ -89,6 +89,50 @@ export const GET = withRBAC({
       [...params, limit]
     )
 
+    // Fetch materials for all time entries
+    const timeEntryIds = timeEntriesResult.rows.map(e => e.id)
+    let materialsMap: Record<string, any[]> = {}
+
+    if (timeEntryIds.length > 0) {
+      const materialsResult = await query(
+        `SELECT tem.*, m.code, m.name, m.unit, m.category
+         FROM "TimeEntryMaterial" tem
+         LEFT JOIN "Material" m ON tem."materialId" = m.id
+         WHERE tem."timeEntryId" = ANY($1)
+         ORDER BY tem."createdAt" ASC`,
+        [timeEntryIds]
+      )
+
+      // Group materials by time entry ID
+      materialsResult.rows.forEach(material => {
+        if (!materialsMap[material.timeEntryId]) {
+          materialsMap[material.timeEntryId] = []
+        }
+        const materialData = {
+          id: material.id,
+          materialId: material.materialId,
+          quantity: parseFloat(material.quantity),
+          notes: material.notes,
+          offTruck: material.offTruck,
+          packingSlipUrl: material.packingSlipUrl,
+          // Include material details from join
+          materialCode: material.code,
+          materialName: material.name,
+          materialUnit: material.unit,
+          materialCategory: material.category,
+          createdAt: material.createdAt,
+          updatedAt: material.updatedAt
+        }
+        console.log('[GET MATERIALS] Material from DB:', {
+          id: material.id,
+          offTruckRaw: material.offTruck,
+          offTruckType: typeof material.offTruck,
+          offTruckInData: materialData.offTruck
+        })
+        materialsMap[material.timeEntryId].push(materialData)
+      })
+    }
+
     // Transform data for frontend
     const transformedEntries = timeEntriesResult.rows.map(entry => {
       const duration = entry.endTime
@@ -130,6 +174,7 @@ export const GET = withRBAC({
         location: entry.location || null,
         jobDescription: entry.jobDescription || null,
         workDescription: entry.workDescription || null,
+        materials: materialsMap[entry.id] || [],
         estimatedPay: estimatedPay,
         calculatedHours: duration,
         description: entry.description,

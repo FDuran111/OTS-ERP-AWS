@@ -27,6 +27,19 @@ import {
 import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
 import HoursBreakdownDisplay from './HoursBreakdownDisplay'
 
+interface Material {
+  id: string
+  materialId: string
+  quantity: number
+  notes: string | null
+  offTruck: boolean
+  packingSlipUrl: string | null
+  materialCode: string
+  materialName: string
+  materialUnit: string
+  materialCategory: string
+}
+
 interface TimesheetEntry {
   id: string
   jobId: string
@@ -44,6 +57,7 @@ interface TimesheetEntry {
   jobDescription?: string // NEW - Specific job/area
   workDescription?: string // NEW - Detailed work description
   description?: string // Keep for backward compatibility
+  materials?: Material[] // NEW - Materials used
   status?: 'draft' | 'submitted' | 'approved' | 'rejected'
   submittedAt?: string
   submittedBy?: string
@@ -484,6 +498,21 @@ export default function WeeklyTimesheetDisplay({
                                     >
                                       ❌
                                     </Typography>
+                                  )
+                                }
+                                return null
+                              })()}
+                              {/* Materials indicator */}
+                              {(() => {
+                                const entry = entries.find(e => e.id === dayData.id)
+                                if (entry?.materials && entry.materials.length > 0) {
+                                  return (
+                                    <Chip
+                                      label={`${entry.materials.length} material${entry.materials.length > 1 ? 's' : ''}`}
+                                      size="small"
+                                      sx={{ fontSize: 9, height: 16 }}
+                                      color="info"
+                                    />
                                   )
                                 }
                                 return null

@@ -57,6 +57,27 @@ interface CategoryHours {
   doubleTimeTravel: string
 }
 
+interface MaterialOption {
+  id: string
+  code: string
+  name: string
+  description: string
+  unit: string
+  category: string
+  inStock: number
+}
+
+interface Material {
+  id: string // Temporary ID for UI tracking
+  materialId: string | null // Selected material from database
+  material: MaterialOption | null // Full material object
+  quantity: string
+  notes: string // Optional description/notes
+  offTruck: boolean
+  packingSlip: File | null
+  packingSlipUrl: string | null // URL/filename from database when editing
+}
+
 interface JobEntry {
   id: string // Temporary ID for UI tracking
   jobId: string | null
@@ -67,6 +88,7 @@ interface JobEntry {
   jobDescription: string // NEW - Specific job/area
   workDescription: string // NEW - Detailed work description
   description: string // Keep for backward compatibility
+  materials: Material[] // NEW - Materials used
 }
 
 interface MultiJobTimeEntryProps {
@@ -78,6 +100,7 @@ interface MultiJobTimeEntryProps {
 export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmployee, preselectedJob }: MultiJobTimeEntryProps) {
   const [jobs, setJobs] = useState<Job[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [materials, setMaterials] = useState<MaterialOption[]>([])
   const [selectedUser, setSelectedUser] = useState<User | null>(preselectedEmployee || null)
   const [date, setDate] = useState<Date>(preselectedJob?.date ? new Date(preselectedJob.date + 'T00:00:00') : new Date())
   const [entries, setEntries] = useState<JobEntry[]>([
@@ -103,7 +126,8 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       location: preselectedJob?.location || '',
       jobDescription: preselectedJob?.jobDescription || '',
       workDescription: preselectedJob?.workDescription || '',
-      description: preselectedJob?.description || '' // Keep for backward compat
+      description: preselectedJob?.description || '', // Keep for backward compat
+      materials: [] // Initialize empty materials array
     }
   ])
 
@@ -139,7 +163,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
   }, [preselectedEmployee])
 
   useEffect(() => {
-    if (preselectedJob && jobs.length > 0) {
+    if (preselectedJob && jobs.length > 0 && materials.length > 0) {
       // Find the full job object from the jobs list
       const fullJob = jobs.find(j => j.id === preselectedJob.jobId)
       if (fullJob) {
@@ -153,6 +177,46 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
           doubleTimeTravel: ''
         }
 
+        // Transform materials from database format to UI format
+        const transformedMaterials = (preselectedJob.materials || []).map((dbMaterial: any) => {
+          // Find the full material object from the materials list
+          let fullMaterial = materials.find(m => m.id === dbMaterial.materialId)
+
+          // If not found in materials list but we have material details from DB, construct it
+          if (!fullMaterial && dbMaterial.materialId) {
+            fullMaterial = {
+              id: dbMaterial.materialId,
+              code: dbMaterial.materialCode || '',
+              name: dbMaterial.materialName || '',
+              description: '',
+              unit: dbMaterial.materialUnit || '',
+              category: dbMaterial.materialCategory || '',
+              inStock: 0
+            }
+          }
+
+          const transformedMaterial = {
+            id: dbMaterial.id || `${Date.now()}-${Math.random()}`,
+            materialId: dbMaterial.materialId,
+            material: fullMaterial || null,
+            quantity: dbMaterial.quantity?.toString() || '',
+            notes: dbMaterial.notes || '',
+            offTruck: dbMaterial.offTruck ?? false, // Use ?? to preserve boolean false
+            packingSlip: null, // Don't load files on edit
+            packingSlipUrl: dbMaterial.packingSlipUrl || null // Load filename from DB
+          }
+
+          console.log('[EDIT] Transforming material:', {
+            dbMaterial,
+            fullMaterial,
+            materialId: dbMaterial.materialId,
+            offTruckFromDB: dbMaterial.offTruck,
+            offTruckTransformed: transformedMaterial.offTruck
+          })
+
+          return transformedMaterial
+        })
+
         setEntries([{
           id: preselectedJob.editingEntryId || '1',
           jobId: fullJob.id,
@@ -162,7 +226,8 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
           location: preselectedJob.location || '',
           jobDescription: preselectedJob.jobDescription || '',
           workDescription: preselectedJob.workDescription || '',
-          description: preselectedJob.description || ''
+          description: preselectedJob.description || '',
+          materials: transformedMaterials
         }])
         setDate(preselectedJob.date ? new Date(preselectedJob.date + 'T00:00:00') : new Date())
       }
@@ -172,7 +237,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
         fetchEntryStatus(preselectedJob.editingEntryId)
       }
     }
-  }, [preselectedJob, jobs])
+  }, [preselectedJob, jobs, materials])
 
   const fetchEntryStatus = async (entryId: string) => {
     try {
@@ -201,6 +266,10 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
         fetch('/api/jobs?status=estimate,scheduled,dispatched,in_progress', {
           headers: authHeaders,
           credentials: 'include'
+        }),
+        fetch('/api/materials?active=true', {
+          headers: authHeaders,
+          credentials: 'include'
         })
       ]
 
@@ -215,11 +284,19 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       }
 
       const responses = await Promise.all(requests)
-      const [jobsRes, usersRes] = responses
+      const [jobsRes, materialsRes, usersRes] = responses
 
       if (jobsRes.ok) {
         const jobsData = await jobsRes.json()
         setJobs(jobsData)
+      }
+
+      if (materialsRes && materialsRes.ok) {
+        const materialsData = await materialsRes.json()
+        console.log('Fetched materials:', materialsData)
+        setMaterials(materialsData)
+      } else {
+        console.error('Failed to fetch materials:', materialsRes?.status)
       }
 
       if (usersRes && usersRes.ok) {
@@ -249,7 +326,8 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       location: '',
       jobDescription: '',
       workDescription: '',
-      description: ''
+      description: '',
+      materials: []
     }
     setEntries([...entries, newEntry])
   }
@@ -309,6 +387,101 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       }
       return entry
     }))
+  }
+
+  // Material management functions
+  const addMaterial = (entryId: string) => {
+    setEntries(entries.map(entry => {
+      if (entry.id === entryId) {
+        const newMaterial: Material = {
+          id: `${Date.now()}-${Math.random()}`,
+          materialId: null,
+          material: null,
+          quantity: '',
+          notes: '',
+          offTruck: false,
+          packingSlip: null,
+          packingSlipUrl: null
+        }
+        return { ...entry, materials: [...entry.materials, newMaterial] }
+      }
+      return entry
+    }))
+  }
+
+  const removeMaterial = (entryId: string, materialId: string) => {
+    setEntries(entries.map(entry => {
+      if (entry.id === entryId) {
+        return { ...entry, materials: entry.materials.filter(m => m.id !== materialId) }
+      }
+      return entry
+    }))
+  }
+
+  const updateMaterial = (entryId: string, materialId: string, field: keyof Material, value: any) => {
+    setEntries(entries.map(entry => {
+      if (entry.id === entryId) {
+        return {
+          ...entry,
+          materials: entry.materials.map(material => {
+            if (material.id === materialId) {
+              // Special handling for material selection
+              if (field === 'material') {
+                return { ...material, material: value, materialId: value?.id || null }
+              }
+              return { ...material, [field]: value }
+            }
+            return material
+          })
+        }
+      }
+      return entry
+    }))
+  }
+
+  const uploadPackingSlip = async (entryId: string, materialId: string, file: File) => {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/materials/upload-packing-slip', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to upload file')
+      }
+
+      const result = await response.json()
+
+      // Update material with uploaded file info
+      setEntries(entries.map(entry => {
+        if (entry.id === entryId) {
+          return {
+            ...entry,
+            materials: entry.materials.map(material => {
+              if (material.id === materialId) {
+                return {
+                  ...material,
+                  packingSlip: file,
+                  packingSlipUrl: result.key // Store S3 key
+                }
+              }
+              return material
+            })
+          }
+        }
+        return entry
+      }))
+
+      return result
+    } catch (error: any) {
+      console.error('Error uploading packing slip:', error)
+      setError(error.message || 'Failed to upload packing slip')
+      throw error
+    }
   }
 
   const calculateTotalHours = () => {
@@ -385,6 +558,8 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       if (preselectedJob?.editingEntryId && entries.length === 1) {
         // Update existing entry
         const entry = entries[0]
+        console.log('[UPDATE] Updating time entry with materials:', entry.materials)
+
         const response = await fetch(`/api/time-entries/${preselectedJob.editingEntryId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -397,6 +572,13 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
             jobDescription: entry.job?.title || entry.jobDescription || null, // Auto-populate from job
             workDescription: entry.workDescription,
             description: entry.description || `Work performed on ${entry.job!.jobNumber}`, // Keep for backward compat
+            materials: entry.materials.map(material => ({
+              materialId: material.materialId,
+              quantity: material.quantity,
+              notes: material.notes,
+              offTruck: material.offTruck,
+              packingSlipUrl: material.packingSlipUrl || null // Use S3 key from upload
+            }))
           }),
         })
 
@@ -425,7 +607,16 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
           jobDescription: entry.job?.title || entry.jobDescription || null, // Auto-populate from job
           workDescription: entry.workDescription,
           description: entry.description || `Work performed on ${entry.job!.jobNumber}`, // Keep for backward compat
+          materials: entry.materials.map(material => ({
+            materialId: material.materialId,
+            quantity: material.quantity,
+            notes: material.notes,
+            offTruck: material.offTruck,
+            packingSlip: material.packingSlip
+          }))
         }))
+
+        console.log('Submitting time entries with materials:', timeEntries)
 
         const response = await fetch('/api/time-entries/bulk', {
           method: 'POST',
@@ -465,7 +656,8 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
         location: '',
         jobDescription: '',
         workDescription: '',
-        description: ''
+        description: '',
+        materials: []
       }])
       setDate(new Date())
       if (!preselectedEmployee && !isAdmin) {
@@ -763,6 +955,161 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                     error={!entry.workDescription}
                     helperText={!entry.workDescription ? "Work description is required" : ""}
                   />
+                </Box>
+
+                {/* MATERIALS SECTION */}
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+                    Materials Used
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Add any materials used for this job (optional)
+                  </Typography>
+
+                  {entry.materials.map((material) => (
+                    <Paper key={material.id} sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}>
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                        {/* Material Selection */}
+                        <Autocomplete
+                          options={materials}
+                          value={material.material}
+                          onChange={(_, newValue) => updateMaterial(entry.id, material.id, 'material', newValue)}
+                          getOptionLabel={(option) => `${option.code} - ${option.name}`}
+                          renderOption={(props, option) => {
+                            const { key, ...otherProps } = props as any
+                            return (
+                              <Box component="li" key={key} {...otherProps}>
+                                <Box>
+                                  <Typography variant="body2">{option.code} - {option.name}</Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {option.category} | {option.unit} | In Stock: {option.inStock}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            )
+                          }}
+                          sx={{ flex: 1, minWidth: 250 }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="Material"
+                              placeholder="Select material..."
+                            />
+                          )}
+                        />
+
+                        {/* Quantity */}
+                        <TextField
+                          label="Quantity"
+                          type="number"
+                          value={material.quantity}
+                          onChange={(e) => updateMaterial(entry.id, material.id, 'quantity', e.target.value)}
+                          sx={{ width: 120 }}
+                          inputProps={{ min: 0, step: 0.01 }}
+                        />
+
+                        {/* Off Truck Checkbox */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', pt: 1 }}>
+                          <input
+                            type="checkbox"
+                            checked={material.offTruck}
+                            onChange={(e) => updateMaterial(entry.id, material.id, 'offTruck', e.target.checked)}
+                            id={`offTruck-${material.id}`}
+                            style={{ marginRight: 8 }}
+                          />
+                          <label htmlFor={`offTruck-${material.id}`} style={{ cursor: 'pointer' }}>
+                            Off Truck
+                          </label>
+                        </Box>
+
+                        {/* Remove Material Button */}
+                        <Button
+                          color="error"
+                          onClick={() => removeMaterial(entry.id, material.id)}
+                          sx={{ mt: 1 }}
+                        >
+                          Remove
+                        </Button>
+                      </Box>
+
+                      {/* Notes (Optional) */}
+                      <Box sx={{ mt: 2 }}>
+                        <TextField
+                          fullWidth
+                          label="Notes (Optional)"
+                          value={material.notes}
+                          onChange={(e) => updateMaterial(entry.id, material.id, 'notes', e.target.value)}
+                          placeholder="Add any additional notes about this material..."
+                          multiline
+                          rows={2}
+                        />
+                      </Box>
+
+                      {/* Packing Slip Upload */}
+                      <Box sx={{ mt: 2 }}>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              try {
+                                await uploadPackingSlip(entry.id, material.id, file)
+                                setSuccess('Packing slip uploaded successfully')
+                                setTimeout(() => setSuccess(null), 3000)
+                              } catch (error) {
+                                // Error is already set in uploadPackingSlip
+                              }
+                            }
+                          }}
+                          id={`packingSlip-${material.id}`}
+                          style={{ display: 'none' }}
+                        />
+                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => document.getElementById(`packingSlip-${material.id}`)?.click()}
+                          >
+                            {(material.packingSlip || material.packingSlipUrl) ? 'Change Packing Slip' : 'Upload Packing Slip'}
+                          </Button>
+                          {(material.packingSlip || material.packingSlipUrl) && (
+                            <Typography
+                              variant="body2"
+                              color="primary"
+                              sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+                              onClick={async () => {
+                                if (material.packingSlipUrl) {
+                                  try {
+                                    const response = await fetch(`/api/materials/view-packing-slip?key=${encodeURIComponent(material.packingSlipUrl)}`)
+                                    const data = await response.json()
+                                    if (data.url) {
+                                      window.open(data.url, '_blank')
+                                    }
+                                  } catch (error) {
+                                    console.error('Error opening file:', error)
+                                    setError('Failed to open file')
+                                  }
+                                }
+                              }}
+                            >
+                              📎 {material.packingSlip ? material.packingSlip.name : material.packingSlipUrl?.split('/').pop()}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </Paper>
+                  ))}
+
+                  {/* Add Material Button */}
+                  <Button
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={() => addMaterial(entry.id)}
+                    sx={{ mt: 1 }}
+                  >
+                    Add Material
+                  </Button>
                 </Box>
               </Paper>
             ))}

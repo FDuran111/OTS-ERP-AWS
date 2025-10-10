@@ -18,13 +18,15 @@ export async function GET(
 ) {
   const resolvedParams = await params
   try {
-    const result = await query(
-      `SELECT 
+    // Query 1: Get materials from MaterialUsage table (manual recordings)
+    const manualUsageResult = await query(
+      `SELECT
         mu.*,
         m.code as "materialCode",
         m.name as "materialName",
         m.unit as "materialUnit",
         m.category as "materialCategory",
+        m.cost as "materialCost",
         jp.name as "phaseName",
         u.name as "userName"
       FROM "MaterialUsage" mu
@@ -36,7 +38,29 @@ export async function GET(
       [resolvedParams.id]
     )
 
-    const materialUsage = result.rows.map(row => ({
+    // Query 2: Get materials from TimeEntryMaterial table (from time entries)
+    const timeEntryMaterialResult = await query(
+      `SELECT
+        tem.*,
+        m.code as "materialCode",
+        m.name as "materialName",
+        m.unit as "materialUnit",
+        m.category as "materialCategory",
+        m.cost as "materialCost",
+        u.name as "userName",
+        te.date as "timeEntryDate",
+        te."userId"
+      FROM "TimeEntryMaterial" tem
+      INNER JOIN "TimeEntry" te ON tem."timeEntryId" = te.id
+      INNER JOIN "Material" m ON tem."materialId" = m.id
+      LEFT JOIN "User" u ON te."userId" = u.id
+      WHERE te."jobId" = $1
+      ORDER BY te.date DESC, tem."createdAt" DESC`,
+      [resolvedParams.id]
+    )
+
+    // Transform manual usage records
+    const manualUsage = manualUsageResult.rows.map(row => ({
       id: row.id,
       jobId: row.jobId,
       materialId: row.materialId,
@@ -54,9 +78,39 @@ export async function GET(
       usageType: row.usageType || 'CONSUMED',
       notes: row.notes,
       usedAt: row.usedAt,
+      source: 'manual',
       createdAt: row.createdAt,
       updatedAt: row.updatedAt || row.createdAt,
     }))
+
+    // Transform time entry materials
+    const timeEntryMaterials = timeEntryMaterialResult.rows.map(row => ({
+      id: row.id,
+      jobId: resolvedParams.id,
+      materialId: row.materialId,
+      materialCode: row.materialCode,
+      materialName: row.materialName,
+      materialUnit: row.materialUnit,
+      materialCategory: row.materialCategory,
+      phaseId: null,
+      phaseName: null,
+      userId: row.userId,
+      userName: row.userName,
+      quantityUsed: parseFloat(row.quantity || 0),
+      unitCost: parseFloat(row.materialCost || 0),
+      totalCost: parseFloat(row.quantity || 0) * parseFloat(row.materialCost || 0),
+      usageType: row.offTruck ? 'OFF_TRUCK' : 'TIME_ENTRY',
+      notes: row.notes,
+      usedAt: row.timeEntryDate,
+      source: 'time_entry',
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt || row.createdAt,
+    }))
+
+    // Combine both sources
+    const materialUsage = [...manualUsage, ...timeEntryMaterials].sort((a, b) =>
+      new Date(b.usedAt).getTime() - new Date(a.usedAt).getTime()
+    )
 
     // Calculate totals by material
     const materialSummary = materialUsage.reduce((acc, usage) => {

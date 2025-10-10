@@ -572,6 +572,58 @@ export async function PUT(
       ]
     )
 
+    // Handle materials update if provided
+    if (body.materials !== undefined) {
+      try {
+        console.log('[MATERIALS UPDATE] Processing materials for time entry:', resolvedParams.id)
+
+        // Delete existing materials for this time entry
+        await query(
+          `DELETE FROM "TimeEntryMaterial" WHERE "timeEntryId" = $1`,
+          [resolvedParams.id]
+        )
+
+        // Insert new materials
+        if (Array.isArray(body.materials) && body.materials.length > 0) {
+          for (const material of body.materials) {
+            if (!material.materialId || !material.quantity) {
+              console.log('[MATERIALS UPDATE] Skipping material - missing materialId or quantity')
+              continue
+            }
+
+            console.log('[MATERIALS UPDATE] Inserting material:', {
+              materialId: material.materialId,
+              quantity: material.quantity,
+              notes: material.notes,
+              offTruck: material.offTruck
+            })
+
+            await query(
+              `INSERT INTO "TimeEntryMaterial" (
+                id, "timeEntryId", "materialId", quantity, notes, "offTruck", "packingSlipUrl", "createdAt", "updatedAt"
+              ) VALUES (
+                gen_random_uuid(), $1, $2, $3, $4, $5, $6, NOW(), NOW()
+              )`,
+              [
+                resolvedParams.id,
+                material.materialId,
+                parseFloat(material.quantity) || 0,
+                material.notes || null,
+                material.offTruck || false,
+                material.packingSlipUrl || null
+              ]
+            )
+          }
+          console.log('[MATERIALS UPDATE] Successfully updated materials')
+        } else {
+          console.log('[MATERIALS UPDATE] No materials to insert')
+        }
+      } catch (materialError) {
+        console.error('[MATERIALS UPDATE] Failed to update materials:', materialError)
+        // Don't fail the entire update if materials fail
+      }
+    }
+
     if (updateResult.rows.length === 0) {
       return NextResponse.json(
         { error: 'Time entry not found' },

@@ -68,6 +68,7 @@ interface MaterialUsage {
   usageType: string
   notes?: string
   usedAt: string
+  source?: 'manual' | 'time_entry'
   createdAt: string
   updatedAt: string
 }
@@ -190,7 +191,17 @@ export default function MaterialUsageTracker({ jobId, phases = [] }: MaterialUsa
       case 'WASTED': return 'error'
       case 'RETURNED': return 'success'
       case 'TRANSFERRED': return 'info'
+      case 'TIME_ENTRY': return 'secondary'
+      case 'OFF_TRUCK': return 'warning'
       default: return 'default'
+    }
+  }
+
+  const getUsageTypeLabel = (type: string) => {
+    switch (type) {
+      case 'TIME_ENTRY': return 'Time Entry'
+      case 'OFF_TRUCK': return 'Off Truck'
+      default: return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
     }
   }
 
@@ -368,12 +379,22 @@ export default function MaterialUsageTracker({ jobId, phases = [] }: MaterialUsa
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip
-                          label={item.usageType}
-                          size="small"
-                          color={getUsageTypeColor(item.usageType) as any}
-                          variant="outlined"
-                        />
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Chip
+                            label={getUsageTypeLabel(item.usageType)}
+                            size="small"
+                            color={getUsageTypeColor(item.usageType) as any}
+                            variant="outlined"
+                          />
+                          {item.source === 'time_entry' && (
+                            <Chip
+                              label="From Time Entry"
+                              size="small"
+                              variant="filled"
+                              sx={{ bgcolor: 'info.light', color: 'info.contrastText' }}
+                            />
+                          )}
+                        </Stack>
                       </TableCell>
                       <TableCell align="right">
                         {formatCurrency(item.totalCost)}
