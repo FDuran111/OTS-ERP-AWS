@@ -3,9 +3,8 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 // Initialize S3 client
 const s3Client = new S3Client({
-  region: process.env.AWS_S3_REGION || 'us-east-2',
-  // In production, credentials come from IAM role
-  // In development, use AWS CLI credentials or environment variables
+  region: process.env.AWS_S3_REGION || process.env.AWS_REGION || 'us-east-1',
+  // Credentials must be explicitly provided
   ...(process.env.AWS_ACCESS_KEY_ID && {
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -14,8 +13,13 @@ const s3Client = new S3Client({
   }),
 })
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'ots-erp-prod-uploads'
-const MAX_FILE_SIZE = parseInt(process.env.AWS_S3_MAX_FILE_SIZE || '10485760') // 10MB default
+// Bucket name must be explicitly configured - no production fallback
+const BUCKET_NAME = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET
+if (!BUCKET_NAME) {
+  console.warn('AWS_S3_BUCKET not configured. S3 storage will not be available.')
+}
+
+const MAX_FILE_SIZE = parseInt(process.env.AWS_S3_MAX_FILE_SIZE || process.env.MAX_FILE_SIZE || '10485760') // 10MB default
 
 export interface UploadParams {
   key: string
@@ -35,6 +39,10 @@ export interface FileUploadResult {
  * Upload a file to S3
  */
 export async function uploadToS3(params: UploadParams): Promise<FileUploadResult> {
+  if (!BUCKET_NAME) {
+    throw new Error('S3 bucket not configured. Set AWS_S3_BUCKET environment variable.')
+  }
+
   const { key, body, contentType, metadata } = params
 
   const command = new PutObjectCommand({
@@ -63,6 +71,10 @@ export async function uploadToS3(params: UploadParams): Promise<FileUploadResult
  * Get a presigned URL for downloading a file
  */
 export async function getPresignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
+  if (!BUCKET_NAME) {
+    throw new Error('S3 bucket not configured. Set AWS_S3_BUCKET environment variable.')
+  }
+
   const command = new GetObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
@@ -79,6 +91,10 @@ export async function getPresignedUploadUrl(
   contentType: string,
   expiresIn: number = 3600
 ): Promise<string> {
+  if (!BUCKET_NAME) {
+    throw new Error('S3 bucket not configured. Set AWS_S3_BUCKET environment variable.')
+  }
+
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
@@ -92,6 +108,10 @@ export async function getPresignedUploadUrl(
  * Delete a file from S3
  */
 export async function deleteFromS3(key: string): Promise<void> {
+  if (!BUCKET_NAME) {
+    throw new Error('S3 bucket not configured. Set AWS_S3_BUCKET environment variable.')
+  }
+
   const command = new DeleteObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,

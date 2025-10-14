@@ -3,44 +3,45 @@ import type { UserRole } from './auth'
 
 /**
  * Database Driver Configuration
- * Supports both Supabase (via DATABASE_URL) and AWS RDS (via explicit config)
+ * Supports PostgreSQL via DATABASE_URL
  */
-const DB_DRIVER = (process.env.DB_DRIVER || 'SUPABASE').toUpperCase()
+const DB_DRIVER = (process.env.DB_DRIVER || 'POSTGRESQL').toUpperCase()
 
 // Create pool based on driver configuration
 function createPool(): Pool {
   if (DB_DRIVER === 'RDS') {
     // AWS RDS configuration with explicit parameters
-    // Support both RDS_ENDPOINT (direct) and RDS_PROXY_ENDPOINT
     const rdsHost = process.env.RDS_ENDPOINT || process.env.RDS_PROXY_ENDPOINT
     if (!rdsHost) {
       throw new Error('RDS_ENDPOINT or RDS_PROXY_ENDPOINT is required when DB_DRIVER=RDS')
     }
-    
+
+    if (!process.env.RDS_DB) {
+      throw new Error('RDS_DB is required when DB_DRIVER=RDS')
+    }
+
     return new Pool({
       host: rdsHost,
       port: 5432,
-      database: process.env.RDS_DB || 'ortmeier',
+      database: process.env.RDS_DB,
       user: process.env.RDS_USER,
       password: process.env.RDS_PASSWORD,
-      ssl: { rejectUnauthorized: false }, // Set to false for public RDS
+      ssl: { rejectUnauthorized: false },
       max: 10,
-      idleTimeoutMillis: 30000, // 30 seconds for direct RDS
-      connectionTimeoutMillis: 5000, // 5 seconds for RDS
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
     })
   } else {
-    // Supabase/Standard PostgreSQL configuration
+    // Standard PostgreSQL configuration (local or remote)
     if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL is required when DB_DRIVER=SUPABASE')
+      throw new Error('DATABASE_URL is required')
     }
-    
+
     return new Pool({
       connectionString: process.env.DATABASE_URL,
-      // Simple connection settings for Supabase
       max: 10,
-      idleTimeoutMillis: 30000, // 30s for Supabase
-      connectionTimeoutMillis: 30000, // 30s for Supabase
-      // Add retry logic for DNS issues
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 30000,
       query_timeout: 60000,
       statement_timeout: 60000,
     })

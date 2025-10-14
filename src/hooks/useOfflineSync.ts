@@ -34,9 +34,9 @@ export interface UseOfflineSyncResult {
 }
 
 const STORAGE_KEYS = {
-  OFFLINE_QUEUE: 'ortmeier_offline_queue',
-  OFFLINE_DATA: 'ortmeier_offline_data',
-  LAST_SYNC: 'ortmeier_last_sync'
+  OFFLINE_QUEUE: 'erp_offline_queue',
+  OFFLINE_DATA: 'erp_offline_data',
+  LAST_SYNC: 'erp_last_sync'
 }
 
 export function useOfflineSync(): UseOfflineSyncResult {

@@ -77,9 +77,10 @@ class S3StorageAdapter implements StorageAdapter {
   }
 }
 
-// Export singleton based on environment
+// Export singleton based on STORAGE_PROVIDER environment variable
+// Default to local storage for safety
 export const storage: StorageAdapter =
-  process.env.NODE_ENV === 'production' || process.env.USE_S3 === 'true'
+  process.env.STORAGE_PROVIDER === 's3'
     ? new S3StorageAdapter()
     : new LocalStorageAdapter()
 

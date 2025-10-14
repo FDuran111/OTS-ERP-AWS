@@ -5,13 +5,13 @@ import LayoutDebugger from "@/components/debug/LayoutDebugger";
 import "./globals.compiled.css";
 
 export const metadata: Metadata = {
-  title: "Ortmeier Technical Service - Job Management",
-  description: "Job management and scheduling platform for electrical contractors",
+  title: "ERP Service - Business Management Platform",
+  description: "Comprehensive ERP system for job management, scheduling, and business operations",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Ortmeier Technical Service",
+    title: "ERP Service",
   },
   formatDetection: {
     telephone: false,

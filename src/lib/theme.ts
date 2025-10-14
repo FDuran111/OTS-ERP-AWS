@@ -4,7 +4,7 @@ import { createTheme } from '@mui/material/styles'
 
 declare module '@mui/material/styles' {
   interface Palette {
-    electrical: {
+    custom: {
       warning: string
       success: string
       urgent: string
@@ -12,7 +12,7 @@ declare module '@mui/material/styles' {
     }
   }
   interface PaletteOptions {
-    electrical?: {
+    custom?: {
       warning?: string
       success?: string
       urgent?: string
@@ -34,16 +34,16 @@ export const theme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#E53E3E', // Ortmeier logo red
-      light: '#FC8181',
-      dark: '#C53030',
+      main: '#1976d2', // Professional blue
+      light: '#42a5f5',
+      dark: '#1565c0',
       contrastText: '#FFFFFF'
     },
     secondary: {
-      main: '#FFF5F5', // Light red/white accent
-      light: '#FFFFFF',
-      dark: '#FED7D7',
-      contrastText: '#1A202C'
+      main: '#9c27b0', // Professional purple
+      light: '#ba68c8',
+      dark: '#7b1fa2',
+      contrastText: '#FFFFFF'
     },
     background: {
       default: '#1A202C', // Dark navy background
@@ -53,25 +53,25 @@ export const theme = createTheme({
       primary: '#FFFFFF',
       secondary: '#CBD5E0',
     },
-    // Custom electrical contractor colors
-    electrical: {
-      warning: '#F6E05E', // Safety yellow
-      success: '#68D391', // Completion green  
-      urgent: '#E53E3E',  // Ortmeier red for priority
-      neutral: '#A0AEC0', // Gray for secondary info
+    // Custom status colors
+    custom: {
+      warning: '#F6E05E', // Warning yellow
+      success: '#68D391', // Success green
+      urgent: '#f44336',  // Urgent red
+      neutral: '#A0AEC0', // Neutral gray
     },
     divider: '#4A5568',
     error: {
-      main: '#FC8181',
+      main: '#f44336',
     },
     warning: {
-      main: '#F6E05E',
+      main: '#ff9800',
     },
     info: {
-      main: '#63B3ED',
+      main: '#2196f3',
     },
     success: {
-      main: '#68D391',
+      main: '#4caf50',
     },
   },
   typography: {
@@ -228,9 +228,9 @@ export const theme = createTheme({
           },
         },
         containedPrimary: {
-          backgroundColor: '#E53E3E',
+          backgroundColor: '#1976d2',
           '&:hover': {
-            backgroundColor: '#C53030',
+            backgroundColor: '#1565c0',
           }
         }
       }
@@ -293,7 +293,7 @@ export const theme = createTheme({
               borderColor: '#718096',
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#E53E3E',
+              borderColor: '#1976d2',
             },
           },
           '& input': {
@@ -313,12 +313,12 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           '&:hover': {
-            backgroundColor: 'rgba(229, 62, 62, 0.08)',
+            backgroundColor: 'rgba(25, 118, 210, 0.08)',
           },
           '&.Mui-selected': {
-            backgroundColor: 'rgba(229, 62, 62, 0.12)',
+            backgroundColor: 'rgba(25, 118, 210, 0.12)',
             '&:hover': {
-              backgroundColor: 'rgba(229, 62, 62, 0.16)',
+              backgroundColor: 'rgba(25, 118, 210, 0.16)',
             },
           },
         },

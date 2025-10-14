@@ -76,7 +76,7 @@ export function generateCustomerReportPDF(data: CustomerReportData) {
   // Header
   doc.setFontSize(20)
   doc.setFont('helvetica', 'bold')
-  doc.text('Ortmeier Technical Service', 105, yPosition, { align: 'center' })
+  doc.text('{{COMPANY_NAME}}', 105, yPosition, { align: 'center' })
   yPosition += 10
 
   doc.setFontSize(16)
