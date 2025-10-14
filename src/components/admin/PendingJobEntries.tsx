@@ -13,28 +13,17 @@ import {
   Typography,
   Button,
   Chip,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   CircularProgress,
   Alert,
 } from '@mui/material'
 import {
   Check,
-  Close,
-  Visibility,
 } from '@mui/icons-material'
 import { format } from 'date-fns'
 
 interface PendingEntry {
   id: string
+  jobId: string
   userId: string
   userName: string
   userEmail: string
@@ -50,76 +39,74 @@ interface PendingEntry {
 
 export default function PendingJobEntries() {
   const [pendingEntries, setPendingEntries] = useState<PendingEntry[]>([])
+  const [pendingJobs, setPendingJobs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [approvalDialog, setApprovalDialog] = useState<{
-    open: boolean
-    entry: PendingEntry | null
-    action: 'approve' | 'reject'
-  }>({ open: false, entry: null, action: 'approve' })
-  const [selectedJobId, setSelectedJobId] = useState('')
-  const [existingJobs, setExistingJobs] = useState<any[]>([])
 
   useEffect(() => {
     fetchPendingEntries()
-    fetchExistingJobs()
   }, [])
 
   const fetchPendingEntries = async () => {
     try {
-      const response = await fetch('/api/time-entries/new-job?status=PENDING')
-      if (response.ok) {
-        const data = await response.json()
-        setPendingEntries(data)
+      // First, fetch pending jobs to get their IDs
+      const pendingJobsResponse = await fetch('/api/jobs/pending', {
+        credentials: 'include'
+      })
+
+      if (!pendingJobsResponse.ok) {
+        setPendingEntries([])
+        setPendingJobs([])
+        setLoading(false)
+        return
+      }
+
+      const jobs = await pendingJobsResponse.json()
+      setPendingJobs(jobs)
+      const pendingJobIds = new Set(jobs.map((job: any) => job.id))
+
+      // Then fetch all time entries
+      const entriesResponse = await fetch('/api/time-entries?status=draft', {
+        credentials: 'include'
+      })
+
+      if (entriesResponse.ok) {
+        const allEntries = await entriesResponse.json()
+        // Filter to only show entries linked to pending jobs
+        const filteredEntries = allEntries.filter((entry: any) =>
+          entry.jobId && pendingJobIds.has(entry.jobId)
+        )
+        setPendingEntries(filteredEntries)
       } else {
-        // Handle error silently - table doesn't exist yet
         setPendingEntries([])
       }
     } catch (error) {
-      // Handle error silently - table doesn't exist yet
+      console.error('Error fetching pending entries:', error)
       setPendingEntries([])
+      setPendingJobs([])
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchExistingJobs = async () => {
+  const handleApproveJob = async (jobId: string) => {
     try {
-      const response = await fetch('/api/jobs')
-      if (response.ok) {
-        const data = await response.json()
-        setExistingJobs(data)
-      }
-    } catch (error) {
-      console.error('Error fetching jobs:', error)
-    }
-  }
-
-  const handleAction = (entry: PendingEntry, action: 'approve' | 'reject') => {
-    setApprovalDialog({ open: true, entry, action })
-    setSelectedJobId('')
-  }
-
-  const confirmAction = async () => {
-    if (!approvalDialog.entry) return
-
-    try {
-      const response = await fetch('/api/time-entries/new-job', {
+      const response = await fetch(`/api/jobs/${jobId}/approve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: approvalDialog.entry.id,
-          status: approvalDialog.action === 'approve' ? 'APPROVED' : 'REJECTED',
-          jobId: approvalDialog.action === 'approve' ? selectedJobId : null,
-        }),
+        credentials: 'include',
+        body: JSON.stringify({ newStatus: 'SCHEDULED' })
       })
 
       if (response.ok) {
-        // Remove from pending list
-        setPendingEntries(prev => prev.filter(e => e.id !== approvalDialog.entry?.id))
-        setApprovalDialog({ open: false, entry: null, action: 'approve' })
+        alert('✅ Job approved! Time entries are now visible.')
+        // Refresh the list
+        fetchPendingEntries()
+      } else {
+        alert('Failed to approve job. Please try again.')
       }
     } catch (error) {
-      console.error('Error processing entry:', error)
+      console.error('Error approving job:', error)
+      alert('Failed to approve job. Please try again.')
     }
   }
 
@@ -142,134 +129,73 @@ export default function PendingJobEntries() {
           No pending new job entries to review.
         </Alert>
       ) : (
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Employee</TableCell>
-                <TableCell>Job Number</TableCell>
-                <TableCell>Customer</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Hours</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell>Submitted</TableCell>
-                <TableCell align="center">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {pendingEntries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell>
-                    <Typography variant="body2">{entry.userName}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {entry.userEmail}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={entry.jobNumber} size="small" />
-                  </TableCell>
-                  <TableCell>{entry.customer}</TableCell>
-                  <TableCell>
-                    {format(new Date(entry.date + 'T00:00:00'), 'MMM d, yyyy')}
-                  </TableCell>
-                  <TableCell>{entry.hours}</TableCell>
-                  <TableCell>
-                    <Typography variant="caption" sx={{
-                      maxWidth: 200,
-                      display: 'block',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {entry.workDescription || entry.description || '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(entry.createdAt), 'MMM d, h:mm a')}
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      color="success"
-                      onClick={() => handleAction(entry, 'approve')}
-                      title="Approve"
-                    >
-                      <Check />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      onClick={() => handleAction(entry, 'reject')}
-                      title="Reject"
-                    >
-                      <Close />
-                    </IconButton>
-                  </TableCell>
+        <>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            These time entries are linked to jobs with PENDING status. Approve the associated job to make these entries visible in time tracking.
+          </Alert>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Employee</TableCell>
+                  <TableCell>Job Number</TableCell>
+                  <TableCell>Customer</TableCell>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Hours</TableCell>
+                  <TableCell>Description</TableCell>
+                  <TableCell>Submitted</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {pendingEntries.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>
+                      <Typography variant="body2">{entry.userName}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {entry.userEmail}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip label={entry.jobNumber} size="small" color="warning" />
+                    </TableCell>
+                    <TableCell>{entry.customer}</TableCell>
+                    <TableCell>
+                      {format(new Date(entry.date + 'T00:00:00'), 'MMM d, yyyy')}
+                    </TableCell>
+                    <TableCell>{entry.hours} hrs</TableCell>
+                    <TableCell>
+                      <Typography variant="caption" sx={{
+                        maxWidth: 200,
+                        display: 'block',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {entry.workDescription || entry.description || '-'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(entry.createdAt), 'MMM d, h:mm a')}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        startIcon={<Check />}
+                        onClick={() => handleApproveJob(entry.jobId)}
+                      >
+                        Approve Job
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
       )}
-
-      {/* Approval Dialog */}
-      <Dialog open={approvalDialog.open} onClose={() => setApprovalDialog({ ...approvalDialog, open: false })}>
-        <DialogTitle>
-          {approvalDialog.action === 'approve' ? 'Approve' : 'Reject'} New Job Entry
-        </DialogTitle>
-        <DialogContent>
-          {approvalDialog.entry && (
-            <Box sx={{ pt: 2 }}>
-              <Typography variant="body2" gutterBottom>
-                <strong>Employee:</strong> {approvalDialog.entry.userName}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                <strong>Job Number:</strong> {approvalDialog.entry.jobNumber}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                <strong>Customer:</strong> {approvalDialog.entry.customer}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                <strong>Date:</strong> {format(new Date(approvalDialog.entry.date + 'T00:00:00'), 'MMM d, yyyy')}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                <strong>Hours:</strong> {approvalDialog.entry.hours}
-              </Typography>
-
-              {approvalDialog.action === 'approve' && (
-                <FormControl fullWidth sx={{ mt: 2 }}>
-                  <InputLabel>Select Existing Job or Create New</InputLabel>
-                  <Select
-                    value={selectedJobId}
-                    onChange={(e) => setSelectedJobId(e.target.value)}
-                    label="Select Existing Job or Create New"
-                  >
-                    <MenuItem value="CREATE_NEW">
-                      <em>Create New Job</em>
-                    </MenuItem>
-                    {existingJobs.map((job) => (
-                      <MenuItem key={job.id} value={job.id}>
-                        {job.jobNumber} - {job.title}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setApprovalDialog({ ...approvalDialog, open: false })}>
-            Cancel
-          </Button>
-          <Button
-            onClick={confirmAction}
-            color={approvalDialog.action === 'approve' ? 'success' : 'error'}
-            variant="contained"
-            disabled={approvalDialog.action === 'approve' && !selectedJobId}
-          >
-            {approvalDialog.action === 'approve' ? 'Approve' : 'Reject'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Paper>
   )
 }

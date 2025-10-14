@@ -56,12 +56,18 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (authLoading) return // Wait for auth to complete
-    
+
     if (!user) {
       router.push('/login')
       return
     }
-    
+
+    // Restrict access to OWNER_ADMIN and FOREMAN only
+    if (user.role === 'EMPLOYEE') {
+      router.push('/dashboard')
+      return
+    }
+
     fetchUpcomingReminders()
   }, [user, authLoading, router])
 

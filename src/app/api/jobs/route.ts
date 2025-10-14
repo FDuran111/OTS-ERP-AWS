@@ -99,6 +99,7 @@ export const GET = withRBAC({
     const transformedJobs = jobsResult.rows.map(job => ({
       id: job.id,
       jobNumber: job.jobNumber,
+      customerPO: job.customerPO,
       title: job.description,
       customer: job.companyName || `${job.firstName} ${job.lastName}`,
       customerId: job.customerId,
@@ -154,7 +155,7 @@ const createJobSchema = z.object({
   estimatedHours: z.number().optional(),
   estimatedCost: z.number().optional(),
   assignedUserIds: z.array(z.string()).optional(),
-  status: z.enum(['ESTIMATE', 'SCHEDULED']).optional(),
+  status: z.enum(['ESTIMATE', 'SCHEDULED', 'PENDING_APPROVAL']).optional(),
 })
 
 // POST create a new job
@@ -193,10 +194,10 @@ export const POST = withRBAC({
     // Create the job
     const jobResult = await query(
       `INSERT INTO "Job" (
-        id, "jobNumber", "customerId", type, division, category, description, status,
+        id, "jobNumber", "customerId", type, division, category, description, "customerPO", status,
         address, city, state, zip, "scheduledDate",
         "estimatedHours", "estimatedCost", "createdAt", "updatedAt"
-      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`,
       [
         jobNumber,
@@ -205,6 +206,7 @@ export const POST = withRBAC({
         data.division || 'LINE_VOLTAGE',
         data.category || null,
         data.description,
+        data.customerPO || null,
         data.status || 'ESTIMATE',
         data.address || null,
         data.city || null,

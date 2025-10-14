@@ -51,7 +51,6 @@ import {
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import LowStockNotification from '@/components/notifications/LowStockNotification'
-import EmployeeJobQuickAccess from '@/components/dashboard/EmployeeJobQuickAccess'
 import NewEmployeeJobs from '@/components/dashboard/NewEmployeeJobs'
 import CreateJobDialog from '@/components/jobs/CreateJobDialog'
 import RejectedEntriesCard from '@/components/dashboard/RejectedEntriesCard'
@@ -242,27 +241,6 @@ export default function DashboardPage() {
         color: colorMap[stat.color as keyof typeof colorMap] || '#E53E3E',
       }))
 
-      // Add Expected Hours card for employees
-      if (user?.role === 'EMPLOYEE') {
-        const expectedHours = statsData.recentJobs.reduce((total: number, job: any) => {
-          // Only count today's jobs
-          const jobDate = new Date(job.date || job.updatedAt)
-          const today = new Date()
-          if (jobDate.toDateString() === today.toDateString()) {
-            return total + (job.estimatedHours || 0)
-          }
-          return total
-        }, 0)
-
-        transformedStats.push({
-          title: 'Expected Hours',
-          value: expectedHours.toFixed(1),
-          change: 'Today\'s scheduled work',
-          icon: ScheduleIcon,
-          color: '#9c27b0', // Purple color for expected hours
-        })
-      }
-
       setStats(transformedStats)
       setRecentJobs(statsData.recentJobs)
 
@@ -300,62 +278,7 @@ export default function DashboardPage() {
   }
 
   // Quick action buttons for mobile and desktop
-  const quickActions = user.role === 'EMPLOYEE' ? (
-    <Stack 
-      direction={isMobile ? 'column' : 'row'} 
-      spacing={2} 
-      sx={{
-        width: { xs: '100%', md: 'auto' },
-        alignItems: { xs: 'stretch', md: 'center' }
-      }}
-    >
-      <Button
-        variant="contained"
-        startIcon={<WorkIcon />}
-        onClick={() => handleQuickAction(isMobile ? '/jobs/mobile' : '/jobs')}
-        sx={{
-          width: { xs: '100%', md: 'auto' },
-          minWidth: { xs: 'auto', md: '120px' },
-          backgroundColor: '#e14eca',
-          '&:hover': {
-            backgroundColor: '#d236b8',
-          },
-        }}
-        size={isMobile ? 'large' : 'medium'}
-      >
-        My Jobs
-      </Button>
-      <Button
-        variant="contained"
-        startIcon={<AddIcon />}
-        onClick={() => setCreateJobDialogOpen(true)}
-        sx={{
-          width: { xs: '100%', md: 'auto' },
-          minWidth: { xs: 'auto', md: '120px' },
-          backgroundColor: '#2ecc71',
-          '&:hover': {
-            backgroundColor: '#27ae60',
-          },
-        }}
-        size={isMobile ? 'large' : 'medium'}
-      >
-        Create Job
-      </Button>
-      <Button
-        variant="outlined"
-        startIcon={<AccessTime />}
-        onClick={() => handleQuickAction('/time')}
-        sx={{
-          width: { xs: '100%', md: 'auto' },
-          minWidth: { xs: 'auto', md: '140px' },
-          whiteSpace: 'nowrap'
-        }}
-        size={isMobile ? 'large' : 'medium'}
-      >
-        Time Clock
-      </Button>
-    </Stack>
-  ) : (
+  const quickActions = user.role === 'EMPLOYEE' ? null : (
     <Stack 
       direction={isMobile ? 'column' : 'row'} 
       spacing={2} 
@@ -422,13 +345,6 @@ export default function DashboardPage() {
         }
         actions={quickActions}
       >
-        {/* Employee Job Quick Access - Only for employees on mobile */}
-        {user.role === 'EMPLOYEE' && isMobile && (
-          <Box sx={{ mb: 3 }}>
-            <EmployeeJobQuickAccess userName={user.name} />
-          </Box>
-        )}
-
         {/* Low Stock Notification - Only for managers/admins */}
         {user.role !== 'EMPLOYEE' && (
           <Box sx={{ mb: 3 }}>
@@ -1057,22 +973,6 @@ export default function DashboardPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Create Job Dialog for Employees */}
-      {user?.role === 'EMPLOYEE' && (
-        <CreateJobDialog
-          open={createJobDialogOpen}
-          onClose={() => setCreateJobDialogOpen(false)}
-          onJobCreated={() => {
-            setCreateJobDialogOpen(false)
-            fetchDashboardData() // Refresh dashboard data
-            setSnackbar({
-              open: true,
-              message: 'Job created successfully! It will be sent for admin approval.',
-              severity: 'success'
-            })
-          }}
-        />
-      )}
 
       {/* Success/Error Snackbar */}
       <Snackbar

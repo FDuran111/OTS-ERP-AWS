@@ -1,182 +1,209 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
 import { query } from '@/lib/db'
-import { writeFile } from 'fs/promises'
-import { join } from 'path'
-import { mkdir } from 'fs/promises'
+import { storage } from '@/lib/storage-adapter'
+import sharp from 'sharp'
 
+// GET all photos for a time entry
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
-    const { id: entryId } = await context.params
-    const token = request.cookies.get('auth-token')?.value
-    
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const result = await query(
-      `SELECT 
-        tep.*,
-        u."firstName",
-        u."lastName"
-       FROM "TimeEntryPhoto" tep
-       LEFT JOIN "User" u ON tep."uploadedBy" = u.id
-       WHERE tep."timeEntryId" = $1
-       ORDER BY tep."uploadedAt" DESC`,
-      [entryId]
+      `SELECT * FROM "TimeEntryPhoto"
+       WHERE "timeEntryId" = $1
+       ORDER BY "uploadedAt" DESC`,
+      [resolvedParams.id]
     )
 
-    const photos = result.rows.map(row => ({
-      id: row.id,
-      photoUrl: row.photoUrl,
-      thumbnailUrl: row.thumbnailUrl,
-      caption: row.caption,
-      uploadedBy: `${row.firstName} ${row.lastName}`,
-      uploadedAt: row.uploadedAt,
-      fileSize: row.fileSize,
-      mimeType: row.mimeType,
-    }))
-
-    return NextResponse.json({ photos })
+    return NextResponse.json(result.rows)
   } catch (error) {
-    console.error('Get photos error:', error)
+    console.error('Error fetching photos:', error)
     return NextResponse.json(
-      { error: 'Failed to get photos' },
+      { error: 'Failed to fetch photos' },
       { status: 500 }
     )
   }
 }
 
+// POST upload a photo to a time entry
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
-    const { id: entryId } = await context.params
-    const token = request.cookies.get('auth-token')?.value
-    
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const userPayload = verifyToken(token)
-    const userId = userPayload.id
-
     const formData = await request.formData()
-    const file = formData.get('photo') as File
-    const caption = formData.get('caption') as string
+    const file = formData.get('file') as File
+    const caption = formData.get('caption') as string | null
+    const uploadedBy = formData.get('uploadedBy') as string
 
     if (!file) {
       return NextResponse.json(
-        { error: 'No photo provided' },
+        { error: 'No file provided' },
         { status: 400 }
       )
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (!uploadedBy) {
       return NextResponse.json(
-        { error: 'File size exceeds 10MB limit' },
+        { error: 'uploadedBy is required' },
         { status: 400 }
       )
     }
 
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
+    // Validate file type (images only)
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
+    if (!validTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only JPEG, PNG, and WebP are allowed' },
+        { error: 'Invalid file type. Only images are allowed.' },
         { status: 400 }
       )
     }
 
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    // Validate file size (10MB max before compression)
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { error: 'File too large. Maximum size is 10MB.' },
+        { status: 400 }
+      )
+    }
 
+    // Convert file to buffer
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    // Generate unique filenames
     const timestamp = Date.now()
-    const filename = `${entryId}_${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'time-entries')
-    
-    await mkdir(uploadDir, { recursive: true })
-    
-    const filepath = join(uploadDir, filename)
-    await writeFile(filepath, buffer)
-    
-    const photoUrl = `/uploads/time-entries/${filename}`
+    const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const photoKey = `time-entry-photos/${resolvedParams.id}/${timestamp}-${sanitizedFilename}`
+    const thumbnailKey = `time-entry-photos/${resolvedParams.id}/thumb-${timestamp}-${sanitizedFilename}`
 
-    const result = await query(
-      `INSERT INTO "TimeEntryPhoto" 
-       ("timeEntryId", "uploadedBy", "photoUrl", caption, "fileSize", "mimeType", "uploadedAt")
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
-       RETURNING *`,
-      [entryId, userId, photoUrl, caption || null, file.size, file.type]
+    // Compress main image (max 1920px width, 85% quality)
+    const compressedImage = await sharp(buffer)
+      .resize(1920, null, {
+        withoutEnlargement: true,
+        fit: 'inside'
+      })
+      .jpeg({ quality: 85 })
+      .toBuffer()
+
+    // Create thumbnail (300px width)
+    const thumbnail = await sharp(buffer)
+      .resize(300, null, {
+        withoutEnlargement: true,
+        fit: 'inside'
+      })
+      .jpeg({ quality: 80 })
+      .toBuffer()
+
+    // Upload both images
+    const [photoResult, thumbnailResult] = await Promise.all([
+      storage.upload({
+        key: photoKey,
+        body: compressedImage,
+        contentType: 'image/jpeg'
+      }),
+      storage.upload({
+        key: thumbnailKey,
+        body: thumbnail,
+        contentType: 'image/jpeg'
+      })
+    ])
+
+    // Insert photo record into database
+    const photoRecord = await query(
+      `INSERT INTO "TimeEntryPhoto" (
+        id, "timeEntryId", "uploadedBy", "photoUrl", "thumbnailUrl",
+        "caption", "fileSize", "mimeType", "uploadedAt"
+      ) VALUES (
+        gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, NOW()
+      ) RETURNING *`,
+      [
+        resolvedParams.id,
+        uploadedBy,
+        photoResult.url,
+        thumbnailResult.url,
+        caption || null,
+        compressedImage.length,
+        'image/jpeg'
+      ]
     )
 
     return NextResponse.json({
-      message: 'Photo uploaded successfully',
-      photo: {
-        id: result.rows[0].id,
-        photoUrl: result.rows[0].photoUrl,
-        caption: result.rows[0].caption,
-        uploadedAt: result.rows[0].uploadedAt,
-      },
+      success: true,
+      photo: photoRecord.rows[0]
     })
-  } catch (error) {
-    console.error('Upload photo error:', error)
+
+  } catch (error: any) {
+    console.error('Error uploading photo:', error)
     return NextResponse.json(
-      { error: 'Failed to upload photo' },
+      { error: error.message || 'Failed to upload photo' },
       { status: 500 }
     )
   }
 }
 
+// DELETE a photo
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
   try {
-    const { id: entryId } = await context.params
-    const token = request.cookies.get('auth-token')?.value
-    
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const userPayload = verifyToken(token)
-    const userId = userPayload.id
-
-    const searchParams = request.nextUrl.searchParams
+    const { searchParams } = new URL(request.url)
     const photoId = searchParams.get('photoId')
 
     if (!photoId) {
       return NextResponse.json(
-        { error: 'Photo ID is required' },
+        { error: 'photoId is required' },
         { status: 400 }
       )
     }
 
-    const result = await query(
-      `DELETE FROM "TimeEntryPhoto"
-       WHERE id = $1 AND "uploadedBy" = $2
-       RETURNING *`,
-      [photoId, userId]
+    // Get photo info before deleting
+    const photoResult = await query(
+      `SELECT * FROM "TimeEntryPhoto" WHERE id = $1 AND "timeEntryId" = $2`,
+      [photoId, resolvedParams.id]
     )
 
-    if (result.rows.length === 0) {
+    if (photoResult.rows.length === 0) {
       return NextResponse.json(
-        { error: 'Photo not found or unauthorized' },
+        { error: 'Photo not found' },
         { status: 404 }
       )
     }
 
+    const photo = photoResult.rows[0]
+
+    // Delete from storage
+    try {
+      await Promise.all([
+        storage.delete(photo.photoUrl),
+        photo.thumbnailUrl ? storage.delete(photo.thumbnailUrl) : Promise.resolve()
+      ])
+    } catch (storageError) {
+      console.error('Error deleting from storage:', storageError)
+      // Continue with database deletion even if storage fails
+    }
+
+    // Delete from database
+    await query(
+      `DELETE FROM "TimeEntryPhoto" WHERE id = $1`,
+      [photoId]
+    )
+
     return NextResponse.json({
-      message: 'Photo deleted successfully',
+      success: true,
+      message: 'Photo deleted successfully'
     })
-  } catch (error) {
-    console.error('Delete photo error:', error)
+
+  } catch (error: any) {
+    console.error('Error deleting photo:', error)
     return NextResponse.json(
-      { error: 'Failed to delete photo' },
+      { error: error.message || 'Failed to delete photo' },
       { status: 500 }
     )
   }

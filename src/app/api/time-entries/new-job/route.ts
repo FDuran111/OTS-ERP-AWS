@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, status, jobId } = body
+    const { id, status, jobId, rejectionReason, approvedBy } = body
 
     if (!['APPROVED', 'REJECTED'].includes(status)) {
       return NextResponse.json(
@@ -123,13 +123,18 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Update the entry status
+    // Update the entry status with approval tracking
     const updateResult = await query(`
       UPDATE "NewJobEntry"
-      SET status = $1, "reviewedAt" = NOW(), "approvedJobId" = $2
-      WHERE id = $3
+      SET
+        status = $1,
+        "reviewedAt" = NOW(),
+        "approvedJobId" = $2,
+        "approvedBy" = $3,
+        "rejectionReason" = $4
+      WHERE id = $5
       RETURNING *
-    `, [status, jobId || null, id])
+    `, [status, jobId || null, approvedBy || null, rejectionReason || null, id])
 
     if (updateResult.rows.length === 0) {
       return NextResponse.json(

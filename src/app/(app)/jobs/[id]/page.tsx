@@ -222,6 +222,12 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 {job.description || 'No description provided'}
               </Typography>
 
+              {job.customerPO && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  📋 <strong>Customer PO:</strong> {job.customerPO}
+                </Typography>
+              )}
+
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
                 <Chip
                   label={job.status.replace('_', ' ')}

@@ -58,6 +58,7 @@ import {
   TrendingUp,
   ViewList as ViewListIcon,
   ViewModule as ViewModuleIcon,
+  CheckCircle as ApproveIcon,
 } from '@mui/icons-material'
 
 interface User {
@@ -70,6 +71,7 @@ interface User {
 interface Job {
   id: string
   jobNumber: string
+  customerPO?: string
   title: string
   customer: string
   customerId: string
@@ -99,6 +101,8 @@ const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | '
     case 'scheduled':
     case 'dispatched':
       return 'warning'
+    case 'pending_approval':
+      return 'warning'
     case 'pending_review':
       return 'secondary'
     case 'completed':
@@ -125,21 +129,22 @@ const getPriorityColor = (priority: string): 'default' | 'primary' | 'secondary'
 }
 
 // Mobile JobCard component
-function JobCard({ job, onEdit, onDelete, onView }: { 
-  job: Job, 
+function JobCard({ job, onEdit, onDelete, onView, onApprove }: {
+  job: Job,
   onEdit: (job: Job) => void,
   onDelete: (job: Job) => void,
-  onView: (job: Job) => void
+  onView: (job: Job) => void,
+  onApprove?: (job: Job) => void
 }) {
   const router = useRouter()
   const { user } = useAuth()
-  
+
   const handleCardClick = () => {
     router.push(`/jobs/${job.id}`)
   }
-  
+
   return (
-    <Card sx={{ 
+    <Card sx={{
       mb: 2,
       transition: 'all 0.2s ease-in-out',
       cursor: 'pointer',
@@ -174,24 +179,35 @@ function JobCard({ job, onEdit, onDelete, onView }: {
             />
           </Box>
         </Box>
-        
+
         <Typography variant="body2" sx={{ mb: 1 }}>
           <strong>Customer:</strong> {job.customer}
         </Typography>
-        
+
         <Typography variant="body2" sx={{ mb: 1 }}>
           <strong>Due Date:</strong> {job.dueDate ? new Date(job.dueDate).toLocaleDateString() : 'Not set'}
         </Typography>
-        
+
         <Typography variant="body2" sx={{ mb: 1 }}>
           <strong>Crew:</strong> {job.crew.join(', ') || 'Unassigned'}
         </Typography>
-        
-        
-        <Box 
-          sx={{ display: 'flex', justifyContent: 'flex-end' }}
+
+
+        <Box
+          sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}
           onClick={(e) => e.stopPropagation()}
         >
+          {job.status.toLowerCase() === 'pending_approval' && onApprove && (
+            <Button
+              variant="contained"
+              color="success"
+              size="small"
+              startIcon={<ApproveIcon />}
+              onClick={() => onApprove(job)}
+            >
+              Approve
+            </Button>
+          )}
           <JobActionsMenu
             job={job}
             onEdit={onEdit}
@@ -302,6 +318,36 @@ export default function JobsPage() {
 
   const handleViewJob = (job: Job) => {
     router.push(`/jobs/${job.id}`)
+  }
+
+  const handleApproveJob = async (job: Job) => {
+    if (!confirm(`Approve job "${job.jobNumber}"? This will change its status to SCHEDULED.`)) {
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch(`/api/jobs/${job.id}/approve`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
+        body: JSON.stringify({ newStatus: 'SCHEDULED' })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to approve job')
+      }
+
+      // Refresh the jobs list
+      fetchJobs()
+      alert(`✅ Job "${job.jobNumber}" has been approved!`)
+    } catch (error) {
+      console.error('Error approving job:', error)
+      alert('Failed to approve job. Please try again.')
+    }
   }
 
   const filteredJobs = (Array.isArray(jobs) ? jobs : []).filter(job => {
@@ -522,6 +568,7 @@ export default function JobsPage() {
                         onChange={(e) => setStatusFilter(e.target.value)}
                       >
                         <MenuItem value="">All</MenuItem>
+                        <MenuItem value="pending_approval">⚠️ Pending Approval</MenuItem>
                         <MenuItem value="estimate">Estimate</MenuItem>
                         <MenuItem value="scheduled">Scheduled</MenuItem>
                         <MenuItem value="dispatched">Dispatched</MenuItem>
@@ -597,12 +644,13 @@ export default function JobsPage() {
                 </Typography>
               ) : (
                 filteredJobs.map((job) => (
-                  <JobCard 
-                    key={job.id} 
-                    job={job} 
+                  <JobCard
+                    key={job.id}
+                    job={job}
                     onEdit={handleEditJob}
                     onDelete={handleDeleteJob}
                     onView={handleViewJob}
+                    onApprove={handleApproveJob}
                   />
                 ))
               )}
@@ -623,12 +671,13 @@ export default function JobsPage() {
                 </Typography>
               ) : (
                 filteredJobs.map((job) => (
-                  <JobCard 
-                    key={job.id} 
-                    job={job} 
+                  <JobCard
+                    key={job.id}
+                    job={job}
                     onEdit={handleEditJob}
                     onDelete={handleDeleteJob}
                     onView={handleViewJob}
+                    onApprove={handleApproveJob}
                   />
                 ))
               )}
@@ -645,7 +694,8 @@ export default function JobsPage() {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Job ID</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Job Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Customer PO</TableCell>
                     <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Title</TableCell>
                     <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Customer</TableCell>
                     <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.default' }}>Status</TableCell>
@@ -658,13 +708,13 @@ export default function JobsPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={9} align="center">
+                      <TableCell colSpan={10} align="center">
                         Loading jobs...
                       </TableCell>
                     </TableRow>
                   ) : filteredJobs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} align="center">
+                      <TableCell colSpan={10} align="center">
                         No jobs found
                       </TableCell>
                     </TableRow>
@@ -682,6 +732,7 @@ export default function JobsPage() {
                         onClick={() => router.push(`/jobs/${job.id}`)}
                       >
                         <TableCell>{job.jobNumber}</TableCell>
+                        <TableCell>{job.customerPO || '-'}</TableCell>
                         <TableCell>{job.title}</TableCell>
                         <TableCell>{job.customer}</TableCell>
                         <TableCell>
@@ -703,16 +754,32 @@ export default function JobsPage() {
                           {job.dueDate ? new Date(job.dueDate).toLocaleDateString() : '-'}
                         </TableCell>
                         <TableCell>{job.crew.join(', ') || 'Unassigned'}</TableCell>
-                        <TableCell 
+                        <TableCell
                           align="right"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <JobActionsMenu
-                            job={job}
-                            onEdit={handleEditJob}
-                            onDelete={handleDeleteJob}
-                            onView={handleViewJob}
-                          />
+                          <Stack direction="row" spacing={1} justifyContent="flex-end">
+                            {job.status.toLowerCase() === 'pending_approval' && (
+                              <Button
+                                variant="contained"
+                                color="success"
+                                size="small"
+                                startIcon={<ApproveIcon />}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleApproveJob(job)
+                                }}
+                              >
+                                Approve
+                              </Button>
+                            )}
+                            <JobActionsMenu
+                              job={job}
+                              onEdit={handleEditJob}
+                              onDelete={handleDeleteJob}
+                              onView={handleViewJob}
+                            />
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     ))

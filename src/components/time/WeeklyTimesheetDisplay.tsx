@@ -58,6 +58,7 @@ interface TimesheetEntry {
   workDescription?: string // NEW - Detailed work description
   description?: string // Keep for backward compatibility
   materials?: Material[] // NEW - Materials used
+  photoCount?: number // NEW - Number of photos attached
   status?: 'draft' | 'submitted' | 'approved' | 'rejected'
   submittedAt?: string
   submittedBy?: string
@@ -296,7 +297,7 @@ export default function WeeklyTimesheetDisplay({
                 onClick={handleSubmitWeek}
                 size="small"
               >
-                Submit Week
+                Submit Card
               </Button>
             </Stack>
           )}
@@ -512,6 +513,21 @@ export default function WeeklyTimesheetDisplay({
                                       size="small"
                                       sx={{ fontSize: 9, height: 16 }}
                                       color="info"
+                                    />
+                                  )
+                                }
+                                return null
+                              })()}
+                              {/* Photos indicator */}
+                              {(() => {
+                                const entry = entries.find(e => e.id === dayData.id)
+                                if (entry?.photoCount && entry.photoCount > 0) {
+                                  return (
+                                    <Chip
+                                      label={`📸 ${entry.photoCount} photo${entry.photoCount > 1 ? 's' : ''}`}
+                                      size="small"
+                                      sx={{ fontSize: 9, height: 16 }}
+                                      color="secondary"
                                     />
                                   )
                                 }

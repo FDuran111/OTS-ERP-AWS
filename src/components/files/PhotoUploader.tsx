@@ -28,13 +28,20 @@ import { useDropzone } from 'react-dropzone'
 
 interface UploadedFile {
   id: string
-  fileName: string
-  fileType: string
-  fileSize: number
+  fileName?: string
+  filename?: string  // For time entry photos (caption)
+  fileType?: string
+  filetype?: string  // For time entry photos
+  fileSize?: number
+  filesize?: number  // For time entry photos
   url: string
   thumbnailUrl?: string
-  uploadedAt: string
+  uploadedAt?: string
+  uploadedat?: string  // For time entry photos
   uploadedByName?: string
+  isTimeEntryPhoto?: boolean
+  timeEntryId?: string
+  timeEntryDate?: string
 }
 
 interface PhotoUploaderProps {
@@ -227,10 +234,10 @@ export default function PhotoUploader({ jobId, onUploadComplete, existingFiles =
                   }}
                   onClick={() => setSelectedImage(file.url)}
                 >
-                  {file.fileType.startsWith('image/') ? (
+                  {(file.fileType || file.filetype || 'image/').startsWith('image/') ? (
                     <img
                       src={file.thumbnailUrl || file.url}
-                      alt={file.fileName}
+                      alt={file.fileName || file.filename || 'Photo'}
                       loading="lazy"
                       style={{
                         width: '100%',
@@ -263,22 +270,28 @@ export default function PhotoUploader({ jobId, onUploadComplete, existingFiles =
                     >
                       <ZoomIcon />
                     </IconButton>
-                    <IconButton
-                      size="small"
-                      sx={{ bgcolor: 'background.paper' }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDelete(file.id)
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                    {!file.isTimeEntryPhoto && (
+                      <IconButton
+                        size="small"
+                        sx={{ bgcolor: 'background.paper' }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDelete(file.id)
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    )}
                   </Box>
                 </Box>
 
                 <ImageListItemBar
-                  title={file.fileName}
-                  subtitle={`${formatFileSize(file.fileSize)} • ${new Date(file.uploadedAt).toLocaleDateString()}`}
+                  title={file.isTimeEntryPhoto ? (file.filename || 'Time Entry Photo') : (file.fileName || 'File')}
+                  subtitle={
+                    file.isTimeEntryPhoto
+                      ? `Time Entry • ${formatFileSize(file.filesize || 0)} • ${new Date(file.uploadedat || Date.now()).toLocaleDateString()}`
+                      : `${formatFileSize(file.fileSize || 0)} • ${new Date(file.uploadedAt || file.uploadedat || Date.now()).toLocaleDateString()}`
+                  }
                 />
               </ImageListItem>
             ))}

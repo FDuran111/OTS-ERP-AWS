@@ -92,6 +92,7 @@ export const GET = withRBAC({
     // Fetch materials for all time entries
     const timeEntryIds = timeEntriesResult.rows.map(e => e.id)
     let materialsMap: Record<string, any[]> = {}
+    let photoCountMap: Record<string, number> = {}
 
     if (timeEntryIds.length > 0) {
       const materialsResult = await query(
@@ -130,6 +131,19 @@ export const GET = withRBAC({
           offTruckInData: materialData.offTruck
         })
         materialsMap[material.timeEntryId].push(materialData)
+      })
+
+      // Fetch photo counts
+      const photoCountResult = await query(
+        `SELECT "timeEntryId", COUNT(*) as count
+         FROM "TimeEntryPhoto"
+         WHERE "timeEntryId" = ANY($1)
+         GROUP BY "timeEntryId"`,
+        [timeEntryIds]
+      )
+
+      photoCountResult.rows.forEach(row => {
+        photoCountMap[row.timeEntryId] = parseInt(row.count)
       })
     }
 
@@ -175,6 +189,7 @@ export const GET = withRBAC({
         jobDescription: entry.jobDescription || null,
         workDescription: entry.workDescription || null,
         materials: materialsMap[entry.id] || [],
+        photoCount: photoCountMap[entry.id] || 0,
         estimatedPay: estimatedPay,
         calculatedHours: duration,
         description: entry.description,

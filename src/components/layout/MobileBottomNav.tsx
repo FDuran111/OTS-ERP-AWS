@@ -15,6 +15,8 @@ import {
   Schedule as ScheduleIcon,
   People as CustomersIcon,
   Add as AddIcon,
+  AccessTime as TimeClockIcon,
+  Inventory as MaterialsIcon,
 } from '@mui/icons-material'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -56,16 +58,22 @@ const bottomNavItems: BottomNavItem[] = [
     roles: ['OWNER_ADMIN', 'FOREMAN']
   },
   {
-    label: 'My Jobs',
-    icon: <JobsIcon />,
-    path: '/jobs/mobile',
+    label: 'Time Clock',
+    icon: <TimeClockIcon />,
+    path: '/time',
+    roles: ['EMPLOYEE']
+  },
+  {
+    label: 'Materials',
+    icon: <MaterialsIcon />,
+    path: '/materials',
     roles: ['EMPLOYEE']
   },
   {
     label: 'Schedule',
     icon: <ScheduleIcon />,
     path: '/schedule',
-    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
+    roles: ['OWNER_ADMIN', 'FOREMAN'] // Employee removed - admin-only calendar
   },
   {
     label: 'Customers',
@@ -118,6 +126,7 @@ export default function MobileBottomNav({
         <BottomNavigation
           value={getCurrentValue()}
           onChange={handleNavChange}
+          showLabels
           className="h-16"
           sx={{
             '& .MuiBottomNavigationAction-root': {

@@ -396,8 +396,8 @@ export default function SimpleTimeEntry({ onTimeEntryCreated, noCard = false, pr
               >
                 Existing Job
               </Button>
-              {/* Show 'New Job Entry' only for employees - TEMPORARILY DISABLED */}
-              {false && currentUser?.role === 'EMPLOYEE' && (
+              {/* Show 'New Job Entry' only for employees */}
+              {currentUser?.role === 'EMPLOYEE' && (
                 <Button
                   variant={entryMode === 'new' ? 'contained' : 'outlined'}
                   startIcon={<AddIcon />}

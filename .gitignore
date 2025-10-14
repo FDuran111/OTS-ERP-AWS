@@ -51,3 +51,4 @@ infra/ecs-alb/.terraform/
 *.tfplan
 .terraform/
 tfplan
+public/uploads/

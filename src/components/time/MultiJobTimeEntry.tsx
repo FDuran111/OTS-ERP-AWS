@@ -15,6 +15,15 @@ import {
   IconButton,
   Divider,
   Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -97,6 +106,7 @@ interface MultiJobTimeEntryProps {
   preselectedJob?: any
 }
 
+
 export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmployee, preselectedJob }: MultiJobTimeEntryProps) {
   const [jobs, setJobs] = useState<Job[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -139,6 +149,33 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
   const [entryStatus, setEntryStatus] = useState<string | null>(null)
   const [hasRejectionNotes, setHasRejectionNotes] = useState(false)
 
+  // Entry mode toggle: 'manual' = existing job, 'new' = create new job
+  const [entryMode, setEntryMode] = useState<'manual' | 'new'>('manual')
+
+  // New job creation dialog and state
+  const [newJobDialogOpen, setNewJobDialogOpen] = useState(false)
+  const [customers, setCustomers] = useState<Array<{id: string, firstName: string, lastName: string, companyName?: string}>>([])
+  const [selectedCustomerId, setSelectedCustomerId] = useState('')
+  const [showNewCustomer, setShowNewCustomer] = useState(false)
+  const [newCustomerData, setNewCustomerData] = useState({
+    firstName: '',
+    lastName: '',
+    companyName: '',
+    email: '',
+    phone: ''
+  })
+  const [newJobCategoryId, setNewJobCategoryId] = useState('')
+  const [newJobType, setNewJobType] = useState('SERVICE_CALL')
+  const [newJobDivision, setNewJobDivision] = useState('LINE_VOLTAGE')
+  const [newJobDescription, setNewJobDescription] = useState('')
+  const [newJobCustomerPO, setNewJobCustomerPO] = useState('')
+  const [newJobAddress, setNewJobAddress] = useState('')
+  const [newJobCity, setNewJobCity] = useState('')
+  const [newJobState, setNewJobState] = useState('')
+  const [newJobZip, setNewJobZip] = useState('')
+  const [jobCategories, setJobCategories] = useState<Array<{id: string, categoryCode: string, categoryName: string, color: string, icon: string}>>([])
+  const [creatingJob, setCreatingJob] = useState(false)
+
   useEffect(() => {
     // Get current user from localStorage
     const storedUser = localStorage.getItem('user')
@@ -161,6 +198,46 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       setSelectedUser(preselectedEmployee)
     }
   }, [preselectedEmployee])
+
+  // Fetch customers and categories when dialog opens
+  useEffect(() => {
+    if (newJobDialogOpen) {
+      fetchCustomers()
+      fetchJobCategories()
+    }
+  }, [newJobDialogOpen])
+
+  const fetchCustomers = async () => {
+    try {
+      const token = localStorage.getItem('auth-token')
+      const response = await fetch('/api/customers', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const customersList = data.customers || data || []
+        setCustomers(Array.isArray(customersList) ? customersList : [])
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error)
+      setCustomers([])
+    }
+  }
+
+  const fetchJobCategories = async () => {
+    try {
+      const response = await fetch('/api/job-categories?active=true')
+      if (response.ok) {
+        const data = await response.json()
+        setJobCategories(data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching job categories:', error)
+      setJobCategories([])
+    }
+  }
+
 
   useEffect(() => {
     if (preselectedJob && jobs.length > 0 && materials.length > 0) {
@@ -261,9 +338,9 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
     try {
       const token = localStorage.getItem('auth-token')
       const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {}
-      
+
       const requests: Promise<Response>[] = [
-        fetch('/api/jobs?status=estimate,scheduled,dispatched,in_progress', {
+        fetch('/api/jobs?status=estimate,scheduled,dispatched,in_progress,pending_approval', {
           headers: authHeaders,
           credentials: 'include'
         }),
@@ -308,6 +385,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
       console.error('Error fetching data:', error)
     }
   }
+
 
   const addEntry = () => {
     const newEntry: JobEntry = {
@@ -762,6 +840,36 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
             </Box>
           </Paper>
 
+          {/* Entry Mode Toggle - Only show for employees */}
+          {currentUser?.role === 'EMPLOYEE' && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Entry Method
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant={entryMode === 'manual' ? 'contained' : 'outlined'}
+                  startIcon={<WorkIcon />}
+                  onClick={() => setEntryMode('manual')}
+                  size="small"
+                >
+                  Existing Job
+                </Button>
+                <Button
+                  variant={entryMode === 'new' ? 'contained' : 'outlined'}
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    setEntryMode('new')
+                    setNewJobDialogOpen(true)
+                  }}
+                  size="small"
+                >
+                  Create New Job
+                </Button>
+              </Stack>
+            </Box>
+          )}
+
           {/* Job Entries */}
           <Stack spacing={2}>
             {entries.map((entry, index) => (
@@ -795,7 +903,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                       value={entry.job}
                       onChange={(_, value) => updateEntry(entry.id, 'job', value)}
                       renderOption={(props, option) => {
-                        const { key, ...otherProps } = props as any
+                        const { key, ...otherProps} = props as any
                         return (
                           <li key={key} {...otherProps}>
                             <Box>
@@ -1187,6 +1295,379 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
           </Box>
         </CardContent>
       </Card>
+
+      {/* Employee Create New Job Dialog */}
+      <Dialog
+        open={newJobDialogOpen}
+        onClose={() => {
+          setNewJobDialogOpen(false)
+          setSelectedCustomerId('')
+          setShowNewCustomer(false)
+          setNewCustomerData({ firstName: '', lastName: '', companyName: '', email: '', phone: '' })
+          setNewJobCategoryId('')
+          setNewJobType('SERVICE_CALL')
+          setNewJobDivision('LINE_VOLTAGE')
+          setNewJobDescription('')
+          setNewJobCustomerPO('')
+          setNewJobAddress('')
+          setNewJobCity('')
+          setNewJobState('')
+          setNewJobZip('')
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Create New Job</DialogTitle>
+        <DialogContent>
+          <Alert severity="info" sx={{ mb: 3, mt: 2 }}>
+            Create job details below. After saving, you can continue entering hours, materials, and photos.
+          </Alert>
+
+          <Grid container spacing={3}>
+            {/* Customer Selection */}
+            <Grid size={{ xs: 12 }}>
+              <FormControl fullWidth>
+                <InputLabel>Customer *</InputLabel>
+                <Select
+                  value={selectedCustomerId}
+                  label="Customer *"
+                  onChange={(e) => setSelectedCustomerId(e.target.value)}
+                >
+                  <MenuItem value="" onClick={() => setShowNewCustomer(true)}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                      <AddIcon fontSize="small" />
+                      <Typography>Add New Customer</Typography>
+                    </Box>
+                  </MenuItem>
+                  {customers.length > 0 && <Divider />}
+                  {customers.map((customer) => (
+                    <MenuItem key={customer.id} value={customer.id}>
+                      <Typography>
+                        {customer.companyName || `${customer.firstName} ${customer.lastName}`}
+                      </Typography>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* New Customer Form */}
+            {showNewCustomer && (
+              <>
+                <Grid size={{ xs: 12 }}>
+                  <Divider sx={{ my: 1 }}>
+                    <Typography variant="subtitle2" color="primary">New Customer</Typography>
+                  </Divider>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    label="First Name *"
+                    value={newCustomerData.firstName}
+                    onChange={(e) => setNewCustomerData({...newCustomerData, firstName: e.target.value})}
+                    fullWidth
+                    required
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    label="Last Name *"
+                    value={newCustomerData.lastName}
+                    onChange={(e) => setNewCustomerData({...newCustomerData, lastName: e.target.value})}
+                    fullWidth
+                    required
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    label="Company Name"
+                    value={newCustomerData.companyName}
+                    onChange={(e) => setNewCustomerData({...newCustomerData, companyName: e.target.value})}
+                    fullWidth
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    label="Email"
+                    type="email"
+                    value={newCustomerData.email}
+                    onChange={(e) => setNewCustomerData({...newCustomerData, email: e.target.value})}
+                    fullWidth
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    label="Phone"
+                    value={newCustomerData.phone}
+                    onChange={(e) => setNewCustomerData({...newCustomerData, phone: e.target.value})}
+                    fullWidth
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <Divider sx={{ my: 1 }} />
+                </Grid>
+              </>
+            )}
+
+            {/* Job Category */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel>Job Category</InputLabel>
+                <Select
+                  value={newJobCategoryId}
+                  label="Job Category"
+                  onChange={(e) => setNewJobCategoryId(e.target.value)}
+                >
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
+                  {jobCategories.map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 1,
+                            bgcolor: category.color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1rem',
+                          }}
+                        >
+                          {category.icon}
+                        </Box>
+                        <Typography>{category.categoryName}</Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Job Type */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel>Job Type *</InputLabel>
+                <Select
+                  value={newJobType}
+                  label="Job Type *"
+                  onChange={(e) => setNewJobType(e.target.value)}
+                >
+                  <MenuItem value="SERVICE_CALL">Service Call</MenuItem>
+                  <MenuItem value="INSTALLATION">Installation</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Division */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel>Division *</InputLabel>
+                <Select
+                  value={newJobDivision}
+                  label="Division *"
+                  onChange={(e) => setNewJobDivision(e.target.value)}
+                >
+                  <MenuItem value="LINE_VOLTAGE">Line Voltage (120V/240V)</MenuItem>
+                  <MenuItem value="LOW_VOLTAGE">Low Voltage (Security/Data)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Customer PO */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                value={newJobCustomerPO}
+                onChange={(e) => setNewJobCustomerPO(e.target.value)}
+                label="Customer PO Number"
+                fullWidth
+              />
+            </Grid>
+
+            {/* Description */}
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                value={newJobDescription}
+                onChange={(e) => setNewJobDescription(e.target.value)}
+                label="Job Description *"
+                multiline
+                rows={3}
+                fullWidth
+                required
+              />
+            </Grid>
+
+            {/* Address Fields */}
+            <Grid size={{ xs: 12 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Job Address
+              </Typography>
+            </Grid>
+
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                value={newJobAddress}
+                onChange={(e) => setNewJobAddress(e.target.value)}
+                label="Street Address"
+                fullWidth
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                value={newJobCity}
+                onChange={(e) => setNewJobCity(e.target.value)}
+                label="City"
+                fullWidth
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField
+                value={newJobState}
+                onChange={(e) => setNewJobState(e.target.value)}
+                label="State"
+                fullWidth
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField
+                value={newJobZip}
+                onChange={(e) => setNewJobZip(e.target.value)}
+                label="ZIP Code"
+                fullWidth
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setNewJobDialogOpen(false)
+            setSelectedCustomerId('')
+            setShowNewCustomer(false)
+            setNewCustomerData({ firstName: '', lastName: '', companyName: '', email: '', phone: '' })
+          }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              // Validate
+              if (showNewCustomer && (!newCustomerData.firstName || !newCustomerData.lastName)) {
+                setError('Please enter customer first and last name')
+                return
+              }
+              if (!showNewCustomer && !selectedCustomerId) {
+                setError('Please select a customer')
+                return
+              }
+              if (!newJobDescription) {
+                setError('Please enter job description')
+                return
+              }
+
+              setCreatingJob(true)
+              try {
+                let customerId = selectedCustomerId
+
+                // Create customer if needed
+                if (showNewCustomer) {
+                  const customerResponse = await fetch('/api/customers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                      ...newCustomerData,
+                      createdByEmployee: true,
+                    }),
+                  })
+
+                  if (!customerResponse.ok) {
+                    throw new Error('Failed to create customer')
+                  }
+
+                  const newCustomer = await customerResponse.json()
+                  customerId = newCustomer.id
+                }
+
+                // Create job with PENDING_APPROVAL status
+                const jobResponse = await fetch('/api/jobs', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    customerId,
+                    categoryId: newJobCategoryId || undefined,
+                    type: newJobType,
+                    division: newJobDivision,
+                    description: newJobDescription,
+                    customerPO: newJobCustomerPO || undefined,
+                    address: newJobAddress || undefined,
+                    city: newJobCity || undefined,
+                    state: newJobState || undefined,
+                    zip: newJobZip || undefined,
+                    status: 'PENDING_APPROVAL',
+                    scheduledDate: new Date().toISOString(),
+                  }),
+                })
+
+                if (!jobResponse.ok) {
+                  throw new Error('Failed to create job')
+                }
+
+                const newJob = await jobResponse.json()
+
+                // Refresh jobs list
+                await fetchData()
+
+                // Auto-select the new job
+                const fullJob = {
+                  id: newJob.id,
+                  jobNumber: newJob.jobNumber,
+                  title: newJob.description || 'New Job',
+                  customer: showNewCustomer ? (newCustomerData.companyName || `${newCustomerData.firstName} ${newCustomerData.lastName}`) : '',
+                  type: newJob.type,
+                  city: newJob.city,
+                  address: newJob.address
+                }
+
+                updateEntry(entries[0].id, 'job', fullJob)
+
+                setSuccess(`Job ${newJob.jobNumber} created! Now enter hours, materials, and photos.`)
+                setNewJobDialogOpen(false)
+
+                // Reset form
+                setSelectedCustomerId('')
+                setShowNewCustomer(false)
+                setNewCustomerData({ firstName: '', lastName: '', companyName: '', email: '', phone: '' })
+                setNewJobCategoryId('')
+                setNewJobDescription('')
+                setNewJobCustomerPO('')
+                setNewJobAddress('')
+                setNewJobCity('')
+                setNewJobState('')
+                setNewJobZip('')
+
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to create job')
+              } finally {
+                setCreatingJob(false)
+              }
+            }}
+            variant="contained"
+            disabled={creatingJob}
+          >
+            {creatingJob ? 'Creating...' : 'Create Job'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </LocalizationProvider>
   )
 }

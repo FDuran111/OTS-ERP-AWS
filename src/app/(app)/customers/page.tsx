@@ -36,6 +36,7 @@ import {
   Phone,
   Email,
   LocationOn,
+  CheckCircle as ApproveIcon,
 } from '@mui/icons-material'
 
 interface User {
@@ -111,16 +112,33 @@ export default function CustomersPage() {
 
   const fetchEmployeeCustomers = async () => {
     try {
-      const response = await fetch('/api/customers?employeeCreatedOnly=true', {
+      const response = await fetch('/api/customers/pending', {
         credentials: 'include'
       })
       if (!response.ok) {
-        throw new Error('Failed to fetch employee customers')
+        throw new Error('Failed to fetch pending customers')
       }
       const data = await response.json()
-      setEmployeeCustomers(data.customers || [])
+      // Transform to match expected format
+      const transformedCustomers = data.map((c: any) => ({
+        id: c.id,
+        name: c.companyName || `${c.firstName} ${c.lastName}`,
+        companyName: c.companyName,
+        firstName: c.firstName,
+        lastName: c.lastName,
+        type: c.type || 'Residential',
+        phone: c.phone || '',
+        email: c.email,
+        address: c.address,
+        totalJobs: 0,
+        activeJobs: 0,
+        status: 'Pending',
+        createdBy: c.createdByName,
+        createdAt: c.createdAt
+      }))
+      setEmployeeCustomers(transformedCustomers)
     } catch (error) {
-      console.error('Error fetching employee customers:', error)
+      console.error('Error fetching pending customers:', error)
     }
   }
 
@@ -190,12 +208,25 @@ export default function CustomersPage() {
                 </Typography>
               )}
             </Box>
-            <CustomerActionsMenu
-              customer={customer}
-              onEdit={handleEditCustomer}
-              onDelete={handleDeleteCustomer}
-              onView={handleViewCustomer}
-            />
+            <Stack direction="row" spacing={1}>
+              {customer.status === 'Pending' && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  startIcon={<ApproveIcon />}
+                  onClick={() => handleApproveCustomer(customer)}
+                >
+                  Approve
+                </Button>
+              )}
+              <CustomerActionsMenu
+                customer={customer}
+                onEdit={handleEditCustomer}
+                onDelete={handleDeleteCustomer}
+                onView={handleViewCustomer}
+              />
+            </Stack>
           </Box>
         </CardContent>
       </Card>
@@ -231,6 +262,32 @@ export default function CustomersPage() {
     // For now, just open edit dialog in view mode
     // Later could be a separate view dialog
     handleEditCustomer(customer)
+  }
+
+  const handleApproveCustomer = async (customer: Customer) => {
+    if (!confirm(`Approve customer "${customer.name}"? This will make them an active customer in the system.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/customers/${customer.id}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to approve customer')
+      }
+
+      // Refresh both lists
+      fetchCustomers()
+      fetchEmployeeCustomers()
+      alert(`✅ Customer "${customer.name}" has been approved!`)
+    } catch (error) {
+      console.error('Error approving customer:', error)
+      alert('Failed to approve customer. Please try again.')
+    }
   }
 
   if (!user) return null
@@ -279,7 +336,11 @@ export default function CustomersPage() {
             sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
           >
             <Tab label="All Customers" />
-            <Tab label="Employee Created" />
+            <Tab
+              label="Pending Customers"
+              icon={employeeCustomers.length > 0 ? <Chip label={employeeCustomers.length} size="small" color="warning" /> : undefined}
+              iconPosition="end"
+            />
           </Tabs>
         )}
 
@@ -456,12 +517,26 @@ export default function CustomersPage() {
                                 />
                               </TableCell>
                               <TableCell align="right">
-                                <CustomerActionsMenu
-                                  customer={customer}
-                                  onEdit={handleEditCustomer}
-                                  onDelete={handleDeleteCustomer}
-                                  onView={handleViewCustomer}
-                                />
+                                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                  <Button
+                                    variant="contained"
+                                    color="success"
+                                    size="small"
+                                    startIcon={<ApproveIcon />}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleApproveCustomer(customer)
+                                    }}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <CustomerActionsMenu
+                                    customer={customer}
+                                    onEdit={handleEditCustomer}
+                                    onDelete={handleDeleteCustomer}
+                                    onView={handleViewCustomer}
+                                  />
+                                </Stack>
                               </TableCell>
                             </TableRow>
                           ))

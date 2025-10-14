@@ -124,6 +124,7 @@ export async function GET(
     const completeJob = {
       id: job.id,
       jobNumber: job.jobNumber,
+      customerPO: job.customerPO,
       title: job.description,  // Map description to title for frontend
       description: job.description,
       status: job.status,
@@ -321,6 +322,10 @@ export async function PATCH(
     if (data.description !== undefined) {
       updateFields.push(`description = $${paramIndex++}`)
       updateValues.push(data.description)
+    }
+    if (data.customerPO !== undefined) {
+      updateFields.push(`"customerPO" = $${paramIndex++}`)
+      updateValues.push(data.customerPO)
     }
     if (data.status !== undefined) {
       updateFields.push(`status = $${paramIndex++}`)

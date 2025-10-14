@@ -90,7 +90,7 @@ const navigationItems: NavItem[] = [
     title: 'Schedule',
     icon: <ScheduleIcon />,
     path: '/schedule',
-    roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE']
+    roles: ['OWNER_ADMIN', 'FOREMAN'] // Employee removed - admin-only calendar
   },
   {
     title: 'Time Card',

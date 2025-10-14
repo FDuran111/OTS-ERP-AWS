@@ -200,7 +200,29 @@ export async function GET(
       [jobId]
     )
 
-    // Generate URLs for each file
+    // Get all time entry photos for this job
+    const timeEntryPhotos = await query(
+      `SELECT
+        p.id,
+        p."photoUrl" as s3key,
+        p."thumbnailUrl" as thumbnails3key,
+        p."caption" as filename,
+        p."fileSize" as filesize,
+        p."mimeType" as filetype,
+        p."uploadedAt" as uploadedat,
+        u.name as uploadedByName,
+        'time_entry_photo' as category,
+        te.id as "timeEntryId",
+        te.date as "timeEntryDate"
+       FROM "TimeEntryPhoto" p
+       LEFT JOIN "TimeEntry" te ON p."timeEntryId" = te.id
+       LEFT JOIN "User" u ON p."uploadedBy" = u.id
+       WHERE te."jobId" = $1
+       ORDER BY p."uploadedAt" DESC`,
+      [jobId]
+    )
+
+    // Generate URLs for job files
     const filesWithUrls = await Promise.all(
       files.rows.map(async (file: any) => ({
         ...file,
@@ -211,9 +233,29 @@ export async function GET(
       }))
     )
 
+    // Generate URLs for time entry photos
+    const photosWithUrls = await Promise.all(
+      timeEntryPhotos.rows.map(async (photo: any) => ({
+        ...photo,
+        url: await storage.getUrl(photo.s3key),
+        thumbnailUrl: photo.thumbnails3key
+          ? await storage.getUrl(photo.thumbnails3key)
+          : null,
+        // Add flag to distinguish from regular files
+        isTimeEntryPhoto: true,
+      }))
+    )
+
+    // Combine both arrays
+    const allFiles = [...filesWithUrls, ...photosWithUrls].sort((a, b) => {
+      return new Date(b.uploadedat).getTime() - new Date(a.uploadedat).getTime()
+    })
+
     return NextResponse.json({
       success: true,
-      files: filesWithUrls,
+      files: allFiles,
+      jobFileCount: filesWithUrls.length,
+      timeEntryPhotoCount: photosWithUrls.length,
     })
   } catch (error) {
     console.error('Error fetching files:', error)
