@@ -27,7 +27,8 @@ function createPool(): Pool {
       user: process.env.RDS_USER,
       password: process.env.RDS_PASSWORD,
       ssl: { rejectUnauthorized: false },
-      max: 10,
+      max: 25, // Increased from 10 for better concurrent request handling
+      min: 2, // Maintain minimum connections
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
     })
@@ -39,7 +40,8 @@ function createPool(): Pool {
 
     return new Pool({
       connectionString: process.env.DATABASE_URL,
-      max: 10,
+      max: 25, // Increased from 10 for better concurrent request handling
+      min: 2, // Maintain minimum connections
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 30000,
       query_timeout: 60000,
@@ -59,26 +61,38 @@ pool.on('error', (err) => {
 // Export the pool for direct access if needed
 export { pool }
 
-// Enhanced query function with better error handling
+// Enhanced query function with better error handling and performance monitoring
 export async function query(text: string, params?: any[]) {
   const start = Date.now()
-  
+
   try {
     const result = await pool.query(text, params)
     const duration = Date.now() - start
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Executed query', { 
-        text: text.replace(/\s+/g, ' ').trim(), 
-        duration: `${duration}ms`, 
-        rows: result.rowCount 
+
+    // Log slow queries in all environments (>500ms threshold)
+    const slowQueryThreshold = 500
+    if (duration > slowQueryThreshold) {
+      console.warn('⚠️  SLOW QUERY DETECTED', {
+        duration: `${duration}ms`,
+        query: text.replace(/\s+/g, ' ').trim().substring(0, 200),
+        rows: result.rowCount,
+        timestamp: new Date().toISOString()
       })
     }
-    
+
+    // Detailed logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Executed query', {
+        text: text.replace(/\s+/g, ' ').trim(),
+        duration: `${duration}ms`,
+        rows: result.rowCount
+      })
+    }
+
     return result
   } catch (error: any) {
     const duration = Date.now() - start
-    
+
     console.error('Database query error:', {
       query: text.replace(/\s+/g, ' ').trim(),
       params: params?.length ? `[${params.length} params]` : 'none',
@@ -86,7 +100,7 @@ export async function query(text: string, params?: any[]) {
       error: error.message,
       code: error.code
     })
-    
+
     // Re-throw with more context
     const enhancedError = new Error(`Database query failed: ${error.message}`)
     enhancedError.name = 'DatabaseQueryError'
@@ -94,7 +108,7 @@ export async function query(text: string, params?: any[]) {
     errorWithContext.originalError = error
     errorWithContext.query = text
     errorWithContext.params = params
-    
+
     throw enhancedError
   }
 }

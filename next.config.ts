@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+// Bundle Analyzer - Run with ANALYZE=true npm run build
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
 const nextConfig: NextConfig = {
   // Enable standalone output for Docker
   output: 'standalone',
@@ -14,15 +19,25 @@ const nextConfig: NextConfig = {
 
   // Externalize server-only packages
   serverExternalPackages: ['pg', 'pg-pool', 'pg-connection-string'],
-  
-  // Experimental settings
+
+  // Experimental settings - Enable caching for better performance
   experimental: {
     staleTimes: {
-      dynamic: 0,
-      static: 0,
+      dynamic: 30, // Cache dynamic pages for 30 seconds
+      static: 180, // Cache static pages for 3 minutes
     },
   },
-  
+
+  // Optimize Material UI imports for better tree-shaking
+  modularizeImports: {
+    '@mui/material': {
+      transform: '@mui/material/{{member}}',
+    },
+    '@mui/icons-material': {
+      transform: '@mui/icons-material/{{member}}',
+    },
+  },
+
   // Webpack configuration for server-only modules
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -38,24 +53,57 @@ const nextConfig: NextConfig = {
     }
     return config
   },
-  
-  // Force no caching on all routes
+
+  // Optimized caching headers for maximum performance
   headers: async () => {
     return [
+      // Static assets (JS, CSS, fonts, etc.) - Aggressive caching
       {
-        source: '/(.*)',
+        source: '/_next/static/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate',
+            value: 'public, max-age=31536000, immutable',
           },
+        ],
+      },
+      // Images - Cache for 1 year
+      {
+        source: '/:all*(svg|jpg|jpeg|png|gif|ico|webp)',
+        headers: [
           {
-            key: 'Pragma',
-            value: 'no-cache',
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, must-revalidate',
           },
+        ],
+      },
+      // API routes - No caching (real-time data)
+      {
+        source: '/api/:path*',
+        headers: [
           {
-            key: 'Expires',
-            value: '0',
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
+          },
+        ],
+      },
+      // Login page - No caching (security)
+      {
+        source: '/login',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
+          },
+        ],
+      },
+      // All other pages - Short-term caching (5 minutes)
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=300, must-revalidate',
           },
         ],
       },
@@ -63,4 +111,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);
