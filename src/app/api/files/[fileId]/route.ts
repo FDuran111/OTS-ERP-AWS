@@ -178,9 +178,45 @@ export async function GET(
       )
     }
 
+    const file = result.rows[0]
+
+    // Generate fresh presigned URLs if file has S3 keys
+    const storage = getStorage()
+    let fileUrl = file.fileUrl
+    let thumbnailUrl = file.thumbnailUrl
+
+    try {
+      if (file.filePath && !file.fileUrl) {
+        // Generate fresh URL from S3 key
+        fileUrl = await storage.getSignedUrl({
+          bucket: 'uploads',
+          key: file.filePath,
+          expiresInSeconds: 86400,
+          operation: 'get'
+        })
+      }
+
+      if (file.thumbnailPath && !file.thumbnailUrl) {
+        // Generate fresh thumbnail URL from S3 key
+        thumbnailUrl = await storage.getSignedUrl({
+          bucket: 'thumbnails',
+          key: file.thumbnailPath,
+          expiresInSeconds: 86400,
+          operation: 'get'
+        })
+      }
+    } catch (urlError) {
+      console.error('Error generating URLs:', urlError)
+      // Continue with existing URLs if generation fails
+    }
+
     return NextResponse.json({
       success: true,
-      file: result.rows[0]
+      file: {
+        ...file,
+        fileUrl,
+        thumbnailUrl
+      }
     })
 
   } catch (error: any) {

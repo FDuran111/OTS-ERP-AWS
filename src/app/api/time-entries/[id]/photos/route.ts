@@ -17,7 +17,28 @@ export async function GET(
       [resolvedParams.id]
     )
 
-    return NextResponse.json(result.rows)
+    // Generate fresh presigned URLs for each photo
+    const photosWithUrls = await Promise.all(
+      result.rows.map(async (photo) => {
+        try {
+          // Generate fresh URLs (valid for 24 hours)
+          const photoUrl = await storage.getUrl(photo.photoUrl)
+          const thumbnailUrl = photo.thumbnailUrl ? await storage.getUrl(photo.thumbnailUrl) : null
+
+          return {
+            ...photo,
+            photoUrl,
+            thumbnailUrl
+          }
+        } catch (error) {
+          console.error('Error generating URL for photo:', photo.id, error)
+          // Return photo with original keys if URL generation fails
+          return photo
+        }
+      })
+    )
+
+    return NextResponse.json(photosWithUrls)
   } catch (error) {
     console.error('Error fetching photos:', error)
     return NextResponse.json(
@@ -113,7 +134,7 @@ export async function POST(
       })
     ])
 
-    // Insert photo record into database
+    // Insert photo record into database (store S3 keys, not presigned URLs)
     const photoRecord = await query(
       `INSERT INTO "TimeEntryPhoto" (
         id, "timeEntryId", "uploadedBy", "photoUrl", "thumbnailUrl",
@@ -124,17 +145,26 @@ export async function POST(
       [
         resolvedParams.id,
         uploadedBy,
-        photoResult.url,
-        thumbnailResult.url,
+        photoResult.key, // Store S3 key, not URL
+        thumbnailResult.key, // Store S3 key, not URL
         caption || null,
         compressedImage.length,
         'image/jpeg'
       ]
     )
 
+    // Generate fresh presigned URLs for response
+    const photo = photoRecord.rows[0]
+    const photoUrlForResponse = await storage.getUrl(photo.photoUrl)
+    const thumbnailUrlForResponse = await storage.getUrl(photo.thumbnailUrl)
+
     return NextResponse.json({
       success: true,
-      photo: photoRecord.rows[0]
+      photo: {
+        ...photo,
+        photoUrl: photoUrlForResponse,
+        thumbnailUrl: thumbnailUrlForResponse
+      }
     })
 
   } catch (error: any) {

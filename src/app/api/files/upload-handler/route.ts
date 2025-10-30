@@ -61,7 +61,6 @@ export async function POST(request: NextRequest) {
     
     // Generate thumbnail for images
     let thumbnailPath = null
-    let thumbnailUrl = null
     if (isImage(file.type) && category !== 'documents') {
       const thumbnailKey = `${category}/thumb_${fileName}`
       try {
@@ -72,24 +71,13 @@ export async function POST(request: NextRequest) {
           body: buffer // In production, this should be resized
         })
         thumbnailPath = thumbnailKey
-        thumbnailUrl = await storage.getSignedUrl({
-          bucket: 'thumbnails',
-          key: thumbnailKey,
-          expiresInSeconds: 86400, // 24 hours
-          operation: 'get'
-        })
       } catch (error) {
         console.warn('Thumbnail generation failed:', error)
       }
     }
-    
-    // Get signed URL for the main file
-    const fileUrl = await storage.getSignedUrl({
-      bucket: uploadResult.bucket,
-      key: uploadResult.key,
-      expiresInSeconds: 86400, // 24 hours
-      operation: 'get'
-    })
+
+    // Note: We store only the S3 key (filePath), not presigned URLs
+    // URLs will be generated on-demand when files are retrieved
     
     // Prepare metadata
     const metadata = {
@@ -109,7 +97,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save file metadata to database
+    // Save file metadata to database (store S3 keys only, not URLs)
     const result = await query(`
       INSERT INTO "FileAttachment" (
         "fileName", "originalName", "mimeType", "fileSize", "fileExtension",
@@ -123,19 +111,37 @@ export async function POST(request: NextRequest) {
       file.type,
       file.size,
       path.extname(file.name),
-      uploadResult.key,
-      fileUrl,
+      uploadResult.key, // S3 key
+      null, // fileUrl - will be generated on-demand
       isImage(file.type),
       null, // imageWidth - would need image processing library
       null, // imageHeight - would need image processing library
-      thumbnailPath,
-      thumbnailUrl,
+      thumbnailPath, // S3 key for thumbnail
+      null, // thumbnailUrl - will be generated on-demand
       description || null,
       parsedTags,
       JSON.stringify(metadata)
     ])
 
     const fileRecord = result.rows[0]
+
+    // Generate fresh presigned URLs for response
+    const fileUrl = await storage.getSignedUrl({
+      bucket: uploadResult.bucket,
+      key: fileRecord.filePath,
+      expiresInSeconds: 86400, // 24 hours
+      operation: 'get'
+    })
+
+    let thumbnailUrl = null
+    if (fileRecord.thumbnailPath) {
+      thumbnailUrl = await storage.getSignedUrl({
+        bucket: 'thumbnails',
+        key: fileRecord.thumbnailPath,
+        expiresInSeconds: 86400, // 24 hours
+        operation: 'get'
+      })
+    }
 
     return NextResponse.json({
       success: true,
@@ -147,12 +153,12 @@ export async function POST(request: NextRequest) {
         fileSize: fileRecord.fileSize,
         fileExtension: fileRecord.fileExtension,
         filePath: fileRecord.filePath,
-        fileUrl: fileRecord.fileUrl,
+        fileUrl: fileUrl, // Fresh presigned URL
         isImage: fileRecord.isImage,
         imageWidth: fileRecord.imageWidth,
         imageHeight: fileRecord.imageHeight,
         thumbnailPath: fileRecord.thumbnailPath,
-        thumbnailUrl: fileRecord.thumbnailUrl,
+        thumbnailUrl: thumbnailUrl, // Fresh presigned URL
         description: fileRecord.description,
         tags: fileRecord.tags || [],
         metadata: fileRecord.metadata,
