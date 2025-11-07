@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { query } from '@/lib/db'
-import { deleteFromS3 } from '@/lib/aws-s3'
+import storage from '@/lib/storage-adapter'
 
 export async function DELETE(
   request: NextRequest,
@@ -41,17 +41,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Delete from S3
+    // Delete from storage
     try {
-      await deleteFromS3(file.s3key)
+      await storage.delete(file.s3key)
 
       // Delete thumbnail if exists
       if (file.thumbnails3key) {
-        await deleteFromS3(file.thumbnails3key)
+        await storage.delete(file.thumbnails3key)
       }
-    } catch (s3Error) {
-      console.error('S3 deletion error:', s3Error)
-      // Continue with database deletion even if S3 fails
+    } catch (storageError) {
+      console.error('Storage deletion error:', storageError)
+      // Continue with database deletion even if storage fails
     }
 
     // Soft delete from database (mark as deleted)

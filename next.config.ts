@@ -6,8 +6,9 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 })
 
 const nextConfig: NextConfig = {
-  // Enable standalone output for Docker
-  output: 'standalone',
+  // REMOVED FOR RENDER: output: 'standalone'
+  // Standalone mode is only needed for Docker deployments (AWS ECS)
+  // Render uses native Node.js environment, so we don't need it
 
   // Skip linting and type checking during builds
   eslint: {

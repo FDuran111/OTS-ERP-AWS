@@ -1,4 +1,5 @@
 import { uploadToS3, deleteFromS3, getPresignedUrl } from './aws-s3'
+import { uploadToSupabase, deleteFromSupabase, getPublicUrl } from './supabase-storage'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -77,11 +78,41 @@ class S3StorageAdapter implements StorageAdapter {
   }
 }
 
+class SupabaseStorageAdapter implements StorageAdapter {
+  async upload(params: UploadParams): Promise<UploadResult> {
+    const result = await uploadToSupabase(params)
+    return {
+      key: result.key,
+      url: result.url,
+      size: result.size
+    }
+  }
+
+  async delete(key: string): Promise<void> {
+    await deleteFromSupabase(key)
+  }
+
+  async getUrl(key: string): Promise<string> {
+    return await getPublicUrl(key)
+  }
+}
+
 // Export singleton based on STORAGE_PROVIDER environment variable
 // Default to local storage for safety
-export const storage: StorageAdapter =
-  process.env.STORAGE_PROVIDER === 's3'
-    ? new S3StorageAdapter()
-    : new LocalStorageAdapter()
+function getStorageAdapter(): StorageAdapter {
+  const provider = process.env.STORAGE_PROVIDER?.toLowerCase()
+
+  switch (provider) {
+    case 's3':
+      return new S3StorageAdapter()
+    case 'supabase':
+      return new SupabaseStorageAdapter()
+    default:
+      console.warn(`Unknown STORAGE_PROVIDER: ${provider}. Falling back to local storage.`)
+      return new LocalStorageAdapter()
+  }
+}
+
+export const storage: StorageAdapter = getStorageAdapter()
 
 export default storage

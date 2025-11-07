@@ -1,0 +1,92 @@
+# Render Blueprint for OTS ERP Application
+# Documentation: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: ots-erp-app
+    runtime: node
+    region: oregon  # Options: oregon, ohio, frankfurt, singapore
+    plan: free  # free ($0) | starter ($7) | standard ($25) | pro ($85)
+
+    # Build configuration
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+
+    # Health check
+    healthCheckPath: /api/health
+
+    # Auto-deploy settings
+    branch: main
+    autoDeploy: true
+
+    # Environment variables
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: NEXT_PUBLIC_ENV
+        value: production
+
+      # Database - Supabase
+      - key: DATABASE_URL
+        sync: false  # Set in Render dashboard (contains password)
+
+      - key: DB_DRIVER
+        value: POSTGRESQL
+
+      # Storage - Supabase
+      - key: STORAGE_PROVIDER
+        value: supabase
+
+      - key: STORAGE_BUCKET
+        value: uploads
+
+      - key: MAX_FILE_SIZE
+        value: 52428800
+
+      # Supabase Configuration
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://xudcmdliqyarbfdqufbq.supabase.co
+
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false  # Set in Render dashboard
+
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false  # Set in Render dashboard (sensitive)
+
+      # Authentication - Auto-generate secure secrets
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+
+      - key: NEXTAUTH_URL
+        fromService:
+          type: web
+          name: ots-erp-app
+          property: host
+
+      # Application Settings
+      - key: NEXT_PUBLIC_APP_URL
+        fromService:
+          type: web
+          name: ots-erp-app
+          property: host
+
+      # Cron Job Security
+      - key: CRON_SECRET
+        generateValue: true
+
+      # QuickBooks Integration (optional)
+      - key: QB_CLIENT_ID
+        value: ""
+
+      - key: QB_CLIENT_SECRET
+        sync: false
+
+      - key: QB_REDIRECT_URI
+        value: ""
+
+      - key: QB_SANDBOX_MODE
+        value: "true"

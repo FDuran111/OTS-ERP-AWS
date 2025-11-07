@@ -6,7 +6,7 @@ import {
   validateFileSize,
   validateFileType,
   getExtensionFromMimeType,
-} from '@/lib/aws-s3'
+} from '@/lib/supabase-storage'
 import storage from '@/lib/storage-adapter'
 import sharp from 'sharp'
 
@@ -64,7 +64,7 @@ export async function POST(
     // Validate file size
     if (!validateFileSize(file.size)) {
       return NextResponse.json(
-        { error: `File too large. Maximum size: ${process.env.AWS_S3_MAX_FILE_SIZE || '10MB'}` },
+        { error: `File too large. Maximum size: ${process.env.MAX_FILE_SIZE ? Math.round(parseInt(process.env.MAX_FILE_SIZE) / 1024 / 1024) + 'MB' : '50MB'}` },
         { status: 400 }
       )
     }
@@ -133,7 +133,7 @@ export async function POST(
         file.type,
         file.size,
         s3Key,
-        process.env.NODE_ENV === 'production' ? process.env.AWS_S3_BUCKET : 'local',
+        process.env.STORAGE_BUCKET || 'uploads',
         thumbnailS3Key,
         category,
         JSON.stringify({
