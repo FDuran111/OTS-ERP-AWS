@@ -100,6 +100,7 @@ function TimePageContent() {
   const [selectedViewUser, setSelectedViewUser] = useState<User | null>(null)
   const [pendingCount, setPendingCount] = useState(0)
   const [pendingJobsCount, setPendingJobsCount] = useState(0)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -486,6 +487,7 @@ function TimePageContent() {
                         userId={selectedViewUser.id}
                         selectedUserId={selectedViewUser.id}
                         isAdmin={true}
+                        refreshTrigger={refreshTrigger}
                         onEditEntry={(entry) => {
                           // Convert categoryHours from database format to UI format if present
                           let categoryHours = undefined
@@ -546,6 +548,7 @@ function TimePageContent() {
             <WeeklyTimesheetDisplay
               userId={user.id}
               isAdmin={false}
+              refreshTrigger={refreshTrigger}
               onEditEntry={(entry) => {
                 // Convert categoryHours from database format to UI format if present
                 let categoryHours = undefined
@@ -631,7 +634,10 @@ function TimePageContent() {
         <DialogContent dividers>
           <MultiJobTimeEntry
             onTimeEntriesCreated={() => {
+              console.log('[TimeEntriesCreated] Callback triggered - refreshing data...')
               fetchTimeData()
+              setRefreshTrigger(prev => prev + 1) // Force refresh of WeeklyTimesheetDisplay
+              router.refresh() // Invalidate Next.js staleTimes cache
               setManualEntryOpen(false)
               setPreselectedJob(null)
             }}

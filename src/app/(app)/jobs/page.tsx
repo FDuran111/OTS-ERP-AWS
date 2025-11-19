@@ -255,9 +255,9 @@ export default function JobsPage() {
     fetchJobs()
   }, [user, authLoading, router])
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (showLoading = true) => {
     try {
-      setLoading(true)
+      if (showLoading) setLoading(true)
       const token = localStorage.getItem('auth-token')
       const response = await fetch('/api/jobs', {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
@@ -278,7 +278,7 @@ export default function JobsPage() {
       console.error('Error fetching jobs:', error)
       setJobs([]) // Ensure jobs is always an array
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
@@ -792,8 +792,31 @@ export default function JobsPage() {
       <CreateJobDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
-        onJobCreated={() => {
-          fetchJobs() // Refresh the jobs list
+        onJobCreated={(newJob) => {
+          // Optimistically add job to list immediately
+          if (newJob) {
+            const jobForList: Job = {
+              id: newJob.id,
+              jobNumber: newJob.jobNumber,
+              title: newJob.description,
+              customer: newJob.customerName,
+              customerId: newJob.customerId,
+              type: newJob.type as 'SERVICE_CALL' | 'INSTALLATION',
+              status: newJob.status,
+              priority: 'MEDIUM', // Default priority for new jobs
+              dueDate: newJob.scheduledDate || null,
+              completedDate: null,
+              crew: [],
+              estimatedHours: newJob.estimatedHours,
+              estimatedCost: newJob.estimatedCost,
+              address: newJob.address,
+              city: newJob.city,
+              state: newJob.state,
+            }
+            setJobs(prev => [jobForList, ...prev])
+          }
+          // Silent background refresh to ensure data consistency
+          fetchJobs(false)
           setCreateDialogOpen(false)
         }}
       />

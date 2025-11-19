@@ -50,10 +50,27 @@ interface JobCategory {
   icon: string
 }
 
+interface CreatedJob {
+  id: string
+  jobNumber: string
+  description: string
+  status: string
+  type: string
+  division?: string
+  customerName: string
+  customerId: string
+  address?: string
+  city?: string
+  state?: string
+  scheduledDate?: string
+  estimatedHours?: number
+  estimatedCost?: number
+}
+
 interface CreateJobDialogProps {
   open: boolean
   onClose: () => void
-  onJobCreated: () => void
+  onJobCreated: (job?: CreatedJob) => void
 }
 
 const jobSchema = z.object({
@@ -174,13 +191,13 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
   const onSubmit = async (data: JobFormData) => {
     try {
       setSubmitting(true)
-      
+
       // If not unscheduled and no date provided, use current date/time
       let scheduledDate = data.scheduledDate
       if (!isUnscheduled && !scheduledDate) {
         scheduledDate = new Date().toISOString()
       }
-      
+
       const submitData = {
         ...data,
         estimatedHours: data.estimatedHours || undefined,
@@ -188,7 +205,7 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
         scheduledDate: isUnscheduled ? undefined : scheduledDate,
         status: isUnscheduled ? 'ESTIMATE' : 'SCHEDULED',
       }
-      
+
       console.log('Submitting job data:', submitData)
 
       const response = await fetch('/api/jobs', {
@@ -205,9 +222,35 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
         throw new Error(errorData.error || 'Failed to create job')
       }
 
+      const responseData = await response.json()
+
+      // Get customer name from selected customer
+      const selectedCustomerObj = customers.find(c => c.id === data.customerId)
+      const customerName = selectedCustomerObj?.name ||
+        `${selectedCustomerObj?.firstName || ''} ${selectedCustomerObj?.lastName || ''}`.trim() ||
+        'Unknown Customer'
+
+      // Build job object for immediate UI update
+      const createdJob: CreatedJob = {
+        id: responseData.id || responseData.job?.id,
+        jobNumber: responseData.jobNumber || responseData.job?.jobNumber || 'NEW',
+        description: data.description,
+        status: isUnscheduled ? 'ESTIMATE' : 'SCHEDULED',
+        type: data.type,
+        division: data.division,
+        customerName,
+        customerId: data.customerId,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        scheduledDate: isUnscheduled ? undefined : scheduledDate,
+        estimatedHours: data.estimatedHours,
+        estimatedCost: data.estimatedCost,
+      }
+
       reset()
       setIsUnscheduled(false)
-      onJobCreated()
+      onJobCreated(createdJob)
       onClose()
     } catch (error) {
       console.error('Error creating job:', error)
@@ -749,19 +792,31 @@ export default function CreateJobDialog({ open, onClose, onJobCreated }: CreateJ
                     multiple
                     options={users}
                     getOptionLabel={(option) => option.name}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
                     value={users.filter(user => field.value?.includes(user.id)) || []}
                     onChange={(_, newValue) => {
                       field.onChange(newValue.map(user => user.id))
                     }}
+                    renderOption={(props, option) => {
+                      const { key, ...otherProps } = props as any
+                      return (
+                        <li key={option.id} {...otherProps}>
+                          {option.name}
+                        </li>
+                      )
+                    }}
                     renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip
-                          variant="outlined"
-                          label={option.name}
-                          {...getTagProps({ index })}
-                          key={option.id}
-                        />
-                      ))
+                      value.map((option, index) => {
+                        const { key, ...tagProps } = getTagProps({ index })
+                        return (
+                          <Chip
+                            key={option.id}
+                            variant="outlined"
+                            label={option.name}
+                            {...tagProps}
+                          />
+                        )
+                      })
                     }
                     renderInput={(params) => (
                       <TextField

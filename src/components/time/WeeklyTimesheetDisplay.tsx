@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Box,
   Paper,
@@ -75,6 +75,7 @@ interface WeeklyTimesheetDisplayProps {
   selectedUserId?: string // For admin viewing other users
   onEditEntry?: (entry: TimesheetEntry) => void
   onRefresh?: () => void
+  refreshTrigger?: number // Increment this to force a refresh from parent
 }
 
 export default function WeeklyTimesheetDisplay({
@@ -82,7 +83,8 @@ export default function WeeklyTimesheetDisplay({
   isAdmin = false,
   selectedUserId,
   onEditEntry,
-  onRefresh
+  onRefresh,
+  refreshTrigger = 0
 }: WeeklyTimesheetDisplayProps) {
   const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [entries, setEntries] = useState<TimesheetEntry[]>([])
@@ -102,16 +104,15 @@ export default function WeeklyTimesheetDisplay({
     }
   }, [])
 
-  useEffect(() => {
-    fetchWeekData()
-  }, [currentWeek, selectedUserId])
-
-  const fetchWeekData = async () => {
+  const fetchWeekData = useCallback(async () => {
+    console.log('[WeeklyTimesheet] fetchWeekData triggered - refreshTrigger:', refreshTrigger)
     setLoading(true)
     try {
       const targetUserId = isAdmin && selectedUserId ? selectedUserId : userId
       const weekStart = format(currentWeek, 'yyyy-MM-dd')
       const weekEnd = format(endOfWeek(currentWeek, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+
+      console.log('[WeeklyTimesheet] Fetching entries for:', { targetUserId, weekStart, weekEnd })
 
       const response = await fetch(
         `/api/time-entries?userId=${targetUserId}&startDate=${weekStart}&endDate=${weekEnd}`,
@@ -120,12 +121,19 @@ export default function WeeklyTimesheetDisplay({
 
       if (response.ok) {
         const data = await response.json()
+        console.log('[WeeklyTimesheet] API returned entries:', data.length, 'entries')
+        console.log('[WeeklyTimesheet] Entry details:', data.map((e: any) => ({
+          id: e.id?.substring(0, 8),
+          jobNumber: e.jobNumber,
+          date: e.date,
+          hours: e.hours,
+          jobId: e.jobId?.substring(0, 8)
+        })))
         setEntries(data)
 
         // Check status based on entries
         const allApproved = data.length > 0 && data.every((e: TimesheetEntry) => e.status === 'approved' || e.approvedAt)
         const anySubmitted = data.some((e: TimesheetEntry) => e.status === 'submitted')
-        const anyApproved = data.some((e: TimesheetEntry) => e.status === 'approved' || e.approvedAt)
 
         if (allApproved) {
           setWeekStatus('approved')
@@ -140,7 +148,20 @@ export default function WeeklyTimesheetDisplay({
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentWeek, isAdmin, selectedUserId, userId, refreshTrigger])
+
+  useEffect(() => {
+    console.log('[WeeklyTimesheet] Main useEffect triggered - fetchWeekData changed')
+    fetchWeekData()
+  }, [fetchWeekData])
+
+  // Additional effect to ensure refresh when trigger changes
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      console.log('[WeeklyTimesheet] RefreshTrigger changed to:', refreshTrigger, '- forcing re-fetch')
+      fetchWeekData()
+    }
+  }, [refreshTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Group entries by job
   const groupedEntries = entries.reduce((acc, entry) => {
@@ -155,8 +176,24 @@ export default function WeeklyTimesheetDisplay({
       }
     }
 
+    // Parse the date safely - handle null/undefined dates
+    if (!entry.date) {
+      console.warn('[WeeklyTimesheet] Entry missing date:', entry.id, entry.jobNumber)
+      return acc
+    }
+
     const dayIndex = new Date(entry.date + 'T00:00:00').getDay()
     const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayIndex]
+
+    // Debug logging
+    console.log('[WeeklyTimesheet] Processing entry:', {
+      id: entry.id,
+      jobNumber: entry.jobNumber,
+      date: entry.date,
+      dayIndex,
+      dayName,
+      hours: entry.hours
+    })
 
     acc[key].days[dayName] = {
       hours: entry.hours,
@@ -166,6 +203,12 @@ export default function WeeklyTimesheetDisplay({
 
     return acc
   }, {} as Record<string, any>)
+
+  // Debug: Log grouped entries
+  console.log('[WeeklyTimesheet] Grouped entries:', Object.keys(groupedEntries).length, 'jobs')
+  Object.entries(groupedEntries).forEach(([jobId, job]: [string, any]) => {
+    console.log('[WeeklyTimesheet] Job:', job.jobNumber, 'Days:', Object.keys(job.days))
+  })
 
   const jobRows = Object.values(groupedEntries)
 
@@ -183,13 +226,33 @@ export default function WeeklyTimesheetDisplay({
     return entries.reduce((sum, entry) => sum + entry.hours, 0)
   }
 
-  // Calculate weekly hours breakdown
+  // Calculate weekly hours breakdown with detailed categoryHours
   const calculateWeekBreakdown = () => {
     const regularHours = entries.reduce((sum, entry) => sum + (entry.regularHours || 0), 0)
     const overtimeHours = entries.reduce((sum, entry) => sum + (entry.overtimeHours || 0), 0)
     const doubleTimeHours = entries.reduce((sum, entry) => sum + (entry.doubleTimeHours || 0), 0)
     const totalEarnings = entries.reduce((sum, entry) => sum + (entry.estimatedPay || 0), 0)
-    return { regularHours, overtimeHours, doubleTimeHours, totalEarnings }
+
+    // Aggregate detailed categoryHours from all entries
+    const categoryHours = entries.reduce((acc, entry) => {
+      if (entry.categoryHours) {
+        const cats = typeof entry.categoryHours === 'string'
+          ? JSON.parse(entry.categoryHours)
+          : entry.categoryHours
+        acc.STRAIGHT_TIME = (acc.STRAIGHT_TIME || 0) + (cats.STRAIGHT_TIME || 0)
+        acc.STRAIGHT_TIME_TRAVEL = (acc.STRAIGHT_TIME_TRAVEL || 0) + (cats.STRAIGHT_TIME_TRAVEL || 0)
+        acc.OVERTIME = (acc.OVERTIME || 0) + (cats.OVERTIME || 0)
+        acc.OVERTIME_TRAVEL = (acc.OVERTIME_TRAVEL || 0) + (cats.OVERTIME_TRAVEL || 0)
+        acc.DOUBLE_TIME = (acc.DOUBLE_TIME || 0) + (cats.DOUBLE_TIME || 0)
+        acc.DOUBLE_TIME_TRAVEL = (acc.DOUBLE_TIME_TRAVEL || 0) + (cats.DOUBLE_TIME_TRAVEL || 0)
+      }
+      return acc
+    }, {} as Record<string, number>)
+
+    // Check if we have any categoryHours data
+    const hasCategoryHours = Object.values(categoryHours).some(v => v > 0)
+
+    return { regularHours, overtimeHours, doubleTimeHours, totalEarnings, categoryHours: hasCategoryHours ? categoryHours : null }
   }
 
   const weekBreakdown = calculateWeekBreakdown()
@@ -644,6 +707,7 @@ export default function WeeklyTimesheetDisplay({
                             weeklyTotal={calculateWeekTotal()}
                             weeklyThreshold={40}
                             showDetails={true}
+                            categoryHours={weekBreakdown.categoryHours}
                           />
                         </Box>
                       </TableCell>

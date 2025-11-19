@@ -108,8 +108,23 @@ export default function PendingReviewJobsPage() {
   const handleApproveJob = async () => {
     if (!approveDialog.job) return
 
+    // Store for rollback
+    const previousJobs = [...jobs]
+    const jobToApprove = approveDialog.job
+
+    // Optimistic update - immediately remove from list
+    setJobs(prev => prev.filter(j => j.id !== jobToApprove.id))
+    setSnackbar({
+      open: true,
+      message: `Job #${jobToApprove.jobNumber} successfully closed!`,
+      severity: 'success'
+    })
+    setApproveDialog({ open: false, job: null })
+    setApprovalNotes('')
+    setBilledAmount('')
+
     try {
-      const response = await fetch(`/api/jobs/${approveDialog.job.id}/approve`, {
+      const response = await fetch(`/api/jobs/${jobToApprove.id}/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -120,21 +135,13 @@ export default function PendingReviewJobsPage() {
         })
       })
 
-      if (response.ok) {
-        setSnackbar({
-          open: true,
-          message: `Job #${approveDialog.job.jobNumber} successfully closed!`,
-          severity: 'success'
-        })
-        setApproveDialog({ open: false, job: null })
-        setApprovalNotes('')
-        setBilledAmount('')
-        fetchPendingJobs()
-      } else {
+      if (!response.ok) {
         throw new Error('Failed to approve job')
       }
     } catch (error) {
       console.error('Error approving job:', error)
+      // Rollback on failure
+      setJobs(previousJobs)
       setSnackbar({
         open: true,
         message: 'Failed to approve job',

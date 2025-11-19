@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Card,
   CardContent,
@@ -24,6 +24,7 @@ import {
   Select,
   MenuItem,
   Grid,
+  CircularProgress,
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -156,6 +157,10 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
   const [newJobDialogOpen, setNewJobDialogOpen] = useState(false)
   const [customers, setCustomers] = useState<Array<{id: string, firstName: string, lastName: string, companyName?: string}>>([])
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
+  const [selectedCustomer, setSelectedCustomer] = useState<{id: string, firstName: string, lastName: string, companyName?: string} | null>(null)
+  const [customerSearchInput, setCustomerSearchInput] = useState('')
+  const [customerSearchLoading, setCustomerSearchLoading] = useState(false)
+  const customerSearchTimeout = useRef<NodeJS.Timeout | null>(null)
   const [showNewCustomer, setShowNewCustomer] = useState(false)
   const [newCustomerData, setNewCustomerData] = useState({
     firstName: '',
@@ -207,10 +212,15 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
     }
   }, [newJobDialogOpen])
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (searchQuery?: string) => {
     try {
       const token = localStorage.getItem('auth-token')
-      const response = await fetch('/api/customers', {
+      // Build URL with optional search query
+      const url = searchQuery && searchQuery.length >= 2
+        ? `/api/customers?q=${encodeURIComponent(searchQuery)}`
+        : '/api/customers'
+
+      const response = await fetch(url, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         credentials: 'include'
       })
@@ -222,8 +232,31 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
     } catch (error) {
       console.error('Error fetching customers:', error)
       setCustomers([])
+    } finally {
+      setCustomerSearchLoading(false)
     }
   }
+
+  // Debounced customer search handler
+  const handleCustomerSearchInput = useCallback((searchValue: string) => {
+    setCustomerSearchInput(searchValue)
+
+    // Clear any existing timeout
+    if (customerSearchTimeout.current) {
+      clearTimeout(customerSearchTimeout.current)
+    }
+
+    // Only search if 2+ characters, otherwise show default (employee's created customers)
+    if (searchValue.length >= 2) {
+      setCustomerSearchLoading(true)
+      customerSearchTimeout.current = setTimeout(() => {
+        fetchCustomers(searchValue)
+      }, 300) // 300ms debounce
+    } else if (searchValue.length === 0) {
+      // Reset to show employee's created customers when input is cleared
+      fetchCustomers()
+    }
+  }, [])
 
   const fetchJobCategories = async () => {
     try {
@@ -757,7 +790,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Card>
+      <Card data-testid="time-entry-form">
         <CardContent>
           <Typography variant="h6" gutterBottom>
             📋 Time Entry
@@ -898,6 +931,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                   <Box sx={{ flex: 2, minWidth: 250, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {/* Job Selection */}
                     <Autocomplete
+                      data-testid="job-select"
                       options={jobs}
                       getOptionLabel={(option) => `${option.jobNumber} - ${option.title}`}
                       value={entry.job}
@@ -957,6 +991,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Chip label="ST" size="small" color="success" sx={{ minWidth: 40 }} />
                         <TextField
+                          data-testid="hours-input"
                           size="small"
                           type="number"
                           value={entry.categoryHours?.straightTime || ''}
@@ -1079,6 +1114,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
                       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                         {/* Material Selection */}
                         <Autocomplete
+                          data-testid="material-select"
                           options={materials}
                           value={material.material}
                           onChange={(_, newValue) => updateMaterial(entry.id, material.id, 'material', newValue)}
@@ -1108,6 +1144,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
 
                         {/* Quantity */}
                         <TextField
+                          data-testid="material-quantity"
                           label="Quantity"
                           type="number"
                           value={material.quantity}
@@ -1211,6 +1248,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
 
                   {/* Add Material Button */}
                   <Button
+                    data-testid="add-material-btn"
                     variant="outlined"
                     startIcon={<AddIcon />}
                     onClick={() => addMaterial(entry.id)}
@@ -1278,6 +1316,7 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
             </Stack>
 
             <Button
+              data-testid="submit-time-entry"
               variant="contained"
               startIcon={<SaveIcon />}
               onClick={handleSubmit}
@@ -1302,6 +1341,8 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
         onClose={() => {
           setNewJobDialogOpen(false)
           setSelectedCustomerId('')
+          setSelectedCustomer(null)
+          setCustomerSearchInput('')
           setShowNewCustomer(false)
           setNewCustomerData({ firstName: '', lastName: '', companyName: '', email: '', phone: '' })
           setNewJobCategoryId('')
@@ -1324,31 +1365,82 @@ export default function MultiJobTimeEntry({ onTimeEntriesCreated, preselectedEmp
           </Alert>
 
           <Grid container spacing={3}>
-            {/* Customer Selection */}
+            {/* Customer Selection - Search-based Autocomplete */}
             <Grid size={{ xs: 12 }}>
-              <FormControl fullWidth>
-                <InputLabel>Customer *</InputLabel>
-                <Select
-                  value={selectedCustomerId}
-                  label="Customer *"
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                >
-                  <MenuItem value="" onClick={() => setShowNewCustomer(true)}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
-                      <AddIcon fontSize="small" />
-                      <Typography>Add New Customer</Typography>
-                    </Box>
-                  </MenuItem>
-                  {customers.length > 0 && <Divider />}
-                  {customers.map((customer) => (
-                    <MenuItem key={customer.id} value={customer.id}>
+              <Autocomplete
+                options={customers}
+                value={selectedCustomer}
+                inputValue={customerSearchInput}
+                onInputChange={(_, newValue, reason) => {
+                  // Always update input value, but only search on typing
+                  if (reason === 'input') {
+                    handleCustomerSearchInput(newValue)
+                  } else if (reason === 'reset' || reason === 'clear') {
+                    // When selecting or clearing, just update the input without searching
+                    setCustomerSearchInput(newValue)
+                  }
+                }}
+                onChange={(_, newValue) => {
+                  if (newValue) {
+                    setSelectedCustomer(newValue)
+                    setSelectedCustomerId(newValue.id)
+                    // Update input to show selected customer's name
+                    setCustomerSearchInput(newValue.companyName || `${newValue.firstName} ${newValue.lastName}`)
+                    setShowNewCustomer(false)
+                  } else {
+                    setSelectedCustomer(null)
+                    setSelectedCustomerId('')
+                    setCustomerSearchInput('')
+                  }
+                }}
+                getOptionLabel={(option) => option.companyName || `${option.firstName} ${option.lastName}`}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                loading={customerSearchLoading}
+                filterOptions={(x) => x} // Disable client-side filtering since API handles it
+                noOptionsText={
+                  customerSearchInput.length < 2
+                    ? "Type 2+ characters to search customers..."
+                    : customerSearchLoading
+                    ? "Searching..."
+                    : "No customers found"
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Customer *"
+                    placeholder="Type to search customers..."
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {customerSearchLoading && <CircularProgress color="inherit" size={20} />}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => {
+                  const { key, ...otherProps } = props as any
+                  return (
+                    <li key={option.id} {...otherProps}>
                       <Typography>
-                        {customer.companyName || `${customer.firstName} ${customer.lastName}`}
+                        {option.companyName || `${option.firstName} ${option.lastName}`}
                       </Typography>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                    </li>
+                  )
+                }}
+              />
+              {/* Add New Customer button */}
+              <Button
+                startIcon={<AddIcon />}
+                onClick={() => setShowNewCustomer(true)}
+                sx={{ mt: 1 }}
+                size="small"
+                variant="text"
+              >
+                Add New Customer
+              </Button>
             </Grid>
 
             {/* New Customer Form */}

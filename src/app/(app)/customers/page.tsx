@@ -92,11 +92,13 @@ export default function CustomersPage() {
     }
   }, [router])
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (showLoading = true) => {
     try {
-      setLoading(true)
-      const response = await fetch('/api/customers', {
-        credentials: 'include'
+      if (showLoading) setLoading(true)
+      // Add cache-busting to prevent stale data
+      const response = await fetch(`/api/customers?_t=${Date.now()}`, {
+        credentials: 'include',
+        cache: 'no-store'
       })
       if (!response.ok) {
         throw new Error('Failed to fetch customers')
@@ -106,14 +108,16 @@ export default function CustomersPage() {
     } catch (error) {
       console.error('Error fetching customers:', error)
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
   const fetchEmployeeCustomers = async () => {
     try {
-      const response = await fetch('/api/customers/pending', {
-        credentials: 'include'
+      // Add cache: 'no-store' to prevent caching issues after approvals
+      const response = await fetch(`/api/customers/pending?_t=${Date.now()}`, {
+        credentials: 'include',
+        cache: 'no-store'
       })
       if (!response.ok) {
         throw new Error('Failed to fetch pending customers')
@@ -240,20 +244,32 @@ export default function CustomersPage() {
   }
 
   const handleDeleteCustomer = async (customer: Customer) => {
+    // Store previous state for rollback
+    const previousCustomers = [...customers]
+    const previousEmployeeCustomers = [...employeeCustomers]
+
+    // Optimistic update - immediately remove from UI
+    setCustomers(prev => prev.filter(c => c.id !== customer.id))
+    setEmployeeCustomers(prev => prev.filter(c => c.id !== customer.id))
+
     try {
       const response = await fetch(`/api/customers/${customer.id}`, {
         method: 'DELETE',
         credentials: 'include'
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to delete customer')
       }
-      
-      fetchCustomers() // Refresh the list
+
+      // Success - silently refresh in background
+      fetchCustomers(false)
     } catch (error) {
       console.error('Error deleting customer:', error)
+      // Rollback optimistic update on failure
+      setCustomers(previousCustomers)
+      setEmployeeCustomers(previousEmployeeCustomers)
       alert(error instanceof Error ? error.message : 'Failed to delete customer. Please try again.')
     }
   }
@@ -269,6 +285,20 @@ export default function CustomersPage() {
       return
     }
 
+    // Store previous state for rollback if needed
+    const previousEmployeeCustomers = [...employeeCustomers]
+    const previousCustomers = [...customers]
+
+    // Optimistic update - immediately update UI
+    setEmployeeCustomers(prev => prev.filter(c => c.id !== customer.id))
+
+    // Add approved customer to main list with updated status
+    const approvedCustomer: Customer = {
+      ...customer,
+      status: 'active'
+    }
+    setCustomers(prev => [approvedCustomer, ...prev])
+
     try {
       const response = await fetch(`/api/customers/${customer.id}/approve`, {
         method: 'PATCH',
@@ -280,12 +310,14 @@ export default function CustomersPage() {
         throw new Error('Failed to approve customer')
       }
 
-      // Refresh both lists
-      fetchCustomers()
+      // Success - fetch fresh data in background silently (no loading state)
+      fetchCustomers(false)
       fetchEmployeeCustomers()
-      alert(`✅ Customer "${customer.name}" has been approved!`)
     } catch (error) {
       console.error('Error approving customer:', error)
+      // Rollback optimistic update on failure
+      setEmployeeCustomers(previousEmployeeCustomers)
+      setCustomers(previousCustomers)
       alert('Failed to approve customer. Please try again.')
     }
   }
@@ -390,7 +422,7 @@ export default function CustomersPage() {
                         .filter(customer =>
                           customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                          customer.phone.includes(searchTerm)
+                          (customer.phone || '').includes(searchTerm)
                         )
                         .map((customer) => (
                           <CustomerCard key={customer.id} customer={customer} />
@@ -407,7 +439,7 @@ export default function CustomersPage() {
                         .filter(customer =>
                           customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                          customer.phone.includes(searchTerm)
+                          (customer.phone || '').includes(searchTerm)
                         )
                         .map((customer) => (
                           <CustomerCard key={customer.id} customer={customer} />
@@ -465,7 +497,7 @@ export default function CustomersPage() {
                           .filter(customer =>
                             customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                            customer.phone.includes(searchTerm)
+                            (customer.phone || '').includes(searchTerm)
                           )
                           .map((customer) => (
                             <TableRow key={customer.id} hover sx={{
@@ -554,7 +586,7 @@ export default function CustomersPage() {
                           .filter(customer =>
                             customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (customer.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                            customer.phone.includes(searchTerm)
+                            (customer.phone || '').includes(searchTerm)
                           )
                           .map((customer) => (
                             <TableRow key={customer.id} hover sx={{
@@ -623,8 +655,13 @@ export default function CustomersPage() {
       <CreateCustomerDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
-        onCustomerCreated={() => {
-          fetchCustomers() // Refresh the customers list
+        onCustomerCreated={(newCustomer) => {
+          // Optimistically add customer to list immediately
+          if (newCustomer) {
+            setCustomers(prev => [newCustomer, ...prev])
+          }
+          // Silent background refresh to ensure data consistency
+          fetchCustomers(false)
           setCreateDialogOpen(false)
         }}
       />

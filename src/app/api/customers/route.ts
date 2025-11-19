@@ -18,8 +18,56 @@ export const GET = withRBAC({
   const createdByEmployee = searchParams.get('createdByEmployee') === 'true'
   const employeeCreatedOnly = searchParams.get('employeeCreatedOnly') === 'true'
 
-  // Employees can only see customers they created
+  // Employees: search all customers if search query provided, otherwise show only their created customers
   if (user.role === 'EMPLOYEE') {
+    const searchQuery = searchParams.get('q')
+
+    // If search query provided (min 2 chars), search ALL customers
+    if (searchQuery && searchQuery.length >= 2) {
+      const searchPattern = `%${searchQuery}%`
+      const result = await query(
+        `SELECT c.*,
+          COUNT(DISTINCT j.id) FILTER (WHERE j.status IN ('SCHEDULED', 'IN_PROGRESS')) as active_jobs,
+          COUNT(DISTINCT j.id) as total_jobs
+        FROM "Customer" c
+        LEFT JOIN "Job" j ON c.id = j."customerId"
+        WHERE (
+          c."firstName" ILIKE $1 OR
+          c."lastName" ILIKE $1 OR
+          c."companyName" ILIKE $1 OR
+          CONCAT(c."firstName", ' ', c."lastName") ILIKE $1 OR
+          c.phone ILIKE $1 OR
+          c.email ILIKE $1 OR
+          c.address ILIKE $1
+        )
+        GROUP BY c.id
+        ORDER BY c."lastName" ASC, c."firstName" ASC
+        LIMIT 20`,
+        [searchPattern]
+      )
+
+      const transformedCustomers = result.rows.map((customer: any) => ({
+        id: customer.id,
+        name: customer.companyName || `${customer.firstName} ${customer.lastName}`,
+        companyName: customer.companyName,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        email: customer.email,
+        phone: customer.phone,
+        address: customer.address,
+        city: customer.city,
+        state: customer.state,
+        zip: customer.zip,
+        createdAt: customer.createdAt
+      }))
+
+      return NextResponse.json({
+        customers: transformedCustomers,
+        pagination: { total: result.rows.length, page: 1, limit: 20 }
+      })
+    }
+
+    // No search query - return only customers they created
     const result = await query(
       `SELECT c.*,
         COUNT(DISTINCT j.id) FILTER (WHERE j.status IN ('SCHEDULED', 'IN_PROGRESS')) as active_jobs,

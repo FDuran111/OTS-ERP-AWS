@@ -220,8 +220,9 @@ export default function LoginPage() {
             </Typography>
           </Box>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} data-testid="login-form">
             <TextField
+              data-testid="email-input"
               fullWidth
               label="Email Address"
               type="email"
@@ -246,6 +247,7 @@ export default function LoginPage() {
             />
 
             <TextField
+              data-testid="password-input"
               fullWidth
               label="Password"
               type={showPassword ? 'text' : 'password'}
@@ -286,6 +288,7 @@ export default function LoginPage() {
             )}
 
             <Button
+              data-testid="login-submit"
               type="submit"
               fullWidth
               variant="contained"

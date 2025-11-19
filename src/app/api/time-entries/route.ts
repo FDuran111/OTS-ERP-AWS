@@ -2,6 +2,37 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
 import { withRBAC } from '@/lib/rbac-middleware'
+import { format } from 'date-fns'
+
+// Helper to safely format date without timezone issues
+function formatDateSafe(dateValue: any): string | null {
+  if (!dateValue) return null
+
+  // If it's already a string in YYYY-MM-DD format, use it directly
+  if (typeof dateValue === 'string') {
+    // Check if it's already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue
+    }
+    // If it's an ISO string, extract the date part
+    if (dateValue.includes('T')) {
+      return dateValue.split('T')[0]
+    }
+    // Try to parse and format
+    const parsed = new Date(dateValue + 'T00:00:00')
+    if (!isNaN(parsed.getTime())) {
+      return format(parsed, 'yyyy-MM-dd')
+    }
+    return dateValue
+  }
+
+  // If it's a Date object, format it in local time
+  if (dateValue instanceof Date) {
+    return format(dateValue, 'yyyy-MM-dd')
+  }
+
+  return null
+}
 
 const createTimeEntrySchema = z.object({
   jobId: z.string().min(1, 'Job ID is required'),
@@ -148,6 +179,17 @@ export const GET = withRBAC({
     }
 
     // Transform data for frontend
+    console.log('[TIME-ENTRIES API] Raw entries from DB:', timeEntriesResult.rows.length)
+    timeEntriesResult.rows.forEach((entry, idx) => {
+      console.log(`[TIME-ENTRIES API] Entry ${idx}:`, {
+        id: entry.id?.substring(0, 8),
+        jobNumber: entry.jobNumber,
+        rawDate: entry.date,
+        rawDateType: typeof entry.date,
+        hours: entry.hours
+      })
+    })
+
     const transformedEntries = timeEntriesResult.rows.map(entry => {
       const duration = entry.endTime
         ? Math.round((new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60) * 100) / 100
@@ -177,7 +219,11 @@ export const GET = withRBAC({
         customer: entry.companyName || `${entry.firstName} ${entry.lastName}`,
         phaseId: entry.phaseId,
         phaseName: entry.phase_name,
-        date: entry.date ? new Date(entry.date).toISOString().split('T')[0] : null,
+        date: (() => {
+          const transformedDate = formatDateSafe(entry.date)
+          console.log(`[TIME-ENTRIES API] Date transform: ${entry.date} (${typeof entry.date}) -> ${transformedDate}`)
+          return transformedDate
+        })(),
         startTime: entry.startTime,
         endTime: entry.endTime,
         hours: parseFloat(entry.hours) || 0,

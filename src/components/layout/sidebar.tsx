@@ -15,6 +15,12 @@ import {
   Clock,
   DollarSign,
   ShoppingCart,
+  CheckSquare,
+  Monitor,
+  Receipt,
+  Wrench,
+  Phone,
+  MapPin,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { UserRole } from '@/lib/auth'
@@ -65,6 +71,12 @@ export function Sidebar({ userRole }: SidebarProps) {
       roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'],
     },
     {
+      name: 'Approvals',
+      href: '/admin',
+      icon: CheckSquare,
+      roles: ['OWNER_ADMIN', 'FOREMAN'],
+    },
+    {
       name: 'Customers',
       href: '/customers',
       icon: Users,
@@ -81,6 +93,36 @@ export function Sidebar({ userRole }: SidebarProps) {
       href: '/purchase-orders',
       icon: ShoppingCart,
       roles: ['OWNER_ADMIN', 'FOREMAN', 'EMPLOYEE'],
+    },
+    {
+      name: 'Billing',
+      href: '/billing',
+      icon: Receipt,
+      roles: ['OWNER_ADMIN'],
+    },
+    {
+      name: 'Equipment Billing',
+      href: '/equipment-billing',
+      icon: Wrench,
+      roles: ['OWNER_ADMIN'],
+    },
+    {
+      name: 'Service Calls',
+      href: '/service-calls',
+      icon: Phone,
+      roles: ['OWNER_ADMIN', 'FOREMAN'],
+    },
+    {
+      name: 'Route Planning',
+      href: '/route-optimization',
+      icon: MapPin,
+      roles: ['OWNER_ADMIN', 'FOREMAN'],
+    },
+    {
+      name: 'Office Display',
+      href: '/office-display',
+      icon: Monitor,
+      roles: ['OWNER_ADMIN', 'FOREMAN'],
     },
     {
       name: 'Invoicing',

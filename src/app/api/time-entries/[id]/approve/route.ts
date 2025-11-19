@@ -8,7 +8,7 @@ import { Pool } from 'pg'
 // POST - Approve a time entry
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,

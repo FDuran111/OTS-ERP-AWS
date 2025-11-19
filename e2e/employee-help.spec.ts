@@ -13,7 +13,7 @@ test.describe('Employee Help Button', () => {
 
     // Login as employee with known password
     await page.getByTestId('email-input').locator('input').fill('Tech@employee.com');
-    await page.getByTestId('password-input').locator('input').fill('employee123');
+    await page.getByTestId('password-input').locator('input').fill('EMP123');
     await page.getByTestId('login-submit').click();
     await page.waitForTimeout(2000);
 

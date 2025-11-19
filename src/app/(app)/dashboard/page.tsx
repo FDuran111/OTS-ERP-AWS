@@ -47,6 +47,7 @@ import {
   Settings as SettingsIcon,
   Dashboard as DashboardIcon,
   Schedule as ScheduleIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
@@ -54,6 +55,7 @@ import LowStockNotification from '@/components/notifications/LowStockNotificatio
 import NewEmployeeJobs from '@/components/dashboard/NewEmployeeJobs'
 import CreateJobDialog from '@/components/jobs/CreateJobDialog'
 import RejectedEntriesCard from '@/components/dashboard/RejectedEntriesCard'
+import MultiJobTimeEntry from '@/components/time/MultiJobTimeEntry'
 import { useAuthCheck } from '@/hooks/useAuthCheck'
 
 
@@ -143,6 +145,7 @@ export default function DashboardPage() {
     jobNumber: ''
   })
   const [createJobDialogOpen, setCreateJobDialogOpen] = useState(false)
+  const [manualEntryOpen, setManualEntryOpen] = useState(false)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -278,10 +281,36 @@ export default function DashboardPage() {
   }
 
   // Quick action buttons for mobile and desktop
-  const quickActions = user.role === 'EMPLOYEE' ? null : (
-    <Stack 
-      direction={isMobile ? 'column' : 'row'} 
-      spacing={2} 
+  const quickActions = user.role === 'EMPLOYEE' ? (
+    <Stack
+      direction={isMobile ? 'column' : 'row'}
+      spacing={2}
+      sx={{
+        width: { xs: '100%', md: 'auto' },
+        alignItems: { xs: 'stretch', md: 'center' }
+      }}
+    >
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => setManualEntryOpen(true)}
+        sx={{
+          width: { xs: '100%', md: 'auto' },
+          minWidth: { xs: 'auto', md: '180px' },
+          backgroundColor: '#00bf9a',
+          '&:hover': {
+            backgroundColor: '#00a085',
+          },
+        }}
+        size={isMobile ? 'large' : 'medium'}
+      >
+        Manual Time Entry
+      </Button>
+    </Stack>
+  ) : (
+    <Stack
+      direction={isMobile ? 'column' : 'row'}
+      spacing={2}
       sx={{
         width: { xs: '100%', md: 'auto' },
         alignItems: { xs: 'stretch', md: 'center' }
@@ -973,6 +1002,35 @@ export default function DashboardPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Manual Time Entry Dialog for Employees */}
+      {user.role === 'EMPLOYEE' && (
+        <Dialog
+          open={manualEntryOpen}
+          onClose={() => setManualEntryOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            pb: 1
+          }}>
+            Manual Time Entry
+            <IconButton onClick={() => setManualEntryOpen(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <MultiJobTimeEntry
+              onTimeEntriesCreated={() => {
+                fetchDashboardData()
+                setManualEntryOpen(false)
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Success/Error Snackbar */}
       <Snackbar

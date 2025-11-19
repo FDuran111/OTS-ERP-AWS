@@ -637,19 +637,31 @@ export default function EditJobDialog({ open, onClose, onJobUpdated, job }: Edit
                     multiple
                     options={users}
                     getOptionLabel={(option) => option.name}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
                     value={users.filter(user => field.value?.includes(user.id)) || []}
                     onChange={(_, newValue) => {
                       field.onChange(newValue.map(user => user.id))
                     }}
+                    renderOption={(props, option) => {
+                      const { key, ...otherProps } = props as any
+                      return (
+                        <li key={option.id} {...otherProps}>
+                          {option.name}
+                        </li>
+                      )
+                    }}
                     renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip
-                          variant="outlined"
-                          label={option.name}
-                          {...getTagProps({ index })}
-                          key={option.id}
-                        />
-                      ))
+                      value.map((option, index) => {
+                        const { key, ...tagProps } = getTagProps({ index })
+                        return (
+                          <Chip
+                            key={option.id}
+                            variant="outlined"
+                            label={option.name}
+                            {...tagProps}
+                          />
+                        )
+                      })
                     }
                     renderInput={(params) => (
                       <TextField

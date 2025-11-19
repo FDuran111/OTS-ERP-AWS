@@ -18,6 +18,15 @@ import {
 } from '@mui/icons-material'
 import { formatHours } from '@/lib/timeCalculations'
 
+interface CategoryHours {
+  STRAIGHT_TIME?: number
+  STRAIGHT_TIME_TRAVEL?: number
+  OVERTIME?: number
+  OVERTIME_TRAVEL?: number
+  DOUBLE_TIME?: number
+  DOUBLE_TIME_TRAVEL?: number
+}
+
 interface HoursBreakdownProps {
   regularHours: number
   overtimeHours: number
@@ -29,6 +38,7 @@ interface HoursBreakdownProps {
   consecutiveDay?: number
   isSeventhDay?: boolean
   showDetails?: boolean
+  categoryHours?: CategoryHours | null  // Detailed breakdown from JSON
 }
 
 export default function HoursBreakdownDisplay({
@@ -42,6 +52,7 @@ export default function HoursBreakdownDisplay({
   consecutiveDay,
   isSeventhDay = false,
   showDetails = true,
+  categoryHours,
 }: HoursBreakdownProps) {
   const getChipColor = (type: 'regular' | 'overtime' | 'double') => {
     switch (type) {
@@ -65,40 +76,119 @@ export default function HoursBreakdownDisplay({
       <Stack spacing={1}>
         {/* Hours Breakdown Chips */}
         <Stack direction="row" spacing={1} flexWrap="wrap">
-          {regularHours > 0 && (
-            <Tooltip title="Regular pay rate">
-              <Chip
-                icon={<Schedule />}
-                label={`Regular: ${formatHours(regularHours)}`}
-                color={getChipColor('regular')}
-                size="small"
-                variant="filled"
-              />
-            </Tooltip>
-          )}
+          {/* Show detailed categories if available, otherwise show aggregated */}
+          {categoryHours ? (
+            <>
+              {(categoryHours.STRAIGHT_TIME ?? 0) > 0 && (
+                <Tooltip title="Straight Time - Regular pay rate">
+                  <Chip
+                    icon={<Schedule />}
+                    label={`ST: ${formatHours(categoryHours.STRAIGHT_TIME!)}`}
+                    color="success"
+                    size="small"
+                    variant="filled"
+                  />
+                </Tooltip>
+              )}
 
-          {overtimeHours > 0 && (
-            <Tooltip title="1.5x pay rate">
-              <Chip
-                icon={<TrendingUp />}
-                label={`OT: ${formatHours(overtimeHours)}`}
-                color={getChipColor('overtime')}
-                size="small"
-                variant="filled"
-              />
-            </Tooltip>
-          )}
+              {(categoryHours.STRAIGHT_TIME_TRAVEL ?? 0) > 0 && (
+                <Tooltip title="Straight Time Travel - Regular pay rate">
+                  <Chip
+                    icon={<Schedule />}
+                    label={`STT: ${formatHours(categoryHours.STRAIGHT_TIME_TRAVEL!)}`}
+                    color="success"
+                    size="small"
+                    variant="outlined"
+                  />
+                </Tooltip>
+              )}
 
-          {doubleTimeHours > 0 && (
-            <Tooltip title="2x pay rate">
-              <Chip
-                icon={<Speed />}
-                label={`DT: ${formatHours(doubleTimeHours)}`}
-                color={getChipColor('double')}
-                size="small"
-                variant="filled"
-              />
-            </Tooltip>
+              {(categoryHours.OVERTIME ?? 0) > 0 && (
+                <Tooltip title="Overtime - 1.5x pay rate">
+                  <Chip
+                    icon={<TrendingUp />}
+                    label={`OT: ${formatHours(categoryHours.OVERTIME!)}`}
+                    color="warning"
+                    size="small"
+                    variant="filled"
+                  />
+                </Tooltip>
+              )}
+
+              {(categoryHours.OVERTIME_TRAVEL ?? 0) > 0 && (
+                <Tooltip title="Overtime Travel - 1.5x pay rate">
+                  <Chip
+                    icon={<TrendingUp />}
+                    label={`OTT: ${formatHours(categoryHours.OVERTIME_TRAVEL!)}`}
+                    color="warning"
+                    size="small"
+                    variant="outlined"
+                  />
+                </Tooltip>
+              )}
+
+              {(categoryHours.DOUBLE_TIME ?? 0) > 0 && (
+                <Tooltip title="Double Time - 2x pay rate">
+                  <Chip
+                    icon={<Speed />}
+                    label={`DT: ${formatHours(categoryHours.DOUBLE_TIME!)}`}
+                    color="error"
+                    size="small"
+                    variant="filled"
+                  />
+                </Tooltip>
+              )}
+
+              {(categoryHours.DOUBLE_TIME_TRAVEL ?? 0) > 0 && (
+                <Tooltip title="Double Time Travel - 2x pay rate">
+                  <Chip
+                    icon={<Speed />}
+                    label={`DTT: ${formatHours(categoryHours.DOUBLE_TIME_TRAVEL!)}`}
+                    color="error"
+                    size="small"
+                    variant="outlined"
+                  />
+                </Tooltip>
+              )}
+            </>
+          ) : (
+            <>
+              {regularHours > 0 && (
+                <Tooltip title="Regular pay rate">
+                  <Chip
+                    icon={<Schedule />}
+                    label={`Regular: ${formatHours(regularHours)}`}
+                    color={getChipColor('regular')}
+                    size="small"
+                    variant="filled"
+                  />
+                </Tooltip>
+              )}
+
+              {overtimeHours > 0 && (
+                <Tooltip title="1.5x pay rate">
+                  <Chip
+                    icon={<TrendingUp />}
+                    label={`OT: ${formatHours(overtimeHours)}`}
+                    color={getChipColor('overtime')}
+                    size="small"
+                    variant="filled"
+                  />
+                </Tooltip>
+              )}
+
+              {doubleTimeHours > 0 && (
+                <Tooltip title="2x pay rate">
+                  <Chip
+                    icon={<Speed />}
+                    label={`DT: ${formatHours(doubleTimeHours)}`}
+                    color={getChipColor('double')}
+                    size="small"
+                    variant="filled"
+                  />
+                </Tooltip>
+              )}
+            </>
           )}
 
           {isSeventhDay && (

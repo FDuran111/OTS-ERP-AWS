@@ -10,9 +10,10 @@ const approveJobSchema = z.object({
 // PATCH approve a pending job
 export const PATCH = withRBAC({
   requiredRoles: ['OWNER_ADMIN', 'FOREMAN']
-})(async (request: NextRequest, { params }: { params: { id: string } }) => {
+})(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
-    const jobId = params.id
+    // Next.js 15 requires awaiting params
+    const { id: jobId } = await params
     const body = await request.json()
     const { newStatus } = approveJobSchema.parse(body)
 

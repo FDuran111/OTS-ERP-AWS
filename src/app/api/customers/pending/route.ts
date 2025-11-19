@@ -18,7 +18,10 @@ export const GET = withRBAC({
       []
     )
 
-    return NextResponse.json(result.rows)
+    const response = NextResponse.json(result.rows)
+    // Prevent caching to ensure fresh data after approvals
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    return response
   } catch (error) {
     console.error('Error fetching pending customers:', error)
     return NextResponse.json(

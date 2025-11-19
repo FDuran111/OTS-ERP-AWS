@@ -9,9 +9,10 @@ export default defineConfig({
   reporter: 'html',
 
   use: {
-    baseURL: 'http://localhost:3001',
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    video: 'on', // Record videos for all tests
   },
 
   projects: [
@@ -21,10 +22,10 @@ export default defineConfig({
     },
   ],
 
-  // Start dev server before tests (disabled - using existing server on 3001)
+  // Start dev server before tests (using existing server on 3000)
   webServer: {
-    command: 'npm run dev -- -p 3001',
-    url: 'http://localhost:3001',
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
     reuseExistingServer: true,  // Always reuse existing server
     timeout: 120 * 1000,
   },

@@ -135,6 +135,16 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
   }
 
   const handleApprove = async (entry: PendingEntry) => {
+    // Store previous state for rollback
+    const previousEntries = [...pendingEntries]
+
+    // Optimistic update - immediately remove from list
+    setPendingEntries(prev => prev.filter(e => e.id !== entry.id))
+    if (onCountChange) {
+      onCountChange(pendingEntries.length - 1)
+    }
+    setSuccessMessage(`Approved time entry for ${entry.userName}`)
+
     try {
       const response = await fetch(`/api/time-entries/${entry.id}/approve`, {
         method: 'POST',
@@ -145,21 +155,40 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
         }),
       })
 
-      if (response.ok) {
-        setSuccessMessage(`Approved time entry for ${entry.userName}`)
-        fetchPendingEntries()
-        setTimeout(() => setSuccessMessage(''), 3000)
+      if (!response.ok) {
+        throw new Error('Failed to approve')
       }
+      setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error) {
       console.error('Error approving entry:', error)
+      // Rollback on failure
+      setPendingEntries(previousEntries)
+      if (onCountChange) {
+        onCountChange(previousEntries.length)
+      }
+      setSuccessMessage('')
     }
   }
 
   const handleReject = async () => {
     if (!selectedEntry) return
 
+    // Store previous state for rollback
+    const previousEntries = [...pendingEntries]
+    const entryToReject = selectedEntry
+
+    // Optimistic update - immediately remove from list
+    setPendingEntries(prev => prev.filter(e => e.id !== entryToReject.id))
+    if (onCountChange) {
+      onCountChange(pendingEntries.length - 1)
+    }
+    setSuccessMessage(`Rejected time entry for ${entryToReject.userName}`)
+    setRejectDialogOpen(false)
+    setSelectedEntry(null)
+    setRejectionReason('')
+
     try {
-      const response = await fetch(`/api/time-entries/${selectedEntry.id}/reject`, {
+      const response = await fetch(`/api/time-entries/${entryToReject.id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -169,38 +198,58 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
         }),
       })
 
-      if (response.ok) {
-        setSuccessMessage(`Rejected time entry for ${selectedEntry.userName}`)
-        setRejectDialogOpen(false)
-        setSelectedEntry(null)
-        setRejectionReason('')
-        fetchPendingEntries()
-        setTimeout(() => setSuccessMessage(''), 3000)
+      if (!response.ok) {
+        throw new Error('Failed to reject')
       }
+      setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error) {
       console.error('Error rejecting entry:', error)
+      // Rollback on failure
+      setPendingEntries(previousEntries)
+      if (onCountChange) {
+        onCountChange(previousEntries.length)
+      }
+      setSuccessMessage('')
     }
   }
 
   const handleBulkApprove = async () => {
     if (!confirm(`Approve all ${pendingEntries.length} pending entries?`)) return
 
+    // Store for rollback
+    const previousEntries = [...pendingEntries]
+    const count = pendingEntries.length
+
+    // Optimistic update - clear all immediately
+    setPendingEntries([])
+    if (onCountChange) {
+      onCountChange(0)
+    }
+    setSuccessMessage(`Approved ${count} entries`)
+
     try {
-      for (const entry of pendingEntries) {
-        await fetch(`/api/time-entries/${entry.id}/approve`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            approvedBy: currentUser?.id,
-          }),
-        })
-      }
-      setSuccessMessage(`Approved ${pendingEntries.length} entries`)
-      fetchPendingEntries()
+      // Process all in parallel for speed
+      await Promise.all(
+        previousEntries.map(entry =>
+          fetch(`/api/time-entries/${entry.id}/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              approvedBy: currentUser?.id,
+            }),
+          })
+        )
+      )
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error) {
       console.error('Error bulk approving:', error)
+      // Rollback on failure
+      setPendingEntries(previousEntries)
+      if (onCountChange) {
+        onCountChange(previousEntries.length)
+      }
+      setSuccessMessage('')
     }
   }
 
@@ -228,6 +277,7 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
         {pendingEntries.length > 0 && (
           <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
             <Button
+              data-testid="bulk-approve-btn"
               variant="contained"
               color="success"
               startIcon={<ApproveIcon />}
@@ -273,7 +323,7 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
                 </TableHead>
                 <TableBody>
                   {pendingEntries.map((entry) => (
-                    <TableRow key={entry.id} hover>
+                    <TableRow key={entry.id} hover data-testid="approval-row" data-status={entry.status}>
                       <TableCell>
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Avatar sx={{ width: 24, height: 24 }}>
@@ -315,6 +365,7 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
                       <TableCell align="center">
                         <Stack direction="row" spacing={1} justifyContent="center">
                           <IconButton
+                            data-testid="approve-btn"
                             size="small"
                             color="success"
                             onClick={() => handleApprove(entry)}
@@ -322,6 +373,7 @@ export default function ApprovalDashboard({ onCountChange, isVisible }: Approval
                             <ApproveIcon fontSize="small" />
                           </IconButton>
                           <IconButton
+                            data-testid="reject-btn"
                             size="small"
                             color="error"
                             onClick={async () => {

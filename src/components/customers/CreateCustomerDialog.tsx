@@ -19,10 +19,25 @@ import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 
+interface CreatedCustomer {
+  id: string
+  name: string
+  companyName?: string
+  firstName: string
+  lastName: string
+  type: string
+  phone: string
+  email?: string
+  address: string
+  totalJobs: number
+  activeJobs: number
+  status: string
+}
+
 interface CreateCustomerDialogProps {
   open: boolean
   onClose: () => void
-  onCustomerCreated: () => void
+  onCustomerCreated: (customer?: CreatedCustomer) => void
 }
 
 const customerSchema = z.object({
@@ -70,7 +85,7 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
   const onSubmit = async (data: CustomerFormData) => {
     try {
       setSubmitting(true)
-      
+
       const submitData = {
         companyName: isCommercial && data.companyName ? data.companyName : undefined,
         firstName: data.firstName,
@@ -97,8 +112,30 @@ export default function CreateCustomerDialog({ open, onClose, onCustomerCreated 
         throw new Error(errorData.error || 'Failed to create customer')
       }
 
+      const responseData = await response.json()
+
+      // Build customer object with all the data for immediate UI update
+      const fullAddress = [data.address, data.city, data.state, data.zip]
+        .filter(Boolean)
+        .join(', ')
+
+      const createdCustomer: CreatedCustomer = {
+        id: responseData.id || responseData.customer?.id,
+        name: isCommercial && data.companyName ? data.companyName : `${data.firstName} ${data.lastName}`,
+        companyName: isCommercial ? data.companyName : undefined,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        type: isCommercial ? 'Commercial' : 'Residential',
+        phone: data.phone || '',
+        email: data.email,
+        address: fullAddress,
+        totalJobs: 0,
+        activeJobs: 0,
+        status: 'active',
+      }
+
       reset()
-      onCustomerCreated()
+      onCustomerCreated(createdCustomer)
       onClose()
     } catch (error) {
       console.error('Error creating customer:', error)

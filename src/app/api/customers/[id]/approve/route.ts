@@ -5,9 +5,10 @@ import { withRBAC } from '@/lib/rbac-middleware'
 // PATCH approve a pending customer
 export const PATCH = withRBAC({
   requiredRoles: ['OWNER_ADMIN', 'FOREMAN']
-})(async (request: NextRequest, { params }: { params: { id: string } }) => {
+})(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
-    const customerId = params.id
+    // Next.js 15 requires awaiting params
+    const { id: customerId } = await params
 
     // Update customer to remove pending status
     const result = await query(

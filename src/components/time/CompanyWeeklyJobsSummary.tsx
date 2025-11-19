@@ -52,7 +52,12 @@ export default function CompanyWeeklyJobsSummary() {
   const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [jobSummaries, setJobSummaries] = useState<JobSummary[]>([])
   const [loading, setLoading] = useState(false)
-  const [weekBreakdown, setWeekBreakdown] = useState({ regularHours: 0, overtimeHours: 0, doubleTimeHours: 0 })
+  const [weekBreakdown, setWeekBreakdown] = useState<{
+    regularHours: number
+    overtimeHours: number
+    doubleTimeHours: number
+    categoryHours: Record<string, number> | null
+  }>({ regularHours: 0, overtimeHours: 0, doubleTimeHours: 0, categoryHours: null })
   const [employeeDialog, setEmployeeDialog] = useState<{
     open: boolean
     jobNumber: string
@@ -86,12 +91,35 @@ export default function CompanyWeeklyJobsSummary() {
         let totalRegular = 0
         let totalOvertime = 0
         let totalDoubleTime = 0
+        const aggregatedCategoryHours: Record<string, number> = {
+          STRAIGHT_TIME: 0,
+          STRAIGHT_TIME_TRAVEL: 0,
+          OVERTIME: 0,
+          OVERTIME_TRAVEL: 0,
+          DOUBLE_TIME: 0,
+          DOUBLE_TIME_TRAVEL: 0
+        }
+        let hasCategoryHours = false
 
         data.forEach((entry: any) => {
           const totalHours = parseFloat(entry.hours || 0)
           let regularHours = parseFloat(entry.regularHours || 0)
           let overtimeHours = parseFloat(entry.overtimeHours || 0)
           let doubleTimeHours = parseFloat(entry.doubleTimeHours || 0)
+
+          // Aggregate categoryHours if available
+          if (entry.categoryHours) {
+            const cats = typeof entry.categoryHours === 'string'
+              ? JSON.parse(entry.categoryHours)
+              : entry.categoryHours
+            aggregatedCategoryHours.STRAIGHT_TIME += cats.STRAIGHT_TIME || 0
+            aggregatedCategoryHours.STRAIGHT_TIME_TRAVEL += cats.STRAIGHT_TIME_TRAVEL || 0
+            aggregatedCategoryHours.OVERTIME += cats.OVERTIME || 0
+            aggregatedCategoryHours.OVERTIME_TRAVEL += cats.OVERTIME_TRAVEL || 0
+            aggregatedCategoryHours.DOUBLE_TIME += cats.DOUBLE_TIME || 0
+            aggregatedCategoryHours.DOUBLE_TIME_TRAVEL += cats.DOUBLE_TIME_TRAVEL || 0
+            hasCategoryHours = true
+          }
 
           // If the breakdown fields are not populated (old entries), estimate them
           if (regularHours === 0 && overtimeHours === 0 && doubleTimeHours === 0 && totalHours > 0) {
@@ -116,7 +144,8 @@ export default function CompanyWeeklyJobsSummary() {
         setWeekBreakdown({
           regularHours: totalRegular,
           overtimeHours: totalOvertime,
-          doubleTimeHours: totalDoubleTime
+          doubleTimeHours: totalDoubleTime,
+          categoryHours: hasCategoryHours ? aggregatedCategoryHours : null
         })
 
         // Group by job number (not jobId) and aggregate hours by day
@@ -436,6 +465,7 @@ export default function CompanyWeeklyJobsSummary() {
                         weeklyTotal={calculateWeekTotal()}
                         weeklyThreshold={40 * getTotalEmployees()}
                         showDetails={false}
+                        categoryHours={weekBreakdown.categoryHours}
                       />
                     </Box>
                   </TableCell>
