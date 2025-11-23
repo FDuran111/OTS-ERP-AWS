@@ -80,11 +80,46 @@ export async function POST(
     )
 
     await client.query(
-      `INSERT INTO "TimeEntryRejectionNote" 
+      `INSERT INTO "TimeEntryRejectionNote"
        ("timeEntryId", "userId", "userRole", note, "isAdminNote", "createdAt")
        VALUES ($1, $2, $3, $4, true, NOW())`,
       [entryId, userId, userRole, rejectionReason]
     )
+
+    // Reverse material deductions by deleting TimeEntryMaterial records
+    // This triggers the reverse_time_entry_material trigger which:
+    // - Restores Material.inStock
+    // - Removes JobMaterialCost records
+    try {
+      const materialsResult = await client.query(
+        `SELECT id, "materialId", quantity FROM "TimeEntryMaterial" WHERE "timeEntryId" = $1`,
+        [entryId]
+      )
+
+      if (materialsResult.rows.length > 0) {
+        await client.query(
+          `DELETE FROM "TimeEntryMaterial" WHERE "timeEntryId" = $1`,
+          [entryId]
+        )
+        console.log(`[REJECT] Reversed ${materialsResult.rows.length} material(s) for time entry ${entryId}`)
+      }
+    } catch (materialError) {
+      console.error('[REJECT] Failed to reverse materials:', materialError)
+      // Don't fail the rejection if material reversal fails
+    }
+
+    // Also remove any JobLaborCost that may have been created
+    try {
+      const laborResult = await client.query(
+        `DELETE FROM "JobLaborCost" WHERE "timeEntryId" = $1 RETURNING id`,
+        [entryId]
+      )
+      if (laborResult.rows.length > 0) {
+        console.log(`[REJECT] Removed JobLaborCost for time entry ${entryId}`)
+      }
+    } catch (laborError) {
+      console.error('[REJECT] Failed to remove JobLaborCost:', laborError)
+    }
 
     const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] || 
                       request.headers.get('x-real-ip') || 

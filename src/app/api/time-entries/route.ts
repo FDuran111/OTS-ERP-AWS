@@ -290,6 +290,24 @@ export const POST = withRBAC({
       console.error('Failed to auto-assign user to job:', assignError)
     }
 
+    // Auto-update Job status to IN_PROGRESS if currently SCHEDULED or DISPATCHED
+    try {
+      const jobStatusResult = await query(
+        `UPDATE "Job"
+         SET status = 'IN_PROGRESS', "updatedAt" = NOW()
+         WHERE id = $1
+         AND status IN ('SCHEDULED', 'DISPATCHED')
+         RETURNING id, status`,
+        [data.jobId]
+      )
+      if (jobStatusResult.rows.length > 0) {
+        console.log(`[TIME_ENTRY] Auto-updated job ${data.jobId} status to IN_PROGRESS`)
+      }
+    } catch (statusError) {
+      // Log but don't fail the time entry creation
+      console.error('Failed to auto-update job status:', statusError)
+    }
+
     // Get related data for response
     const [userResult, jobResult, phaseResult] = await Promise.all([
       query('SELECT id, name FROM "User" WHERE id = $1', [userId]),

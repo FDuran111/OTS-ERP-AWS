@@ -331,6 +331,26 @@ export async function POST(request: NextRequest) {
       createdEntries.push(timeEntry)
     }
 
+    // Auto-update Job status to IN_PROGRESS for all affected jobs
+    const affectedJobIds = [...new Set(entries.map(e => e.jobId))]
+    for (const jobId of affectedJobIds) {
+      try {
+        const jobStatusResult = await query(
+          `UPDATE "Job"
+           SET status = 'IN_PROGRESS', "updatedAt" = NOW()
+           WHERE id = $1
+           AND status IN ('SCHEDULED', 'DISPATCHED')
+           RETURNING id, status`,
+          [jobId]
+        )
+        if (jobStatusResult.rows.length > 0) {
+          console.log(`[BULK] Auto-updated job ${jobId} status to IN_PROGRESS`)
+        }
+      } catch (statusError) {
+        console.error(`[BULK] Failed to auto-update job ${jobId} status:`, statusError)
+      }
+    }
+
     // Return success with created entries
     return NextResponse.json({
       success: true,

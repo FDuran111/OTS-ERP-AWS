@@ -1,13 +1,14 @@
 import { query as dbQuery } from './db'
 import { v4 as uuidv4 } from 'uuid'
 
-export type AuditAction = 
-  | 'CREATE' 
-  | 'UPDATE' 
-  | 'SUBMIT' 
-  | 'APPROVE' 
-  | 'REJECT' 
-  | 'DELETE' 
+export type AuditAction =
+  | 'CREATE'
+  | 'UPDATE'
+  | 'SUBMIT'
+  | 'RESUBMIT'
+  | 'APPROVE'
+  | 'REJECT'
+  | 'DELETE'
   | 'VOID'
   | 'BULK_APPROVE'
   | 'BULK_REJECT'
