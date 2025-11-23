@@ -268,6 +268,28 @@ export const POST = withRBAC({
 
     const timeEntry = timeEntryResult.rows[0]
 
+    // Auto-assign user to job if not already assigned
+    try {
+      // Check if user is already assigned to this job
+      const existingAssignment = await query(
+        'SELECT id FROM "JobAssignment" WHERE "jobId" = $1 AND "userId" = $2',
+        [data.jobId, userId]
+      )
+
+      if (existingAssignment.rows.length === 0) {
+        // Create auto-assignment
+        await query(
+          `INSERT INTO "JobAssignment" (id, "jobId", "userId", "assignedAt", "assignedBy", "assignmentType")
+           VALUES (gen_random_uuid()::text, $1, $2, CURRENT_TIMESTAMP, 'SYSTEM', 'AUTO_TIME_ENTRY')`,
+          [data.jobId, userId]
+        )
+        console.log(`Auto-assigned user ${userId} to job ${data.jobId} via time entry`)
+      }
+    } catch (assignError) {
+      // Log but don't fail the time entry creation
+      console.error('Failed to auto-assign user to job:', assignError)
+    }
+
     // Get related data for response
     const [userResult, jobResult, phaseResult] = await Promise.all([
       query('SELECT id, name FROM "User" WHERE id = $1', [userId]),

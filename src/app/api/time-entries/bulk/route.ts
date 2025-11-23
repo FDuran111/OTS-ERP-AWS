@@ -230,6 +230,25 @@ export async function POST(request: NextRequest) {
 
       const timeEntry = timeEntryResult.rows[0]
 
+      // Auto-assign user to job if not already assigned
+      try {
+        const existingAssignment = await query(
+          'SELECT id FROM "JobAssignment" WHERE "jobId" = $1 AND "userId" = $2',
+          [entry.jobId, userId]
+        )
+
+        if (existingAssignment.rows.length === 0) {
+          await query(
+            `INSERT INTO "JobAssignment" (id, "jobId", "userId", "assignedAt", "assignedBy", "assignmentType")
+             VALUES (gen_random_uuid()::text, $1, $2, CURRENT_TIMESTAMP, 'SYSTEM', 'AUTO_TIME_ENTRY')`,
+            [entry.jobId, userId]
+          )
+          console.log(`[BULK] Auto-assigned user ${userId} to job ${entry.jobId}`)
+        }
+      } catch (assignError) {
+        console.error('[BULK] Failed to auto-assign:', assignError)
+      }
+
       // Insert materials if any exist
       if (entry.materials && Array.isArray(entry.materials) && entry.materials.length > 0) {
         for (const material of entry.materials) {
