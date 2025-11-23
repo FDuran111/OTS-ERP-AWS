@@ -137,17 +137,77 @@ export async function POST(request: NextRequest) {
           [adminId, entry.id]
         )
 
-        await new Promise(resolve => setTimeout(resolve, 100))
-
-        const laborCostResult = await client.query(
-          `SELECT id FROM "JobLaborCost" 
-           WHERE "timeEntryId" = $1 
-           ORDER BY "createdAt" DESC 
+        // Check if JobLaborCost already exists for this time entry
+        const existingLaborCost = await client.query(
+          `SELECT id FROM "JobLaborCost"
+           WHERE "timeEntryId" = $1
+           ORDER BY "createdAt" DESC
            LIMIT 1`,
           [entry.id]
         )
 
-        const jobLaborCostId = laborCostResult.rows[0]?.id || null
+        let jobLaborCostId = existingLaborCost.rows[0]?.id || null
+
+        // If no JobLaborCost exists and we have a jobId, create one
+        if (!jobLaborCostId && entry.jobId) {
+          // Get user's rates and role for labor cost calculation
+          const userRatesResult = await client.query(
+            `SELECT role, "regularRate", "overtimeRate", "doubleTimeRate"
+             FROM "User" WHERE id = $1`,
+            [entry.userId]
+          )
+          const userRates = userRatesResult.rows[0]
+
+          // Map role to skill level
+          const roleToSkillLevel: Record<string, string> = {
+            'OWNER_ADMIN': 'FOREMAN',
+            'FOREMAN': 'FOREMAN',
+            'EMPLOYEE': 'JOURNEYMAN',
+            'FIELD_CREW': 'JOURNEYMAN',
+            'APPRENTICE': 'APPRENTICE'
+          }
+          const skillLevel = roleToSkillLevel[userRates?.role] || 'JOURNEYMAN'
+
+          // Calculate total cost based on hour types
+          const regularHours = parseFloat(entry.regularHours || 0)
+          const overtimeHours = parseFloat(entry.overtimeHours || 0)
+          const doubleTimeHours = parseFloat(entry.doubleTimeHours || 0)
+          const totalHours = parseFloat(entry.hours || 0)
+
+          const regularRate = parseFloat(userRates?.regularRate || 25)
+          const overtimeRate = parseFloat(userRates?.overtimeRate || regularRate * 1.5)
+          const doubleTimeRate = parseFloat(userRates?.doubleTimeRate || regularRate * 2)
+
+          // Calculate total cost with OT breakdown
+          const totalCost = (regularHours * regularRate) +
+                            (overtimeHours * overtimeRate) +
+                            (doubleTimeHours * doubleTimeRate)
+
+          // Use weighted average hourly rate for the record
+          const effectiveRate = totalHours > 0 ? totalCost / totalHours : regularRate
+
+          // Create the JobLaborCost record
+          const laborCostInsert = await client.query(
+            `INSERT INTO "JobLaborCost" (
+              "jobId", "userId", "skillLevel", "hourlyRate",
+              "hoursWorked", "totalCost", "workDate", "timeEntryId"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id`,
+            [
+              entry.jobId,
+              entry.userId,
+              skillLevel,
+              effectiveRate,
+              totalHours,
+              totalCost,
+              entry.date,
+              entry.id
+            ]
+          )
+
+          jobLaborCostId = laborCostInsert.rows[0]?.id
+          console.log(`[BULK_APPROVE] Created JobLaborCost ${jobLaborCostId} for time entry ${entry.id}`)
+        }
 
         const changes = captureChanges(
           { 

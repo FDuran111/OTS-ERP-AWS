@@ -243,6 +243,38 @@ export async function POST(
         )
       }
 
+      // Create JobMaterialCost record for job costing (only for CONSUMED materials)
+      if (data.usageType === 'CONSUMED') {
+        const markupPercentage = 25.0 // Default markup
+        const markupAmount = totalCost * (markupPercentage / 100)
+        const billedAmount = totalCost + markupAmount
+
+        await query(
+          `INSERT INTO "JobMaterialCost" (
+            "jobId", "materialId", "quantityUsed", "unitCost",
+            "totalCost", "markup", "markupAmount", "billedAmount", "usageDate"
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_DATE)`,
+          [
+            resolvedParams.id,
+            data.materialId,
+            data.quantity,
+            unitCost,
+            totalCost,
+            markupPercentage,
+            markupAmount,
+            billedAmount
+          ]
+        )
+        console.log(`[MATERIAL_USAGE] Created JobMaterialCost for job ${resolvedParams.id}, material ${data.materialId}`)
+
+        // Trigger job cost recalculation
+        try {
+          await query(`SELECT calculate_job_costs($1)`, [resolvedParams.id])
+        } catch (calcError) {
+          console.log('[MATERIAL_USAGE] Job cost recalculation skipped:', calcError)
+        }
+      }
+
       await query('COMMIT')
 
       return NextResponse.json(usageResult.rows[0], { status: 201 })
