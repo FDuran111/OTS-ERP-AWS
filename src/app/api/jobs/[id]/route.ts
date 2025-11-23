@@ -3,6 +3,7 @@ import { query } from '@/lib/db'
 import { z } from 'zod'
 import { permissions, stripPricingData } from '@/lib/permissions'
 import { verifyToken } from '@/lib/auth'
+import { generateJobCompletionJournalEntry } from '@/lib/workflows/job-completion-automation'
 
 // GET a single job
 export async function GET(
@@ -252,7 +253,7 @@ const updateJobSchema = z.object({
   division: z.enum(['LOW_VOLTAGE', 'LINE_VOLTAGE']).optional(),
   description: z.string().optional(),
   customerPO: z.string().optional(),
-  status: z.enum(['ESTIMATE', 'SCHEDULED', 'DISPATCHED', 'IN_PROGRESS', 'COMPLETED', 'BILLED', 'CANCELLED']).optional(),
+  status: z.enum(['ESTIMATE', 'PENDING_APPROVAL', 'SCHEDULED', 'DISPATCHED', 'IN_PROGRESS', 'PENDING_REVIEW', 'COMPLETED', 'BILLED', 'CANCELLED']).optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -385,6 +386,25 @@ export async function PATCH(
         `UPDATE "Job" SET ${updateFields.join(', ')} WHERE id = $${paramIndex}`,
         updateValues
       )
+    }
+
+    // If status changed to COMPLETED, trigger accounting automation
+    if (data.status === 'COMPLETED') {
+      try {
+        // Set completedDate if not already set
+        await query(
+          `UPDATE "Job" SET "completedDate" = COALESCE("completedDate", CURRENT_TIMESTAMP) WHERE id = $1`,
+          [resolvedParams.id]
+        )
+
+        // Generate COGS journal entry
+        const journalEntryId = await generateJobCompletionJournalEntry(resolvedParams.id)
+        console.log(`Created COGS journal entry ${journalEntryId} for job ${resolvedParams.id}`)
+      } catch (accountingError) {
+        // Log error but don't fail the job update - accounting can be retried
+        console.error('Failed to create COGS journal entry:', accountingError)
+        // Optionally: Create a notification for admins about the failed accounting entry
+      }
     }
 
     // Get the updated job with customer and assignments
