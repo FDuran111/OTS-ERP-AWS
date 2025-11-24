@@ -1,9 +1,17 @@
 import type { NextConfig } from "next";
 
 // Bundle Analyzer - Run with ANALYZE=true npm run build
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-})
+// Only load if available (it's a devDependency, not installed in production)
+let withBundleAnalyzer = (config: NextConfig) => config;
+try {
+  if (process.env.ANALYZE === 'true') {
+    withBundleAnalyzer = require('@next/bundle-analyzer')({
+      enabled: true,
+    });
+  }
+} catch (e) {
+  // Bundle analyzer not available in production, which is fine
+}
 
 const nextConfig: NextConfig = {
   // REMOVED FOR RENDER: output: 'standalone'
